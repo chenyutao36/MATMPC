@@ -11,6 +11,8 @@ else
 end
 
 Ts  = settings.Ts;   % Sampling time
+Ts_st = settings.Ts_st; % Shooting interval
+s = settings.s; % number of integration steps per interval
 nx = settings.nx;    % No. of states
 nu = settings.nu;    % No. of controls
 ny = settings.ny;    % No. of outputs (references)    
@@ -30,12 +32,12 @@ settings.neq = neq;
 settings.nineq = nineq; 
 
 % solver configurations
-input.opt.integrator='ERK4'; % 'ERK4', 'IRK4'
-input.opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
-input.opt.qpsolver='qpoases'; %'qpoases'
-input.opt.condensing='full';  %'full','no','null-space'
-input.opt.hotstart='no'; %'yes','no' (only for qpoases)
-input.opt.shifting='no'; % 'yes','no'
+opt.integrator='ERK4'; % 'ERK4-CASADI','ERK4','IRK4'
+opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
+opt.qpsolver='qpoases'; %'qpoases'
+opt.condensing='full';  %'full'
+opt.hotstart='no'; %'yes','no' (only for qpoases)
+opt.shifting='no'; % 'yes','no'
 
 % globalization configurations (require advanced knowledge on globilization)
 % input.opt.meritfun.mu_merit=0;              % initialize the parameter
@@ -67,8 +69,12 @@ input.opt.shifting='no'; % 'yes','no'
 %     input.opt.ipopt.options.ipopt.print_level=0;
 % end
 
-if strcmp(input.opt.qpsolver,'qpoases')
-    input.opt.condensing_matrix.QP=0;
+if strcmp(opt.qpsolver,'qpoases')
+    mem.qpoases.warm_start=0;
+    mem.qpoases_hot_start=0;
+    if strcmp(opt.hotstart, 'yes')
+        mem.qpoases_hot_start=1;
+    end
 end
 
 
@@ -80,35 +86,43 @@ input.lambda=ones(nx,N+1);
 input.mu=zeros(2*nc,N);
 input.muN=zeros(2*ncN,1);
 
-% ERK settings
+% Integrator settings
 
-sim_erk_mem.A_erk=[0, 0, 0, 0;
-               0.5, 0, 0, 0;
-               0, 0.5, 0, 0;
-               0, 0, 1, 0];
-sim_erk_mem.B_erk=[1/6, 1/3, 1/3, 1/6];
-sim_erk_mem.num_steps = 2;
-sim_erk_mem.num_stages = 4;
-sim_erk_mem.h=0.1/sim_erk_mem.num_steps;
-sim_erk_mem.nx = nx;
-sim_erk_mem.nu = nu;
-sim_erk_mem.Sx = eye(nx);
-sim_erk_mem.Su = zeros(nx,nu);
+switch opt.integrator
+    case 'ERK4-CASADI'
+        mem.sim_method = 0;
+    case 'ERK4'
+        mem.sim_method = 1;
+        mem.A=[0, 0, 0, 0;
+                       0.5, 0, 0, 0;
+                       0, 0.5, 0, 0;
+                       0, 0, 1, 0];
+        mem.B=[1/6, 1/3, 1/3, 1/6];
+        mem.num_steps = s;
+        mem.num_stages = 4;
+        mem.h=Ts_st/mem.num_steps;
+        mem.nx = nx;
+        mem.nu = nu;
+        mem.Sx = eye(nx);
+        mem.Su = zeros(nx,nu);
 
-%% IRK settings
-sim_irk_mem.A_irk=[5/36,             2/9-sqrt(15)/15, 5/36-sqrt(15)/30;
-                   5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;
-                   5/36+sqrt(15)/30, 2/9+sqrt(15)/15, 5/36];
-sim_irk_mem.B_irk=[5/18;4/9;5/18];
-sim_irk_mem.num_steps = 2;
-sim_irk_mem.num_stages = 3;
-sim_irk_mem.h= 0.1/sim_irk_mem.num_steps;
-sim_irk_mem.nx = nx;
-sim_irk_mem.nu = nu;
-sim_irk_mem.Sx = eye(nx);
-sim_irk_mem.Su = zeros(nx,nu);
-sim_irk_mem.newton_iter = 3;
-sim_irk_mem.JFK = sim_irk_mem.h*[sim_irk_mem.B_irk(1)*eye(nx,nx), sim_irk_mem.B_irk(2)*eye(nx,nx), sim_irk_mem.B_irk(3)*eye(nx,nx)];
+    case 'IRK4'
+        mem.sim_method = 2;
+        mem.A=[5/36,             2/9-sqrt(15)/15, 5/36-sqrt(15)/30;
+               5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;
+               5/36+sqrt(15)/30, 2/9+sqrt(15)/15, 5/36];
+        mem.B=[5/18;4/9;5/18];
+        mem.num_steps = s;
+        mem.num_stages = 3;
+        mem.h= Ts_st/mem.num_steps;
+        mem.nx = nx;
+        mem.nu = nu;
+        mem.Sx = eye(nx);
+        mem.Su = zeros(nx,nu);
+        mem.newton_iter = 3;
+        mem.JFK = mem.h*[mem.B(1)*eye(nx,nx), mem.B(2)*eye(nx,nx), mem.B(3)*eye(nx,nx)];
+        
+end
 %% Initialzation (initialize your simulation properly...)
 
 Initialization;
@@ -148,10 +162,10 @@ while time(end) < Tf
     input.x0 = state_sim(end,:)';
     
     % call the NMPC solver
-    output=mpc_nmpcsolver(input,settings,sim_erk_mem,sim_irk_mem);
+    [output, mem]=mpc_nmpcsolver(input,settings,mem);
     
     % obtain the solution and update the data
-    switch input.opt.shifting
+    switch opt.shifting
         case 'yes'
         input.z=[output.z(:,2:end),[output.xN; output.z(nx+1:nx+nu,end)]];  
         input.xN=output.xN;
@@ -167,9 +181,9 @@ while time(end) < Tf
     end
 %     input.opt.meritfun=output.meritfun;
     
-    if strcmp(input.opt.qpsolver,'qpoases')
-        input.opt.condensing_matrix.QP=output.opt.condensing_matrix.QP;
-    end
+%     if strcmp(opt.qpsolver,'qpoases')
+%         input.opt.condensing_matrix.QP=output.opt.condensing_matrix.QP;
+%     end
     
     % collect the statistics
     cpt=output.info.cpuTime;

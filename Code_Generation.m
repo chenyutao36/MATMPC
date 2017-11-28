@@ -45,9 +45,9 @@ Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'s
 
 %% Explicit Runge-Kutta 4 Integrator for multiple shooting
 
-Ts = 0.1; % shooting interval time
+Ts_st = 0.1; % shooting interval time
 s  = 2; % No. of integration steps per shooting interval
-DT = Ts/s;
+DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
 jacX = SX.zeros(nx,nx)+jacobian(x_dot,states);
 jacU = SX.zeros(nx,nu)+jacobian(x_dot,controls);
@@ -65,7 +65,7 @@ vdeX = SX.zeros(nx,nx);
 vdeX = vdeX + jtimes(x_dot,states,Sx);
 vdeU = SX.zeros(nx,nu) + jacobian(x_dot,controls);
 vdeU = vdeU + jtimes(x_dot,states,Su);
-vdeFun = Function('vdeFun',{states,controls,params,Sx,Su},{x_dot,vdeX,vdeU});
+vdeFun = Function('vdeFun',{states,controls,params,Sx,Su},{vdeX,vdeU});
 
 X=states;
 U=controls; 
@@ -82,8 +82,6 @@ F = Function('F', {z,params}, {X + SX.zeros(nx,1)}, {'z','params'}, {'xf'});
 A = jacobian(X,states) + SX.zeros(nx,nx);
 B = jacobian(X,controls) + SX.zeros(nx,nu);
 D = Function('D', {z,params}, {A, B}, {'z','params'}, {'A','B'});
-
-Ts = 0.01; % recover the original sampling time
 
 %% objective and constraints
 
@@ -142,25 +140,28 @@ if strcmp(generate,'y')
     ineq_fun.generate('ineq_fun.c',opts);
     ineqN_fun.generate('ineqN_fun.c',opts);
    
-    opts = struct('main',false,'mex',false);
+    opts = struct('main',false,'mex',false,'with_header',true);
     cd ../mex_core
-        f_fun.generate('f_fun.c',opts);
-        jac_f_fun.generate('jac_f_fun.c',opts);
-        vdeFun.generate('vdeFun.c',opts);
-        impl_f_fun.generate('impl_f_fun.c',opts);
-        F.generate('F.c',opts);
-        D.generate('D.c',opts);
-        h_fun.generate('h_fun.c',opts);
-        ineq_fun.generate('ineq_fun.c',opts);
-        ineqN_fun.generate('ineqN_fun.c',opts);    
-        gi_fun.generate('gi_fun.c',opts);
-        gN_fun.generate('gN_fun.c',opts);
-        Ji_fun.generate('Ji_fun.c',opts);  
-        JN_fun.generate('JN_fun.c',opts);
-        Ci_fun.generate('Ci_fun.c',opts);  
-        CN_fun.generate('CN_fun.c',opts);   
-        adj_fun.generate('adj_fun.c',opts);
-        adjN_fun.generate('adjN_fun.c',opts);
+        P = CodeGenerator ('casadi_src.c', opts) ;
+        P.add(f_fun);
+        P.add(jac_f_fun);
+        P.add(vdeFun);
+        P.add(impl_f_fun);
+        P.add(F);
+        P.add(D);
+        P.add(h_fun);
+        P.add(ineq_fun);
+        P.add(ineqN_fun);
+        P.add(gi_fun);
+        P.add(gN_fun);
+        P.add(Ji_fun);
+        P.add(JN_fun);
+        P.add(Ci_fun);
+        P.add(CN_fun);
+        P.add(adj_fun);
+        P.add(adjN_fun);
+        
+        P.generate();
     cd ../Source_Codes
 
 display('                           ');
@@ -220,6 +221,8 @@ display('                           ');
 display('Preparing the NMPC solver...');
 
 settings.Ts = Ts;
+settings.Ts_st = Ts_st;
+settings.s =s ;
 settings.nx = nx; 
 settings.nu = nu;    
 settings.ny = ny;    

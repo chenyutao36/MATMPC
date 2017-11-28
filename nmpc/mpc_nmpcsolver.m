@@ -1,4 +1,4 @@
-function [output] = mpc_nmpcsolver(input,settings, sim_erk_mem, sim_irk_mem)
+function [output, mem] = mpc_nmpcsolver(input,settings, mem)
     tic;
 
 %     i=0;
@@ -14,17 +14,17 @@ function [output] = mpc_nmpcsolver(input,settings, sim_erk_mem, sim_irk_mem)
         %% ----------- QP Preparation
 
         tshoot = tic;
-%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex(input, settings);
-        [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex_erk(input, settings, sim_erk_mem);
-%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex_irk(input, settings, sim_irk_mem);
+        [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex(input, settings, mem);
+%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex_erk(input, settings, mem);
+%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex_irk(input, settings, mem);
         tSHOOT = toc(tshoot)*1000; 
         
         tcond=tic;
-        [Hc,gc, Cc,cc]=Condensing_mex(A,B,Q_h,S,R,Cx,Cu,ds0,a,c,gx,gu,settings);
+        [Hc,gc, Cc,cc] = Condensing_mex(A,B,Q_h,S,R,Cx,Cu,ds0,a,c,gx,gu,settings);
         tCOND=toc(tcond)*1e3;
         
         %% ----------  Solving QP
-        [du,mu_vec,tQP,input] = mpc_qp_solve_dense(Hc,gc,Cc,cc,input,settings);
+        [du,mu_vec,tQP,mem] = mpc_qp_solve_dense(Hc,gc,Cc,cc, settings, mem);
 
         [dz, dxN, lambda, mu, muN] = Recover_mex(Q_h,S,A,B,Cx,a,gx,du,ds0,mu_vec,settings);
 
@@ -67,10 +67,6 @@ function [output] = mpc_nmpcsolver(input,settings, sim_erk_mem, sim_irk_mem)
     output.info.shootTime=CPT.SHOOT;
     output.info.condTime=CPT.COND;
     output.info.qpTime=CPT.QP;
-    
-    if strcmp(input.opt.qpsolver,'qpoases')
-        output.opt.condensing_matrix.QP=input.opt.condensing_matrix.QP;
-    end
 
 %     output.meritfun=input.opt.meritfun;
 end

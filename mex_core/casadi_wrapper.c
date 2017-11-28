@@ -55,16 +55,15 @@ void vde_Fun(double **in, double **out){
     const double *Sx = in[3];
     const double *Su = in[4];
     
-    double *xn = out[0];
-    double *jac_x = out[1];
-    double *jac_u = out[2];
+    double *jac_x = out[0];
+    double *jac_u = out[1];
     
     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
     const double *casadi_arg[5];
-    double *casadi_res[3];
+    double *casadi_res[2];
 
     casadi_arg[0] = x;
     casadi_arg[1] = u;
@@ -72,9 +71,8 @@ void vde_Fun(double **in, double **out){
     casadi_arg[3] = Sx;
     casadi_arg[4] = Su;
 
-    casadi_res[0] = xn;
-    casadi_res[1] = jac_x;
-    casadi_res[2] = jac_u;
+    casadi_res[0] = jac_x;
+    casadi_res[1] = jac_u;
 
     vdeFun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }

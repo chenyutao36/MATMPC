@@ -44,7 +44,7 @@ void Block_Fill(mwSize m, mwSize n, double *Gi, double *G, mwSize idm, mwSize id
        
 }
 
-void sim_irk(double **in, double **out, mxArray **Jac, mxArray *sim_mem){
+void sim_irk(double **in, double **out, mxArray **Jac, mxArray *mem){
     
     int istep, i, j, k, iter;
     double a,b;
@@ -60,17 +60,17 @@ void sim_irk(double **in, double **out, mxArray **Jac, mxArray *sim_mem){
     double *Jac_x = mxGetPr(Jac[0]);
     double *Jac_u = mxGetPr(Jac[1]);
     
-    double *A = mxGetPr( mxGetField(sim_mem, 0, "A_irk"));
-    double *B = mxGetPr( mxGetField(sim_mem, 0, "B_irk"));
-    double h = mxGetScalar( mxGetField(sim_mem, 0, "h") );
-    mwSize num_stages = mxGetScalar( mxGetField(sim_mem, 0, "num_stages") );
-    mwSize num_steps = mxGetScalar( mxGetField(sim_mem, 0, "num_steps") );
-    mwSize nx = mxGetScalar( mxGetField(sim_mem, 0, "nx") );
-    mwSize nu = mxGetScalar( mxGetField(sim_mem, 0, "nu") );
-    double *Sx = mxGetPr( mxGetField(sim_mem, 0, "Sx"));
-    double *Su = mxGetPr( mxGetField(sim_mem, 0, "Su"));
-    mwSize newton_iter = mxGetScalar( mxGetField(sim_mem, 0, "newton_iter") );
-    double *JFK = mxGetPr( mxGetField(sim_mem, 0, "JFK"));
+    double *A = mxGetPr( mxGetField(mem, 0, "A"));
+    double *B = mxGetPr( mxGetField(mem, 0, "B"));
+    double h = mxGetScalar( mxGetField(mem, 0, "h") );
+    mwSize num_stages = mxGetScalar( mxGetField(mem, 0, "num_stages") );
+    mwSize num_steps = mxGetScalar( mxGetField(mem, 0, "num_steps") );
+    mwSize nx = mxGetScalar( mxGetField(mem, 0, "nx") );
+    mwSize nu = mxGetScalar( mxGetField(mem, 0, "nu") );
+    double *Sx = mxGetPr( mxGetField(mem, 0, "Sx"));
+    double *Su = mxGetPr( mxGetField(mem, 0, "Su"));
+    mwSize newton_iter = mxGetScalar( mxGetField(mem, 0, "newton_iter") );
+    double *JFK = mxGetPr( mxGetField(mem, 0, "JFK"));
         
     mwSize jx = nx*nx;
     mwSize ju = nx*nu;
