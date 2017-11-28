@@ -20,7 +20,7 @@ function [output] = mpc_nmpcsolver(input,settings, sim_erk_mem, sim_irk_mem)
         tSHOOT = toc(tshoot)*1000; 
         
         tcond=tic;
-        [Hc,gc, Cc,cc]=Condensing_mex_new(A,B,Q_h,S,R,Cx,Cu,ds0,a,c,gx,gu,settings);
+        [Hc,gc, Cc,cc]=Condensing_mex(A,B,Q_h,S,R,Cx,Cu,ds0,a,c,gx,gu,settings);
         tCOND=toc(tcond)*1e3;
         
         %% ----------  Solving QP
