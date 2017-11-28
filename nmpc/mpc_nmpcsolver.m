@@ -14,9 +14,9 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         %% ----------- QP Preparation
 
         tshoot = tic;
-        [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex(input, settings, mem);
-%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex_erk(input, settings, mem);
-%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_mex_irk(input, settings, mem);
+%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_casadi(input, settings, mem);
+        [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_erk(input, settings, mem);
+%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_irk(input, settings, mem);
         tSHOOT = toc(tshoot)*1000; 
         
         tcond=tic;

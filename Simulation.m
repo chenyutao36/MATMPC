@@ -71,7 +71,7 @@ opt.shifting='no'; % 'yes','no'
 
 if strcmp(opt.qpsolver,'qpoases')
     mem.qpoases.warm_start=0;
-    mem.qpoases_hot_start=0;
+    mem.qpoases.hot_start=0;
     if strcmp(opt.hotstart, 'yes')
         mem.qpoases_hot_start=1;
     end
