@@ -1,8 +1,8 @@
 clear mex; close all;clc;
 %% Configuration (complete your configuration here...)
-addpath('nmpc');
-addpath('Source_Codes');
-addpath('mex_core');
+addpath('/home/yutaochen/Documents/MATLAB/Packages/MATMPC/nmpc');
+addpath('/home/yutaochen/Documents/MATLAB/Packages/MATMPC/Source_Codes');
+addpath('/home/yutaochen/Documents/MATLAB/Packages/MATMPC/mex_core');
 
 if exist('settings','file')==2
     load settings
@@ -92,6 +92,7 @@ switch opt.integrator
     case 'ERK4-CASADI'
         mem.sim_method = 0;
     case 'ERK4'
+%         Ts_st = 0.01;
         mem.sim_method = 1;
         mem.A=[0, 0, 0, 0;
                        0.5, 0, 0, 0;
@@ -131,12 +132,14 @@ Initialization;
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
-Tf = 4;               % simulation time
+Tf = 5;               % simulation time
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
 constraints = [];
 CPT = [];
+
+ref_traj = [];
 
 % mpc_callnum=1;         % maximum number of iterations for each sampling instant (for RTI, this is ONE)
 % kkt_lim=1e-2;           % tolerance on optimality
@@ -154,9 +157,15 @@ while time(end) < Tf
 %     input.y = repmat(REF(iter,:)',1,N);
 %     input.yN = REF(iter,1:nyN)';
 
+%     REF = [];
+%     for i=1:N+1
+%         y = sin(time(end)+(i-1)*Ts);
+%         REF = [REF [0 y 1 0 0 0 0 0 0 0 0 0]'];
+%     end    
+%     ref_traj=[ref_traj,REF(2,1)];
     % time-varying reference (reference preview)
-%     input.y = REF(iter:iter+N-1,:);
-%     input.yN = REF(iter+N,:);
+%     input.y = REF(:,1:N);
+%     input.yN = REF(1:nyN,N+1);
            
     % obtain the state measurement
     input.x0 = state_sim(end,:)';
@@ -220,5 +229,5 @@ end
 %% draw pictures (optional)
 clear mex;
 
-mean(CPT,1)
+mean(CPT(2:end,:),1)
 Draw;

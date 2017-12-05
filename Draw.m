@@ -165,81 +165,116 @@ switch settings.model
         zlim([-6 0.5]);
         
     case 'Hexacopter'
-        figure();
+        figure();      
+        subplot(321)
         hold on;
         grid on;
-        subplot(321)
-        plot(time(1:end-1),y_sim(:,1));
+        plot(time(1:end-1),y_sim(:,1),'Color',red);
         title('x');
         
         subplot(322)
-        plot(time(1:end-1),y_sim(:,2));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,2),'Color',red);
+        %plot(time(1:end-1),ref_traj, 'k--');
         title('y');
         
         subplot(323)
-        plot(time(1:end-1),y_sim(:,3));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,3),'Color',red);
         title('z');
         
         subplot(324)
-        plot(time(1:end-1),y_sim(:,4));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,4),'Color',red);
         title('phi');
         
         subplot(325)
-        plot(time(1:end-1),y_sim(:,5));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,5),'Color',red);
         title('theta');
         
         subplot(326)
-        plot(time(1:end-1),y_sim(:,6));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,6),'Color',red);
         title('psi');
         
         figure();
         subplot(321)
-        plot(time(1:end),state_sim(:,13));
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,13),'Color',red);
         title('f1');
         
         subplot(322)
-        plot(time(1:end),state_sim(:,14));
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,14),'Color',red);
         title('f2');
         
         subplot(323)
-        plot(time(1:end),state_sim(:,15));
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,15),'Color',red);
         title('f3');
         
         subplot(324)
-        plot(time(1:end),state_sim(:,16));
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,16),'Color',red);
         title('f4');
         
         subplot(325)
-        plot(time(1:end),state_sim(:,17));
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,17),'Color',red);
         title('f5');
         
         subplot(326)
-        plot(time(1:end),state_sim(:,18));
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,18),'Color',red);
         title('f6');
         
         figure();
         subplot(321)
-        plot(time(1:end-1),y_sim(:,7));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,7),'Color',red);
         title('df1');
         
         subplot(322)
-        plot(time(1:end-1),y_sim(:,8));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,8),'Color',red);
         title('df2');
         
         subplot(323)
-        plot(time(1:end-1),y_sim(:,9));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,9),'Color',red);
         title('df3');
         
         subplot(324)
-        plot(time(1:end-1),y_sim(:,10));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,10),'Color',red);
         title('df4');
         
         subplot(325)
-        plot(time(1:end-1),y_sim(:,11));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,11),'Color',red);
         title('df5');
         
         subplot(326)
-        plot(time(1:end-1),y_sim(:,12));
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,12),'Color',red);
         title('df6');
 end
 

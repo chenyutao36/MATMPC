@@ -53,19 +53,19 @@ HEAD4_PATH='-I/home/yutaochen/Documents/MATLAB/Packages/blasfeo/include';
 HEAD5_PATH='-I/home/yutaochen/Documents/MATLAB/Packages/qpOASES_C/qpOASES/include';
 %% 
 
-mex(options, CC_FLAGS, OP_FLAGS, 'Condensing.c', LIB1);
+% mex(options, CC_FLAGS, OP_FLAGS, 'Condensing.c', LIB1);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim_erk.c','casadi_src.c',LIB1);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim_erk.c','casadi_src.c',LIB1);
 
 mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_erk.c','casadi_wrapper.c','sim_erk.c','casadi_src.c',LIB1);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_irk.c','casadi_wrapper.c','sim_irk.c','casadi_src.c',LIB1, LIB2);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_irk.c','casadi_wrapper.c','sim_irk.c','casadi_src.c',LIB1, LIB2);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
 
 mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_info.c','casadi_wrapper.c','casadi_src.c', LIB1, LIB2);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c', LIB1);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c', LIB1);
 
 %%
 

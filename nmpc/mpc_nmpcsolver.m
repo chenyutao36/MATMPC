@@ -20,18 +20,18 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         tSHOOT = toc(tshoot)*1000; 
         
         tcond=tic;
-        [Hc,gc, Cc,cc] = Condensing_mex(A,B,Q_h,S,R,Cx,Cu,ds0,a,c,gx,gu,settings);
+        [Hc,gc, Cc,cc] = Condensing(A,B,Q_h,S,R,Cx,Cu,ds0,a,c,gx,gu,settings);
         tCOND=toc(tcond)*1e3;
         
         %% ----------  Solving QP
         [du,mu_vec,tQP,mem] = mpc_qp_solve_dense(Hc,gc,Cc,cc, settings, mem);
 
-        [dz, dxN, lambda, mu, muN] = Recover_mex(Q_h,S,A,B,Cx,a,gx,du,ds0,mu_vec,settings);
+        [dz, dxN, lambda, mu, muN] = Recover(Q_h,S,A,B,Cx,a,gx,du,ds0,mu_vec,settings);
 
         %% ---------- Line search
 
         alpha = 1;
-        [z,xN,lambda,mu,muN] = Line_search_mex(dz, dxN, lambda, mu, muN, alpha, input, settings);
+        [z,xN,lambda,mu,muN] = Line_search(dz, dxN, lambda, mu, muN, alpha, input, settings);
 
         %% ---------- KKT calculation 
         

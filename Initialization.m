@@ -82,11 +82,12 @@ switch settings.model
         input.lbN=lbN;               
         input.ubN=ubN;    
     case 'Hexacopter'
-        x0=zeros(nx,1);
+        x0=zeros(nx,1); %x0(12) =1; x0(13:18) = [4.0699, 4.3772, 5.1754, 4.0504, 4.3580, 5.1781];
         u0=zeros(nu,1);
         para0=0;
         
         lb=zeros(nu,1);
+%         lb = -inf*ones(nu,1);
         ub=100*ones(nu,1);
         lbN=lb;
         ubN=ub;
@@ -96,8 +97,8 @@ switch settings.model
         input.lbN=lbN;               
         input.ubN=ubN;  
         
-        q = [5e0, 5e0, 5e0, 0.1, 0.1, 0.1, 1e-3*ones(1,nu)];
-        qN = ones(1,nyN);
+        q = [5e0, 5e0, 5e0, 0.5, 0.5, 0.5, 1e-3*ones(1,nu)];
+        qN = q(1:nyN);
         Q = diag(q);
         QN = diag(qN);
 end
