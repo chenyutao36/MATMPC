@@ -86,11 +86,13 @@ switch settings.model
         u0=zeros(nu,1);
         para0=0;
         
-        lb=zeros(nu,1);
-%         lb = -inf*ones(nu,1);
-        ub=100*ones(nu,1);
-        lbN=lb;
-        ubN=ub;
+        lb = 0*ones(nc,1);
+        ub = 100*ones(nc,1);
+        lbN = lb;
+        ubN = ub;
+        
+        input.lbu = -inf*ones(N*nu,1);
+        input.ubu = inf*ones(N*nu,1);
         
         input.lb=repmat(lb,1,N);
         input.ub=repmat(ub,1,N); 

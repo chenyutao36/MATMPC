@@ -87,8 +87,7 @@ void sim_erk(double **in, double **out, mxArray **Jac, mxArray *mem){
         
         ode_out = (double **) mxMalloc( 1 * sizeof(double*));
         mexMakeMemoryPersistent(ode_out);
-        
-        
+              
         vde_in = (double **) mxMalloc( 5 * sizeof(double*));
         mexMakeMemoryPersistent(vde_in);
         

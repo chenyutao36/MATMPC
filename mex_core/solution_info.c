@@ -13,6 +13,7 @@
 // #endif
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
+#define MIN(a,b) (((a)<(b))?(a):(b))
 
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
@@ -41,8 +42,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize np = mxGetScalar( mxGetField(prhs[5], 0, "np") ); if(np==0) np++;
     mwSize ny = mxGetScalar( mxGetField(prhs[5], 0, "ny") );
     mwSize nyN = mxGetScalar( mxGetField(prhs[5], 0, "nyN") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[5], 0, "nc") ); nc *= 2;
-    mwSize ncN = mxGetScalar( mxGetField(prhs[5], 0, "ncN") ); ncN *=2;
+    mwSize nc = mxGetScalar( mxGetField(prhs[5], 0, "nc") );
+    mwSize ncN = mxGetScalar( mxGetField(prhs[5], 0, "ncN") );
     mwSize N = mxGetScalar( mxGetField(prhs[5], 0, "N") );
       
     mwIndex i=0,j=0;
@@ -65,7 +66,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *L = (double *) mxCalloc( nw, sizeof(double));
     double *a = (double *) mxCalloc( neq, sizeof(double));
     memcpy(&a[0], &ds0[0], nx*sizeof(double));
-    double *c = (double *) mxCalloc( nineq, sizeof(double));
+    double *lc = (double *) mxCalloc( nineq, sizeof(double));
+    double *uc = (double *) mxCalloc( nineq, sizeof(double));
     
     double *work;
     double KKT=0,eq_res=0,ineq_res=0;
@@ -97,11 +99,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 vec_out[0][j] -= xN[j];
         }
         
-        vec_out[0] = c + i*nc;
-        ineq_Fun(vec_in, vec_out);
-        for (j=0;j<nc/2;j++){
-            vec_out[0][nc/2+j] = lb[j] - vec_out[0][j];
-            vec_out[0][j] -= ub[j];
+        vec_out[0] = lc + i*nc;
+        path_con_Fun(vec_in, vec_out);
+        for (j=0;j<nc;j++){
+            uc[i*nc+j] = ub[j] - vec_out[0][j];
+            vec_out[0][j] = lb[j] - vec_out[0][j];            
         }
     }
     vec_in[0] = xN;
@@ -114,17 +116,18 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     adjN_Fun(vec_in, vec_out);
     daxpy(&nx, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);
     
-    vec_out[0] = c + N*nc;
-    ineqN_Fun(vec_in, vec_out);
-    for (j=0;j<ncN/2;j++){
-        vec_out[0][ncN/2+j] = lbN[j] - vec_out[0][j];
-        vec_out[0][j] -= ub[j];
+    vec_out[0] = lc + N*nc;
+    path_con_N_Fun(vec_in, vec_out);
+    for (j=0;j<ncN;j++){
+        uc[i*nc+j] = ubN[j] - vec_out[0][j];
+        vec_out[0][j] = lbN[j] - vec_out[0][j];            
     }
          
     eq_res = dlange(Norm, &neq, &one_i, a, &one_i, work);
     KKT = dlange(Norm, &nw, &one_i, L, &one_i, work);
     for (i=0;i<nineq;i++){
-        ineq_res += MAX(c[i],0);
+        ineq_res += MIN(uc[i],0);
+        ineq_res += MAX(lc[i],0);
     }
     
     plhs[0] = mxCreateDoubleScalar(eq_res); // eq_res
@@ -135,5 +138,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mxFree(vec_out);
     mxFree(L);
     mxFree(a);
-    mxFree(c);
+    mxFree(lc);
+    mxFree(uc);
 }

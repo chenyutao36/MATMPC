@@ -24,7 +24,7 @@ ncN = settings.ncN;  % No. of constraints at terminal stage
 N     = 20; % No. of shooting points
 nw    = (N+1)*nx+N*nu; % No. of total optimization varialbes
 neq   = (N+1)*nx; % No. of equality constraints
-nineq = N*2*nc+2*ncN; % No. of inequality constraints (by default we assume there are lower and upper bounds)
+nineq = N*nc+ncN; % No. of inequality constraints (by default we assume there are lower and upper bounds)
 
 settings.N  = N;
 settings.nw = nw; 
@@ -83,8 +83,8 @@ end
 % Multipliers
 
 input.lambda=ones(nx,N+1);
-input.mu=zeros(2*nc,N);
-input.muN=zeros(2*ncN,1);
+input.mu=zeros(nc,N);
+input.muN=zeros(ncN,1);
 
 % Integrator settings
 
@@ -156,14 +156,15 @@ while time(end) < Tf
     % time-varying reference (no reference preview)
 %     input.y = repmat(REF(iter,:)',1,N);
 %     input.yN = REF(iter,1:nyN)';
-
+    
+    %time-varying reference (reference preview)
 %     REF = [];
 %     for i=1:N+1
 %         y = sin(time(end)+(i-1)*Ts);
 %         REF = [REF [0 y 1 0 0 0 0 0 0 0 0 0]'];
 %     end    
 %     ref_traj=[ref_traj,REF(2,1)];
-    % time-varying reference (reference preview)
+%     
 %     input.y = REF(:,1:N);
 %     input.yN = REF(1:nyN,N+1);
            
@@ -179,7 +180,7 @@ while time(end) < Tf
         input.z=[output.z(:,2:end),[output.xN; output.z(nx+1:nx+nu,end)]];  
         input.xN=output.xN;
         input.lambda=[output.lambda(:,2:end),output.lambda(:,end)];
-        input.mu=[output.mu(:,2:end),[output.muN;output.mu(2*ncN+1:2*nc,end)]];
+        input.mu=[output.mu(:,2:end),[output.muN;output.mu(ncN+1:nc,end)]];
         input.muN=output.muN;
         case 'no'
         input.z=output.z;
@@ -188,11 +189,6 @@ while time(end) < Tf
         input.mu=output.mu;
         input.muN=output.muN;
     end
-%     input.opt.meritfun=output.meritfun;
-    
-%     if strcmp(opt.qpsolver,'qpoases')
-%         input.opt.condensing_matrix.QP=output.opt.condensing_matrix.QP;
-%     end
     
     % collect the statistics
     cpt=output.info.cpuTime;
@@ -211,7 +207,7 @@ while time(end) < Tf
     y_sim = [y_sim; full(h_fun('h_fun', xf, sim_input.u, sim_input.p))'];  
     
     % Collect constraints
-    constraints=[constraints; full( ineq_fun('ineq_fun', xf, sim_input.u, sim_input.p) )'];
+    constraints=[constraints; full( path_con_fun('path_con_fun', xf, sim_input.u, sim_input.p) )'];
     
     % store the optimal solution and states
     controls_MPC = [controls_MPC; output.z(nx+1:nx+nu,1)'];

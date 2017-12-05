@@ -15,16 +15,16 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
 
         tshoot = tic;
 %         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_casadi(input, settings, mem);
-        [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_erk(input, settings, mem);
+        [Q_h,S,R,A,B,Cx,Cu,gx,gu,a,ds0,lc,uc] = qp_generation_erk(input, settings, mem);
 %         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_irk(input, settings, mem);
         tSHOOT = toc(tshoot)*1000; 
         
         tcond=tic;
-        [Hc,gc, Cc,cc] = Condensing(A,B,Q_h,S,R,Cx,Cu,ds0,a,c,gx,gu,settings);
+        [Hc,gc, Cc, lcc, ucc] = Condensing(A,B,Q_h,S,R,Cx,Cu,ds0,a,gx,gu,lc, uc, settings);
         tCOND=toc(tcond)*1e3;
         
         %% ----------  Solving QP
-        [du,mu_vec,tQP,mem] = mpc_qp_solve_dense(Hc,gc,Cc,cc, settings, mem);
+        [du,mu_vec,tQP,mem] = mpc_qp_solve_dense(Hc,gc,Cc,input.lbu,input.ubu,lcc,ucc,settings,mem);
 
         [dz, dxN, lambda, mu, muN] = Recover(Q_h,S,A,B,Cx,a,gx,du,ds0,mu_vec,settings);
 
@@ -36,6 +36,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         %% ---------- KKT calculation 
         
         [eq_res, ineq_res, KKT] = solution_info(lambda, mu, muN, ds0, input, settings);
+        
         %% ---------- Multiple call management and convergence check
                         
 %         CPT.INT=CPT.INT+tINT;
@@ -60,7 +61,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
     output.mu=mu;
     output.muN=muN;
 
-    % output.info.iteration_num=i;    
+%     output.info.iteration_num=i;    
     output.info.kktValue=KKT;
     output.info.eq_res=eq_res;
     output.info.ineq_res=ineq_res;
@@ -68,6 +69,5 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
     output.info.condTime=CPT.COND;
     output.info.qpTime=CPT.QP;
 
-%     output.meritfun=input.opt.meritfun;
 end
 

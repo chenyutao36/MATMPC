@@ -211,7 +211,7 @@ void gi_Fun(double **in, double **out) {
     gi_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-void ineq_Fun(double **in, double **out) {
+void path_con_Fun(double **in, double **out) {
 
     const double *xi = in[0];
     const double *ui = in[1];
@@ -232,7 +232,7 @@ void ineq_Fun(double **in, double **out) {
     
     casadi_res[0] = ci;
 
-    ineq_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+    path_con_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
 void Ci_Fun(double **in, mxArray **out) {
@@ -309,7 +309,7 @@ void gN_Fun(double **in, double **out) {
     gN_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-void ineqN_Fun(double **in, double **out) {
+void path_con_N_Fun(double **in, double **out) {
 
     const double *xN = in[0];
     const double *paraN = in[1];
@@ -328,7 +328,7 @@ void ineqN_Fun(double **in, double **out) {
     
     casadi_res[0] = cN;
 
-    ineqN_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+    path_con_N_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
 void CN_Fun(double **in, mxArray **out) {

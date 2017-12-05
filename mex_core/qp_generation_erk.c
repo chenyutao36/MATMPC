@@ -34,8 +34,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize np = mxGetScalar( mxGetField(prhs[1], 0, "np") ); if(np==0) np++;
     mwSize ny = mxGetScalar( mxGetField(prhs[1], 0, "ny") );
     mwSize nyN = mxGetScalar( mxGetField(prhs[1], 0, "nyN") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); nc *= 2;
-    mwSize ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") ); ncN *=2;
+    mwSize nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
+    mwSize ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
     mwSize N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
     
     plhs[0] = mxCreateCellMatrix(1, N+1); // Qh
@@ -47,9 +47,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     plhs[6] = mxCreateCellMatrix(1, N); // Cu
     plhs[7] = mxCreateDoubleMatrix(nx, N+1, mxREAL); //gx
     plhs[8] = mxCreateDoubleMatrix(nu, N, mxREAL); //gu
-    plhs[9] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL); //c
-    plhs[10] = mxCreateDoubleMatrix(nx,N, mxREAL); //a
-    plhs[11] = mxCreateDoubleMatrix(nx,1,mxREAL); // ds0
+    
+    plhs[9] = mxCreateDoubleMatrix(nx,N, mxREAL); //a
+    plhs[10] = mxCreateDoubleMatrix(nx,1,mxREAL); // ds0
+    
+    plhs[11] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL); //lc
+    plhs[12] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL); //uc
     
     mwIndex i=0,j=0;
     mwSize nz = nx+nu;
@@ -59,9 +62,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
       
     double *gx = mxGetPr(plhs[7]);
     double *gu = mxGetPr(plhs[8]);
-    double *c = mxGetPr(plhs[9]);
-    double *a = mxGetPr(plhs[10]);
-    double *ds0 = mxGetPr(plhs[11]); 
+    
+    double *a = mxGetPr(plhs[9]);
+    double *ds0 = mxGetPr(plhs[10]); 
+    
+    double *lc = mxGetPr(plhs[11]);
+    double *uc = mxGetPr(plhs[12]);
+    
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - z[i];
     
@@ -142,11 +149,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         gi_Fun(vec_in, vec_out);
         
         // constraint residual
-        vec_out[0] = c + i*nc;
-        ineq_Fun(vec_in, vec_out);
-        for (j=0;j<nc/2;j++){
-            vec_out[0][nc/2+j] = lb[j] - vec_out[0][j];
-            vec_out[0][j] -= ub[j];
+        vec_out[0] = lc + i*nc;
+        path_con_Fun(vec_in, vec_out);
+        for (j=0;j<nc;j++){
+            uc[i*nc+j] = ub[j] - vec_out[0][j];
+            vec_out[0][j] = lb[j] - vec_out[0][j];            
         }
         
         // constraint Jacobian
@@ -168,11 +175,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     vec_out[0] = gx+N*nx;
     gN_Fun(vec_in, vec_out);
 
-    vec_out[0] = c + N*nc;
-    ineqN_Fun(vec_in, vec_out);
-    for (j=0;j<ncN/2;j++){
-        vec_out[0][ncN/2+j] = lbN[j] - vec_out[0][j];
-        vec_out[0][j] -= ub[j];
+    vec_out[0] = lc + N*nc;
+    path_con_N_Fun(vec_in, vec_out);
+    for (j=0;j<ncN;j++){
+        uc[i*nc+j] = ubN[j] - vec_out[0][j];
+        vec_out[0][j] = lbN[j] - vec_out[0][j];            
     }
     
     CN_Fun(vec_in, Cons[N]);

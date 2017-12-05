@@ -176,7 +176,9 @@ switch settings.model
         hold on;
         grid on;
         plot(time(1:end-1),y_sim(:,2),'Color',red);
-        %plot(time(1:end-1),ref_traj, 'k--');
+        if isempty(ref_traj) ~=1
+            plot(time(1:end-1),ref_traj, 'k--');
+        end
         title('y');
         
         subplot(323)

@@ -22,8 +22,8 @@ end
 import casadi.*
 
 lambdai=SX.sym('lambdai',nx,1);            % the i th multiplier for equality constraints
-mui=SX.sym('mui',2*nc,1);                  % the i th multiplier for inequality constraints
-muN=SX.sym('muN',2*ncN,1);                 % the N th multiplier for inequality constraints
+mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality constraints
+muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
 
 Ts    = 0.01;  % NMPC sampling time [s]
 
@@ -97,9 +97,9 @@ gxi = jacobian(obji,states)' + SX.zeros(nx,1);
 gui = jacobian(obji,controls)' + SX.zeros(nu,1);
 gxN = jacobian(objN,states)' + SX.zeros(nx,1);
 
-Cxi = jacobian([ineq;-ineq], states) + SX.zeros(2*nc, nx);
-Cui = jacobian([ineq;-ineq], controls) + SX.zeros(2*nc, nu);
-CxN = jacobian([ineqN;-ineqN],states) + SX.zeros(2*ncN, nx);
+Cxi = jacobian(path_con, states) + SX.zeros(nc, nx);
+Cui = jacobian(path_con, controls) + SX.zeros(nc, nu);
+CxN = jacobian(path_con_N, states) + SX.zeros(ncN, nx);
 
 Ji_fun=Function('Ji_fun',{z,params,refs,Q},{Jxi,Jui},{'z','params','refs','Q'},{'Jxi','Jui'});
 JN_fun=Function('JN_fun',{states,params,refN,QN},{JxN},{'states','params','refN','QN'},{'JxN'});
@@ -113,8 +113,8 @@ CN_fun=Function('CN_fun',{states},{CxN},{'states'},{'CxN'});
 dobj = SX.zeros(nx+nu,1) + jacobian(obji,z)';
 dobjN = SX.zeros(nx,1) + jacobian(objN,states)';
 adj_dG = SX.zeros(nx+nu,1) + jtimes(X, z, lambdai, true);
-adj_dB = SX.zeros(nx+nu,1) + jtimes([ineq;-ineq], z, mui, true);
-adj_dBN = SX.zeros(nx,1) + jtimes([ineqN;-ineqN], states, muN, true);
+adj_dB = SX.zeros(nx+nu,1) + jtimes(path_con, z, mui, true);
+adj_dBN = SX.zeros(nx,1) + jtimes(path_con_N, states, muN, true);
 
 adj_fun = Function('adj_fun',{z,params,refs,Q, lambdai, mui},{dobj, adj_dG, adj_dB});
 adjN_fun = Function('adjN_fun',{states,params,refN, QN, muN},{dobjN, adj_dBN});
@@ -128,8 +128,8 @@ if strcmp(generate,'y')
     display('                           ');
     display('Generating source code...');
 
-    if exist('Source_Codes','dir')~=7
-        mkdir('Source_Codes');
+    if exist([pwd,'Source_Codes'],'dir')~=7
+        mkdir([pwd,'Source_Codes']);
     end
     
     cd Source_Codes
@@ -137,8 +137,8 @@ if strcmp(generate,'y')
     opts = struct( 'main', false, 'mex' , true ) ; 
     Simulate_system.generate('Simulate_system.c',opts);
     h_fun.generate('h_fun.c',opts);
-    ineq_fun.generate('ineq_fun.c',opts);
-    ineqN_fun.generate('ineqN_fun.c',opts);
+    path_con_fun.generate('path_con_fun.c',opts);
+    path_con_N_fun.generate('path_con_N_fun.c',opts);
    
     opts = struct('main',false,'mex',false,'with_header',true);
     cd ../mex_core
@@ -150,8 +150,8 @@ if strcmp(generate,'y')
         P.add(F);
         P.add(D);
         P.add(h_fun);
-        P.add(ineq_fun);
-        P.add(ineqN_fun);
+        P.add(path_con_fun);
+        P.add(path_con_N_fun);
         P.add(gi_fun);
         P.add(gN_fun);
         P.add(Ji_fun);
@@ -184,8 +184,8 @@ if strcmp(compile,'y')
         display('Optimization flag turned on');
         display('                           ');
         
-       mex -largeArrayDims ineq_fun.c
-       mex -largeArrayDims ineqN_fun.c
+       mex -largeArrayDims path_con_fun.c
+       mex -largeArrayDims path_con_N_fun.c
        mex -largeArrayDims h_fun.c
        mex -largeArrayDims Simulate_system.c
        
@@ -199,8 +199,8 @@ if strcmp(compile,'y')
         display('Optimization flag turned off');
         display('                            ');
         
-        mex -largeArrayDims -g ineq_fun.c
-        mex -largeArrayDims -g ineqN_fun.c
+        mex -largeArrayDims -g path_con_fun.c
+        mex -largeArrayDims -g path_con_N_fun.c
         mex -largeArrayDims -g h_fun.c
         mex -largeArrayDims -g Simulate_system.c
         

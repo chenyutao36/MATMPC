@@ -23,8 +23,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     mwSize nx = mxGetScalar( mxGetField(prhs[7], 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(prhs[7], 0, "nu") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[7], 0, "nc") ); nc *= 2;
-    mwSize ncN = mxGetScalar( mxGetField(prhs[7], 0, "ncN") ); ncN *=2;
+    mwSize nc = mxGetScalar( mxGetField(prhs[7], 0, "nc") );
+    mwSize ncN = mxGetScalar( mxGetField(prhs[7], 0, "ncN") );
     mwSize N = mxGetScalar( mxGetField(prhs[7], 0, "N") );
     
     mwSize nz = nx+nu;

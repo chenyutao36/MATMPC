@@ -7,13 +7,13 @@
 
 %% Dimensions
 
-nx=12+6;  % No. of states
+nx=18;  % No. of states
 nu=6;  % No. of controls
-ny=6+nu; % No. of outputs
+ny=12; % No. of outputs
 nyN=6; % No. of outputs at the terminal point
 np=0; % No. of model parameters
-nc=nu;
-ncN=nu;
+nc=6; % No. of general inequality constraints
+ncN=6; % No. of general inequality constraints
 
 import casadi.*
 
@@ -105,13 +105,16 @@ hN = h(1:nyN);
 h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
 hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
 
-ineq=[f1;f2;f3;f4;f5;f6];
-ineqN=ineq;
+% bx_idx = 13:18; % the index of state bound constraints
+% nbx = length(bx_idx);
+% Bx = zeros(nbx, nx);
+% for i=1:nbx
+%     Bx(i,bx_idx(i))=1.0;
+% end
 
-ineq_fun=Function('ineq_fun', {states,controls,params}, {ineq},{'states','controls','params'},{'ineq'});
-ineqN_fun=Function('ineqN_fun', {states,params}, {ineqN},{'states','params'},{'ineqN'});
+path_con = [f1;f2;f3;f4;f5;f6]; % general inequality path constraints (including bounds on states)
+path_con_N = [f1;f2;f3;f4;f5;f6]; %
 
-lb_ineq=SX.sym('lb_ineq',length(ineq),1);
-ub_ineq=SX.sym('ub_ineq',length(ineq),1);
-lbN_ineq=SX.sym('lbN_ineq',length(ineqN),1);
-ubN_ineq=SX.sym('ubN_ineq',length(ineqN),1);
+path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
+path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});
+
