@@ -151,23 +151,23 @@ while time(end) < Tf
     % the reference input.yN is a nyN by 1 vector
     
     % time-invariant reference
-    input.y = repmat(REF',1,N);
-    input.yN = REF(1:nyN)';
+%     input.y = repmat(REF',1,N);
+%     input.yN = REF(1:nyN)';
     
     % time-varying reference (no reference preview)
 %     input.y = repmat(REF(iter,:)',1,N);
 %     input.yN = REF(iter,1:nyN)';
     
     %time-varying reference (reference preview)
-%     REF = [];
-%     for i=1:N+1
-%         y = sin(time(end)+(i-1)*Ts);
-%         REF = [REF [0 y 1 0 0 0 0 0 0 0 0 0]'];
-%     end    
-%     ref_traj=[ref_traj,REF(2,1)];
+    REF = [];
+    for i=1:N+1
+        y = sin(time(end)+(i-1)*Ts_st);
+        REF = [REF [0 y 0 0 0 0]'];
+    end    
+    ref_traj=[ref_traj,REF(2,1)];
 %     
-%     input.y = REF(:,1:N);
-%     input.yN = REF(1:nyN,N+1);
+    input.y = REF(:,1:N);
+    input.yN = REF(1:nyN,N+1);
            
     % obtain the state measurement
     input.x0 = state_sim(end,:)';

@@ -7,13 +7,13 @@
 
 %% Dimensions
 
-nx=18;  % No. of states
+nx=12;  % No. of states
 nu=6;  % No. of controls
-ny=12; % No. of outputs
+ny=6; % No. of outputs
 nyN=6; % No. of outputs at the terminal point
 np=0; % No. of model parameters
 nc=6; % No. of general inequality constraints
-ncN=6; % No. of general inequality constraints
+ncN=1; % No. of general inequality constraints
 
 import casadi.*
 
@@ -58,19 +58,19 @@ w=states(9);
 x=states(10);
 y=states(11);
 z=states(12);
-f1=states(13);
-f2=states(14);
-f3=states(15);
-f4=states(16);
-f5=states(17);
-f6=states(18);
+% f1=states(13);
+% f2=states(14);
+% f3=states(15);
+% f4=states(16);
+% f5=states(17);
+% f6=states(18);
 
-df1=controls(1);
-df2=controls(2);
-df3=controls(3);
-df4=controls(4);
-df5=controls(5);
-df6=controls(6);
+f1=controls(1);
+f2=controls(2);
+f3=controls(3);
+f4=controls(4);
+f5=controls(5);
+f6=controls(6);
 
 x_dot = [ p+r*cos(phi)*tan(theta)+q*sin(phi)*tan(theta);...
           q*cos(phi) - r*sin(phi);...
@@ -84,12 +84,12 @@ x_dot = [ p+r*cos(phi)*tan(theta)+q*sin(phi)*tan(theta);...
           w*(sin(phi)*sin(psi)+cos(phi)*cos(psi)*sin(theta)) - v*(cos(phi)*sin(psi)-cos(psi)*sin(phi)*sin(theta)) + u*cos(psi)*cos(theta);...
           v*(cos(phi)*cos(psi)+sin(phi)*sin(psi)*sin(theta)) - w*(sin(phi)*cos(psi)-sin(psi)*cos(phi)*sin(theta)) + u*sin(psi)*cos(theta);...
           w*cos(phi)*cos(theta)-u*sin(theta)+v*cos(theta)*sin(phi);
-          df1;...
-          df2;...
-          df3;...
-          df4;...
-          df5;...
-          df6
+%           df1;...
+%           df2;...
+%           df3;...
+%           df4;...
+%           df5;...
+%           df6
     ];
 
 
@@ -98,22 +98,17 @@ impl_f = xdot - x_dot;
      
 %% Objectives and constraints
 
-h = [x;y;z;phi;theta;psi;controls];
+h = [x;y;z;phi;theta;psi];
 
 hN = h(1:nyN);
 
 h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
 hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
 
-% bx_idx = 13:18; % the index of state bound constraints
-% nbx = length(bx_idx);
-% Bx = zeros(nbx, nx);
-% for i=1:nbx
-%     Bx(i,bx_idx(i))=1.0;
-% end
-
-path_con = [f1;f2;f3;f4;f5;f6]; % general inequality path constraints (including bounds on states)
-path_con_N = [f1;f2;f3;f4;f5;f6]; %
+% general inequality path constraints (including bounds on states)
+path_con = [f1;f2;f3;f4;f5;f6]; 
+% path_con_N = [f1;f2;f3;f4;f5;f6]; %
+path_con_N = states(1);
 
 path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
 path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});

@@ -205,78 +205,78 @@ switch settings.model
         plot(time(1:end-1),y_sim(:,6),'Color',red);
         title('psi');
         
-        figure();
-        subplot(321)
-        hold on;
-        grid on;
-        plot(time(1:end),state_sim(:,13),'Color',red);
-        title('f1');
+%         figure();
+%         subplot(321)
+%         hold on;
+%         grid on;
+%         plot(time(1:end),state_sim(:,13),'Color',red);
+%         title('f1');
+%         
+%         subplot(322)
+%         hold on;
+%         grid on;
+%         plot(time(1:end),state_sim(:,14),'Color',red);
+%         title('f2');
+%         
+%         subplot(323)
+%         hold on;
+%         grid on;
+%         plot(time(1:end),state_sim(:,15),'Color',red);
+%         title('f3');
+%         
+%         subplot(324)
+%         hold on;
+%         grid on;
+%         plot(time(1:end),state_sim(:,16),'Color',red);
+%         title('f4');
+%         
+%         subplot(325)
+%         hold on;
+%         grid on;
+%         plot(time(1:end),state_sim(:,17),'Color',red);
+%         title('f5');
+%         
+%         subplot(326)
+%         hold on;
+%         grid on;
+%         plot(time(1:end),state_sim(:,18),'Color',red);
+%         title('f6');
         
-        subplot(322)
-        hold on;
-        grid on;
-        plot(time(1:end),state_sim(:,14),'Color',red);
-        title('f2');
-        
-        subplot(323)
-        hold on;
-        grid on;
-        plot(time(1:end),state_sim(:,15),'Color',red);
-        title('f3');
-        
-        subplot(324)
-        hold on;
-        grid on;
-        plot(time(1:end),state_sim(:,16),'Color',red);
-        title('f4');
-        
-        subplot(325)
-        hold on;
-        grid on;
-        plot(time(1:end),state_sim(:,17),'Color',red);
-        title('f5');
-        
-        subplot(326)
-        hold on;
-        grid on;
-        plot(time(1:end),state_sim(:,18),'Color',red);
-        title('f6');
-        
-        figure();
-        subplot(321)
-        hold on;
-        grid on;
-        plot(time(1:end-1),y_sim(:,7),'Color',red);
-        title('df1');
-        
-        subplot(322)
-        hold on;
-        grid on;
-        plot(time(1:end-1),y_sim(:,8),'Color',red);
-        title('df2');
-        
-        subplot(323)
-        hold on;
-        grid on;
-        plot(time(1:end-1),y_sim(:,9),'Color',red);
-        title('df3');
-        
-        subplot(324)
-        hold on;
-        grid on;
-        plot(time(1:end-1),y_sim(:,10),'Color',red);
-        title('df4');
-        
-        subplot(325)
-        hold on;
-        grid on;
-        plot(time(1:end-1),y_sim(:,11),'Color',red);
-        title('df5');
-        
-        subplot(326)
-        hold on;
-        grid on;
-        plot(time(1:end-1),y_sim(:,12),'Color',red);
-        title('df6');
+%         figure();
+%         subplot(321)
+%         hold on;
+%         grid on;
+%         plot(time(1:end-1),y_sim(:,7),'Color',red);
+%         title('df1');
+%         
+%         subplot(322)
+%         hold on;
+%         grid on;
+%         plot(time(1:end-1),y_sim(:,8),'Color',red);
+%         title('df2');
+%         
+%         subplot(323)
+%         hold on;
+%         grid on;
+%         plot(time(1:end-1),y_sim(:,9),'Color',red);
+%         title('df3');
+%         
+%         subplot(324)
+%         hold on;
+%         grid on;
+%         plot(time(1:end-1),y_sim(:,10),'Color',red);
+%         title('df4');
+%         
+%         subplot(325)
+%         hold on;
+%         grid on;
+%         plot(time(1:end-1),y_sim(:,11),'Color',red);
+%         title('df5');
+%         
+%         subplot(326)
+%         hold on;
+%         grid on;
+%         plot(time(1:end-1),y_sim(:,12),'Color',red);
+%         title('df6');
 end
 
