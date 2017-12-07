@@ -102,7 +102,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             if (sim_method == 1)
                 size = sim_erk_calculate_workspace_size(prhs[6],false);
             if (sim_method ==2)
-                size = sim_irk_calculate_workspace_size(prhs[6]);
+                size = sim_irk_calculate_workspace_size(prhs[6],false);
 
             workspace = mxMalloc(size);
             mexMakeMemoryPersistent(workspace);  
@@ -149,7 +149,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             sim_erk(ode_in, vec_out, Sens, prhs[6], false, workspace);
         }
         if (sim_method == 2){
-            F_Fun(vec_in, vec_out);
+            mxArray *Sens[2];
+            ode_in[0]=z+i*nz;
+            ode_in[1]=z+i*nz+nx;
+            ode_in[2]=od+i*np;
+            sim_irk(ode_in, vec_out, Sens, prhs[6], false, workspace);
         }
         
         if (i < N-1){

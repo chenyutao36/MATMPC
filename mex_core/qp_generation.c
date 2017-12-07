@@ -13,6 +13,13 @@
 // #define dgemv dgemv_
 // #endif
 
+static void *workspace = NULL;
+
+void exitFcn_sim(){
+    if (workspace!=NULL)
+        mxFree(workspace);
+}
+
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
@@ -37,6 +44,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
     mwSize ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
     mwSize N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
+    
+    int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
     
     plhs[0] = mxCreateCellMatrix(1, N+1); // Qh
     plhs[1] = mxCreateCellMatrix(1, N); // S
@@ -73,12 +82,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         ds0[i] = x0[i] - z[i];
     
     // allocate memory
-    mxArray ***Sens = (mxArray ***) mxMalloc(N * sizeof(mxArray**));
-    mxArray ***Jac = (mxArray ***) mxMalloc((N+1) * sizeof(mxArray**));
-    mxArray ***Cons = (mxArray ***) mxMalloc((N+1) * sizeof(mxArray**));
-    mxArray **Qh = (mxArray **) mxMalloc((N+1) * sizeof(mxArray*));
-    mxArray **S = (mxArray **) mxMalloc(N * sizeof(mxArray*));
-    mxArray **R = (mxArray **) mxMalloc(N * sizeof(mxArray*));
+    mxArray **Sens[N];
+    mxArray **Jac[N+1];
+    mxArray **Cons[N+1];
+    mxArray *Qh[N+1];
+    mxArray *S[N];
+    mxArray *R[N];
     for(i=0;i<N;i++){
         Sens[i] = (mxArray **) mxMalloc(2 * sizeof(mxArray*));
         Sens[i][0] = mxCreateDoubleMatrix(nx, nx, mxREAL);
@@ -102,11 +111,24 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     Cons[N] = (mxArray **) mxMalloc(sizeof(mxArray*));
     Cons[N][0] = mxCreateDoubleMatrix(ncN, nx, mxREAL);
     
-    double **vec_out = (double **) mxMalloc(2 * sizeof(double*));    
-    double **vec_in = (double **) mxMalloc(4 * sizeof(double*));
+    double *vec_in[4];
+    double *vec_out[2];    
     vec_in[3] = Q;
+   
+    double *ode_in[3];
     
-    double **ode_in = (double **) mxMalloc(3 * sizeof(double*));   
+//     void *workspace;
+    if (workspace== NULL && sim_method!=0){
+        int size = 0;
+        if (sim_method == 1)
+            size = sim_erk_calculate_workspace_size(prhs[2],true);
+        if (sim_method ==2)
+            size = sim_irk_calculate_workspace_size(prhs[2],true);    
+        
+        workspace = mxMalloc(size);
+        mexMakeMemoryPersistent(workspace);        
+        mexAtExit(exitFcn_sim);
+    }
     
     // start loop
     for(i=0;i<N;i++){
@@ -117,10 +139,22 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         // integration
         vec_out[0] = a+i*nx;
 
-        ode_in[0]=z+i*nz;
-        ode_in[1]=z+i*nz+nx;
-        ode_in[2]=od+i*np;
-        sim_erk(ode_in, vec_out, Sens[i], prhs[2]);
+        if (sim_method == 0){
+            F_Fun(vec_in, vec_out);
+            D_Fun(vec_in, Sens[i]);  
+        }
+        if (sim_method == 1){
+            ode_in[0]=z+i*nz;
+            ode_in[1]=z+i*nz+nx;
+            ode_in[2]=od+i*np;          
+            sim_erk(ode_in, vec_out, Sens[i], prhs[2], true, workspace);
+        }
+        if (sim_method == 2){
+            ode_in[0]=z+i*nz;
+            ode_in[1]=z+i*nz+nx;
+            ode_in[2]=od+i*np;
+            sim_irk(ode_in, vec_out, Sens[i], prhs[2], true, workspace);
+        }
         
         if (i < N-1){
             for (j=0;j<nx;j++)

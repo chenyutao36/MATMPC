@@ -79,7 +79,7 @@ void *sim_erk_cast_workspace(mxArray *mem, bool forw_sens, void *raw_memory){
         c_ptr += nx*nu * sizeof(double);   
     }
     
-    assert((char*)raw_memory + sim_erk_calculate_workspace_size(mem) >= c_ptr);
+    assert((char*)raw_memory + sim_erk_calculate_workspace_size(mem, forw_sens) >= c_ptr);
 
     return (void *)workspace;
 
@@ -197,7 +197,7 @@ int sim_erk(double **in, double **out, mxArray **Jac, mxArray *mem, bool forw_se
     return 0;      
 }
 
-int sim_irk_calculate_workspace_size(mxArray *mem)
+int sim_irk_calculate_workspace_size(mxArray *mem, bool forw_sens)
 {
     mwSize nx = mxGetScalar( mxGetField(mem, 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(mem, 0, "nu") );
@@ -212,10 +212,13 @@ int sim_irk_calculate_workspace_size(mxArray *mem)
     size += nx * sizeof(double); // xt
     size += 2 *ldG * sizeof(double); // K, rG
     size += ldG*ldG * sizeof(double); // JGK
-    size += ldG*nx * sizeof(double); // JGx
-    size += ldG*nu * sizeof(double); // JGu
-    size += ldG*nx * sizeof(double); // JKx
-    size += ldG*nu * sizeof(double); // JKu
+    
+    if (forw_sens){        
+        size += ldG*nx * sizeof(double); // JGx
+        size += ldG*nu * sizeof(double); // JGu
+        size += ldG*nx * sizeof(double); // JKx
+        size += ldG*nu * sizeof(double); // JKu
+    }
       
     size += nx*nx*sizeof(double); //impl_ode_out[1]
     size += nx*nu*sizeof(double); //impl_ode_out[2]
@@ -226,7 +229,7 @@ int sim_irk_calculate_workspace_size(mxArray *mem)
     return size;
 }
 
-void *sim_irk_cast_workspace(mxArray *mem, void *raw_memory){
+void *sim_irk_cast_workspace(mxArray *mem, bool forw_sens, void *raw_memory){
     mwSize nx = mxGetScalar( mxGetField(mem, 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(mem, 0, "nu") );
     mwSize num_stages = mxGetScalar( mxGetField(mem, 0, "num_stages") );
@@ -255,17 +258,19 @@ void *sim_irk_cast_workspace(mxArray *mem, void *raw_memory){
     workspace->JGK = (double *)c_ptr;
     c_ptr += ldG * ldG * sizeof(double);
     
-    workspace->JGx = (double *)c_ptr;
-    c_ptr += ldG*nx * sizeof(double);
-    
-    workspace->JGu = (double *)c_ptr;
-    c_ptr += ldG*nu * sizeof(double);
-    
-    workspace->JKx = (double *)c_ptr;
-    c_ptr += ldG*nx * sizeof(double);
-    
-    workspace->JKu = (double *)c_ptr;
-    c_ptr += ldG*nu * sizeof(double);
+    if (forw_sens){
+        workspace->JGx = (double *)c_ptr;
+        c_ptr += ldG*nx * sizeof(double);
+
+        workspace->JGu = (double *)c_ptr;
+        c_ptr += ldG*nu * sizeof(double);
+
+        workspace->JKx = (double *)c_ptr;
+        c_ptr += ldG*nx * sizeof(double);
+
+        workspace->JKu = (double *)c_ptr;
+        c_ptr += ldG*nu * sizeof(double);
+    }
     
     workspace->impl_ode_out[1] = (double *)c_ptr;
     c_ptr += nx*nx * sizeof(double);
@@ -279,15 +284,13 @@ void *sim_irk_cast_workspace(mxArray *mem, void *raw_memory){
     workspace->IPIV = (mwIndex *)c_ptr;
     c_ptr += ldG * sizeof(mwIndex);
     
-    assert((char*)raw_memory + sim_irk_calculate_workspace_size(mem) >= c_ptr);
+    assert((char*)raw_memory + sim_irk_calculate_workspace_size(mem, forw_sens) >= c_ptr);
 
     return (void *)workspace;
 
 }
 
-int sim_irk(double **in, double **out, mxArray **Jac, mxArray *mem, void *work_){
-    
-    int kk,pp;
+int sim_irk(double **in, double **out, mxArray **Jac, mxArray *mem, bool forw_sens, void *work_){
     
     int istep, i, j, k, iter;
     double a,b;
@@ -314,7 +317,7 @@ int sim_irk(double **in, double **out, mxArray **Jac, mxArray *mem, void *work_)
     mwSize newton_iter = mxGetScalar( mxGetField(mem, 0, "newton_iter") );
     double *JFK = mxGetPr( mxGetField(mem, 0, "JFK"));
     
-    sim_irk_workspace *workspace = (sim_irk_workspace *) sim_irk_cast_workspace(mem, work_);
+    sim_irk_workspace *workspace = (sim_irk_workspace *) sim_irk_cast_workspace(mem, forw_sens, work_);
     
     double *xt = workspace->xt;
     double *K = workspace->K;
@@ -335,8 +338,11 @@ int sim_irk(double **in, double **out, mxArray **Jac, mxArray *mem, void *work_)
     mwIndex INFO = 0;
              
     memcpy(&xn[0], &x[0], nx*sizeof(double));
-    memcpy(&Jac_x[0], &Sx[0], nx*nx*sizeof(double));
-    memcpy(&Jac_u[0], &Su[0], nx*nu*sizeof(double));
+    
+    if (forw_sens){
+        memcpy(&Jac_x[0], &Sx[0], nx*nx*sizeof(double));
+        memcpy(&Jac_u[0], &Su[0], nx*nu*sizeof(double));
+    }
     
     impl_ode_in[1] = in[1]; // u
     impl_ode_in[2] = in[2]; // p
@@ -385,55 +391,55 @@ int sim_irk(double **in, double **out, mxArray **Jac, mxArray *mem, void *work_)
                                     
             daxpy(&ldG, &minus_one_d, rG, &one_i, K, &one_i);
         }//end iter
-        
-        
-        
+               
         // evaluate forward sens
-        for(i=0; i<num_stages; i++){  
-            
-            memcpy(&xt[0], &xn[0], nx*sizeof(double));
-            
-            for(j=0; j<num_stages; j++){ 
-                a = A[i+num_stages*j];
-                if(a!=0){
-                   a *= h;
-                   daxpy(&nx, &a, K+j*nx, &one_i, xt, &one_i); 
-                }
-            } 
-           impl_ode_in[0] = xt;
-           impl_ode_in[3] = K + i*nx;
-           impl_ode_out[0] = rG + i*nx;
-      
-           impl_f_Fun(impl_ode_in, impl_ode_out);
-           
-           Block_Fill(nx, nx, impl_ode_out[1], JGx, i*nx, 0, ldG);
-           Block_Fill(nx, nu, impl_ode_out[2], JKu, i*nx, 0, ldG);
-                
-           for (j=0; j<num_stages; j++){ //compute the block (ii,jj)th block = Jt
-               a = A[i + num_stages*j];
-               if (a!=0){
-                   a *= h;
-                   dscal(&jx, &a, impl_ode_out[1], &one_i);                       
-               }
-               if(j==i){
-                   daxpy(&jx, &one_d, impl_ode_out[3], &one_i, impl_ode_out[1], &one_i);
-               }
-               // fill in the i-th, j-th block of JGK
-               Block_Fill(nx, nx, impl_ode_out[1], JGK, i*nx, j*nx, ldG);
-           } // end j
-       }// end i
-            
-       dgetrf(&ldG, &ldG, JGK, &ldG, IPIV, &INFO);
-       
-       dgemm(nTrans, nTrans, &ldG, &nx, &nx, &one_d, JGx, &ldG, Jac_x, &nx, &zero, JKx, &ldG);
-          
-       dgemm(nTrans, nTrans, &ldG, &nu, &nx, &one_d, JGx, &ldG, Jac_u, &nx, &one_d, JKu, &ldG);
-       
-       dgetrs(nTrans, &ldG, &nx, JGK, &ldG, IPIV, JKx, &ldG, &INFO);
-       dgetrs(nTrans, &ldG, &nu, JGK, &ldG, IPIV, JKu, &ldG, &INFO);
-       
-       dgemm(nTrans, nTrans, &nx, &nx, &ldG, &minus_one_d, JFK, &nx, JKx, &ldG, &one_d, Jac_x, &nx);
-       dgemm(nTrans, nTrans, &nx, &nu, &ldG, &minus_one_d, JFK, &nx, JKu, &ldG, &one_d, Jac_u, &nx);
+        if (forw_sens){
+            for(i=0; i<num_stages; i++){  
+
+                memcpy(&xt[0], &xn[0], nx*sizeof(double));
+
+                for(j=0; j<num_stages; j++){ 
+                    a = A[i+num_stages*j];
+                    if(a!=0){
+                       a *= h;
+                       daxpy(&nx, &a, K+j*nx, &one_i, xt, &one_i); 
+                    }
+                } 
+               impl_ode_in[0] = xt;
+               impl_ode_in[3] = K + i*nx;
+               impl_ode_out[0] = rG + i*nx;
+
+               impl_f_Fun(impl_ode_in, impl_ode_out);
+
+               Block_Fill(nx, nx, impl_ode_out[1], JGx, i*nx, 0, ldG);
+               Block_Fill(nx, nu, impl_ode_out[2], JKu, i*nx, 0, ldG);
+
+               for (j=0; j<num_stages; j++){ //compute the block (ii,jj)th block = Jt
+                   a = A[i + num_stages*j];
+                   if (a!=0){
+                       a *= h;
+                       dscal(&jx, &a, impl_ode_out[1], &one_i);                       
+                   }
+                   if(j==i){
+                       daxpy(&jx, &one_d, impl_ode_out[3], &one_i, impl_ode_out[1], &one_i);
+                   }
+                   // fill in the i-th, j-th block of JGK
+                   Block_Fill(nx, nx, impl_ode_out[1], JGK, i*nx, j*nx, ldG);
+               } // end j
+           }// end i
+
+           dgetrf(&ldG, &ldG, JGK, &ldG, IPIV, &INFO);
+
+           dgemm(nTrans, nTrans, &ldG, &nx, &nx, &one_d, JGx, &ldG, Jac_x, &nx, &zero, JKx, &ldG);
+
+           dgemm(nTrans, nTrans, &ldG, &nu, &nx, &one_d, JGx, &ldG, Jac_u, &nx, &one_d, JKu, &ldG);
+
+           dgetrs(nTrans, &ldG, &nx, JGK, &ldG, IPIV, JKx, &ldG, &INFO);
+           dgetrs(nTrans, &ldG, &nu, JGK, &ldG, IPIV, JKu, &ldG, &INFO);
+
+           dgemm(nTrans, nTrans, &nx, &nx, &ldG, &minus_one_d, JFK, &nx, JKx, &ldG, &one_d, Jac_x, &nx);
+           dgemm(nTrans, nTrans, &nx, &nu, &ldG, &minus_one_d, JFK, &nx, JKu, &ldG, &one_d, Jac_u, &nx);
+        }
        
         // update xn
         for (i = 0; i < num_stages; i++){
