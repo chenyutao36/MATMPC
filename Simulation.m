@@ -32,7 +32,7 @@ settings.neq = neq;
 settings.nineq = nineq; 
 
 % solver configurations
-opt.integrator='ERK4'; % 'ERK4-CASADI','ERK4','IRK4'
+opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
 opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
@@ -69,6 +69,7 @@ opt.shifting='no'; % 'yes','no'
 %     input.opt.ipopt.options.ipopt.print_level=0;
 % end
 
+mem = struct;
 if strcmp(opt.qpsolver,'qpoases')
     mem.qpoases.warm_start=0;
     mem.qpoases.hot_start=0;
@@ -88,11 +89,11 @@ input.muN=zeros(ncN,1);
 
 % Integrator settings
 
+
 switch opt.integrator
     case 'ERK4-CASADI'
         mem.sim_method = 0;
     case 'ERK4'
-%         Ts_st = 0.01;
         mem.sim_method = 1;
         mem.A=[0, 0, 0, 0;
                        0.5, 0, 0, 0;
@@ -107,7 +108,7 @@ switch opt.integrator
         mem.Sx = eye(nx);
         mem.Su = zeros(nx,nu);
 
-    case 'IRK4'
+    case 'IRK3'
         mem.sim_method = 2;
         mem.A=[5/36,             2/9-sqrt(15)/15, 5/36-sqrt(15)/30;
                5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;

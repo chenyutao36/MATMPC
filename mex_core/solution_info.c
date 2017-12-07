@@ -1,5 +1,8 @@
 #include "mex.h"
 #include "string.h"
+#include <stdbool.h>
+
+#include "sim.h"
 
 // for builtin blas
 #include "lapack.h"
@@ -14,6 +17,25 @@
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
+
+static double *vec_out[3];
+static double *L = NULL,*a = NULL,*lc = NULL,*uc = NULL;
+static void *workspace = NULL;
+static bool mem_alloc_info = false;
+
+void exitFcn_info(){
+    if (mem_alloc_info){
+        mxFree(vec_out[1]);
+        mxFree(vec_out[2]);
+        mxFree(L);
+        mxFree(a);
+        mxFree(lc);
+        mxFree(uc);       
+    }
+    
+    if (workspace!=NULL)
+        mxFree(workspace);
+}
 
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
@@ -45,6 +67,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize nc = mxGetScalar( mxGetField(prhs[5], 0, "nc") );
     mwSize ncN = mxGetScalar( mxGetField(prhs[5], 0, "ncN") );
     mwSize N = mxGetScalar( mxGetField(prhs[5], 0, "N") );
+    
+    int sim_method = mxGetScalar( mxGetField(prhs[6], 0, "sim_method") );
       
     mwIndex i=0,j=0;
     mwSize nz = nx+nu;
@@ -55,19 +79,42 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double one_d = 1.0, zero = 0.0;
     mwSignedIndex one_i = 1;
     
-    double **vec_out = (double **) mxMalloc(3 * sizeof(double*));
-    vec_out[1] = (double *)mxCalloc(nz, sizeof(double));
-    vec_out[2] = (double *)mxCalloc(nz, sizeof(double));
+    double *vec_in[6];
+    double *ode_in[3];
     
+    if (!mem_alloc_info){
+        vec_out[1] = (double *)mxCalloc(nz, sizeof(double));
+        mexMakeMemoryPersistent(vec_out[1]);
+        vec_out[2] = (double *)mxCalloc(nz, sizeof(double));
+        mexMakeMemoryPersistent(vec_out[2]);
+      
+        L = (double *)mxCalloc( nw, sizeof(double));
+        mexMakeMemoryPersistent(L);
+        a = (double *)mxCalloc( neq, sizeof(double));
+        mexMakeMemoryPersistent(a);
+        lc = (double *)mxCalloc( nineq, sizeof(double));
+        mexMakeMemoryPersistent(lc);
+        uc = (double *)mxCalloc( nineq, sizeof(double));
+        mexMakeMemoryPersistent(uc);
         
-    double **vec_in = (double **) mxMalloc(6 * sizeof(double*));
-    vec_in[3] = Q;
+        if (sim_method!=0){
+            int size = 0;
+            if (sim_method == 1)
+                size = sim_erk_calculate_workspace_size(prhs[6],false);
+            if (sim_method ==2)
+                size = sim_irk_calculate_workspace_size(prhs[6]);
+
+            workspace = mxMalloc(size);
+            mexMakeMemoryPersistent(workspace);  
+        }
+        
+        mem_alloc_info = true;
+        
+        mexAtExit(exitFcn_info);
+    }
     
-    double *L = (double *) mxCalloc( nw, sizeof(double));
-    double *a = (double *) mxCalloc( neq, sizeof(double));
+    vec_in[3] = Q;
     memcpy(&a[0], &ds0[0], nx*sizeof(double));
-    double *lc = (double *) mxCalloc( nineq, sizeof(double));
-    double *uc = (double *) mxCalloc( nineq, sizeof(double));
     
     double *work;
     double KKT=0,eq_res=0,ineq_res=0;
@@ -90,7 +137,21 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         daxpy(&nz, &one_d, vec_out[2], &one_i, vec_out[0], &one_i);
         
         vec_out[0] = a+(i+1)*nx;
-        F_Fun(vec_in, vec_out);
+        
+        if (sim_method == 0){
+            F_Fun(vec_in, vec_out);
+        }
+        if (sim_method == 1){
+            mxArray *Sens[2];
+            ode_in[0]=z+i*nz;
+            ode_in[1]=z+i*nz+nx;
+            ode_in[2]=od+i*np;
+            sim_erk(ode_in, vec_out, Sens, prhs[6], false, workspace);
+        }
+        if (sim_method == 2){
+            F_Fun(vec_in, vec_out);
+        }
+        
         if (i < N-1){
             for (j=0;j<nx;j++)
                 vec_out[0][j] -= z[(i+1)*nz+j];
@@ -134,10 +195,4 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     plhs[1] = mxCreateDoubleScalar(ineq_res); // ineq_res
     plhs[2] = mxCreateDoubleScalar(KKT); // KKT
     
-    mxFree(vec_in);
-    mxFree(vec_out);
-    mxFree(L);
-    mxFree(a);
-    mxFree(lc);
-    mxFree(uc);
 }

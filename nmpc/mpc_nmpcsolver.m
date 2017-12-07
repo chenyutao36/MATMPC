@@ -14,9 +14,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         %% ----------- QP Preparation
 
         tshoot = tic;
-%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_casadi(input, settings, mem);
-        [Q_h,S,R,A,B,Cx,Cu,gx,gu,a,ds0,lc,uc] = qp_generation_erk(input, settings, mem);
-%         [Q_h,S,R,A,B,Cx,Cu,gx,gu,c,a,ds0] = qp_generation_irk(input, settings, mem);
+        [Q_h,S,R,A,B,Cx,Cu,gx,gu,a,ds0,lc,uc] = qp_generation(input, settings, mem);
         tSHOOT = toc(tshoot)*1000; 
         
         tcond=tic;
@@ -35,7 +33,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
 
         %% ---------- KKT calculation 
         
-        [eq_res, ineq_res, KKT] = solution_info(lambda, mu, muN, ds0, input, settings);
+        [eq_res, ineq_res, KKT] = solution_info(lambda, mu, muN, ds0, input, settings, mem);
         
         %% ---------- Multiple call management and convergence check
                         
