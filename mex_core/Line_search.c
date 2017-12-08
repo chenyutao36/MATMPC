@@ -65,12 +65,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     memcpy(&lambda_new[0], &lambda[0], neq*sizeof(double));
     daxpy(&neq, &inc, lambda_old, &one_i, lambda_new, &one_i);
     
-    dscal(&nineq, &alpha, mu, &one_i);
-    memcpy(&mu_new[0], &mu[0], nineq*sizeof(double));
-    daxpy(&nineq, &inc, mu_old, &one_i, mu_new, &one_i);
+    if (nc>0){
+        dscal(&nineq, &alpha, mu, &one_i);
+        memcpy(&mu_new[0], &mu[0], nineq*sizeof(double));
+        daxpy(&nineq, &inc, mu_old, &one_i, mu_new, &one_i);
+    }
     
-    dscal(&ncN, &alpha, muN, &one_i);
-    memcpy(&muN_new[0], &muN[0], ncN*sizeof(double));
-    daxpy(&ncN, &inc, muN_old, &one_i, muN_new, &one_i);
-    
+    if (ncN>0){
+        dscal(&ncN, &alpha, muN, &one_i);
+        memcpy(&muN_new[0], &muN[0], ncN*sizeof(double));
+        daxpy(&ncN, &inc, muN_old, &one_i, muN_new, &one_i);
+    }
 }

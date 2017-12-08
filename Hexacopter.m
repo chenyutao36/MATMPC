@@ -12,8 +12,8 @@ nu=6;  % No. of controls
 ny=6; % No. of outputs
 nyN=6; % No. of outputs at the terminal point
 np=0; % No. of model parameters
-nc=6; % No. of general inequality constraints
-ncN=1; % No. of general inequality constraints
+nc=0; % No. of general inequality constraints
+ncN=0; % No. of general inequality constraints
 
 import casadi.*
 
@@ -106,9 +106,8 @@ h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','para
 hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
 
 % general inequality path constraints (including bounds on states)
-path_con = [f1;f2;f3;f4;f5;f6]; 
-% path_con_N = [f1;f2;f3;f4;f5;f6]; %
-path_con_N = states(1);
+path_con = []; 
+path_con_N = []; %
 
 path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
 path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});

@@ -205,6 +205,44 @@ switch settings.model
         plot(time(1:end-1),y_sim(:,6),'Color',red);
         title('psi');
         
+        figure();
+        subplot(321)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,1),'Color',red);
+        title('f1');
+        
+        subplot(322)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,2),'Color',red);
+        title('f2');
+        
+        subplot(323)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,3),'Color',red);
+        title('f3');
+        
+        subplot(324)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,4),'Color',red);
+        title('f4');
+        
+        subplot(325)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,5),'Color',red);
+        title('f5');
+        
+        subplot(326)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,6),'Color',red);
+        title('f6');
+        
+        
 %         figure();
 %         subplot(321)
 %         hold on;

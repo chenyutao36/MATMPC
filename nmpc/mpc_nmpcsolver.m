@@ -14,15 +14,15 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         %% ----------- QP Preparation
 
         tshoot = tic;
-        [Q_h,S,R,A,B,Cx,Cu,gx,gu,a,ds0,lc,uc] = qp_generation(input, settings, mem);
+        [Q_h,S,R,A,B,Cx,Cu,gx,gu,a,ds0,lc,uc,lb_du,ub_du] = qp_generation(input, settings, mem);
         tSHOOT = toc(tshoot)*1000; 
         
         tcond=tic;
-        [Hc,gc, Cc, lcc, ucc] = Condensing(A,B,Q_h,S,R,Cx,Cu,ds0,a,gx,gu,lc, uc, settings);
+        [Hc,gc, Cc, lcc, ucc] = Condensing(A,B,Q_h,S,R,Cx,Cu,ds0,a,gx,gu,lc,uc,settings);
         tCOND=toc(tcond)*1e3;
         
         %% ----------  Solving QP
-        [du,mu_vec,tQP,mem] = mpc_qp_solve_dense(Hc,gc,Cc,input.lbu,input.ubu,lcc,ucc,settings,mem);
+        [du,mu_vec,tQP,mem] = mpc_qp_solve_dense(Hc,gc,Cc,lb_du,ub_du,lcc,ucc,settings,mem);
 
         [dz, dxN, lambda, mu, muN] = Recover(Q_h,S,A,B,Cx,a,gx,du,ds0,mu_vec,settings);
 

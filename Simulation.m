@@ -224,6 +224,7 @@ while time(end) < Tf
 end
 
 %% draw pictures (optional)
+qpOASES_sequence( 'c', mem.qpoases.warm_start);
 clear mex;
 
 mean(CPT(2:end,:),1)

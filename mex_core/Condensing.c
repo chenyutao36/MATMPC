@@ -56,10 +56,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     if (!mxIsCell(prhs[6])) mexErrMsgTxt("Cuk is not a cell array!"); /* Cu{} prhs[6] */
     double *ds0 = mxGetPr(prhs[7]);
     double *a = mxGetPr(prhs[8]);    
-    
     double *gs = mxGetPr(prhs[9]);
-    double *gu = mxGetPr(prhs[10]);
-    
+    double *gu = mxGetPr(prhs[10]);    
     double *lc = mxGetPr(prhs[11]);
     double *uc = mxGetPr(prhs[12]);
     
@@ -72,7 +70,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize nz = nx+nu;
     
     /*Outputs*/
-    double  *Hc, *gc, *Cc, *lcc, *ucc; 
+    double  *Hc, *gc, *Cc, *lcc, *ucc, *lcu, *ucu; 
     
     plhs[0] = mxCreateDoubleMatrix(N*nu, N*nu, mxREAL);
     Hc = mxGetPr(plhs[0]);
@@ -83,14 +81,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     plhs[3] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL);
     lcc = mxGetPr(plhs[3]);
     plhs[4] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL);
-    ucc = mxGetPr(plhs[4]);
     
     /*Allocate memory*/
     mwIndex i=0,j=0;
     const mxArray *cell_element;  
     double *cell; /* from cells */
     
-    double **G = (double **) mxMalloc(N*N * sizeof(double*));
+    double *G[N*N];
     
     if (!mem_alloc_cond){       
         
@@ -218,42 +215,46 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
     
     /* Compute Cc */
-    for(i=0;i<N;i++){
-        cell_element = mxGetCell(prhs[6], i);
-        cell = mxGetPr(cell_element); /* Cui */ 
-        Block_Fill(nc, nu, cell, Cc, i*nc, i*nu, N*nc+ncN);
-                
-        for(j=i+1;j<N;j++){   
-            cell_element = mxGetCell(prhs[5], j);
-            cell = mxGetPr(cell_element);   /* Csi */
-            dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, cell, &nc, G[i*N+j-1], &nx, &zero, Cci, &nc);
-            Block_Fill(nc, nu, Cci, Cc, j*nc, i*nu, N*nc+ncN);
-        }    
-    }
+    if (nc>0){   
+        for(i=0;i<N;i++){
+            cell_element = mxGetCell(prhs[6], i);
+            cell = mxGetPr(cell_element); /* Cui */ 
+            Block_Fill(nc, nu, cell, Cc, i*nc, i*nu, N*nc+ncN);
+
+            for(j=i+1;j<N;j++){   
+                cell_element = mxGetCell(prhs[5], j);
+                cell = mxGetPr(cell_element);   /* Csi */
+                dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, cell, &nc, G[i*N+j-1], &nx, &zero, Cci, &nc);
+                Block_Fill(nc, nu, Cci, Cc, j*nc, i*nu, N*nc+ncN);
+            }    
+        }
     
-    /* Compute cc */
-    for(i=0;i<N;i++){
-        cell_element = mxGetCell(prhs[5], i);
-        cell = mxGetPr(cell_element); /* Csi */       
-        memcpy(&lcc[i*nc],&lc[i*nc],nc*sizeof(double));
-        dgemv(nTrans,&nc,&nx,&minus_one,cell,&nc,L+i*nx,&one_i,&one_d,lcc+i*nc,&one_i); 
-        
-        memcpy(&ucc[i*nc],&uc[i*nc],nc*sizeof(double));
-        dgemv(nTrans,&nc,&nx,&minus_one,cell,&nc,L+i*nx,&one_i,&one_d,ucc+i*nc,&one_i);
+        /* Compute cc */
+        for(i=0;i<N;i++){
+            cell_element = mxGetCell(prhs[5], i);
+            cell = mxGetPr(cell_element); /* Csi */       
+            memcpy(&lcc[i*nc],&lc[i*nc],nc*sizeof(double));
+            dgemv(nTrans,&nc,&nx,&minus_one,cell,&nc,L+i*nx,&one_i,&one_d,lcc+i*nc,&one_i); 
+
+            memcpy(&ucc[i*nc],&uc[i*nc],nc*sizeof(double));
+            dgemv(nTrans,&nc,&nx,&minus_one,cell,&nc,L+i*nx,&one_i,&one_d,ucc+i*nc,&one_i);
+        }
     }
     
     /* Compute CcN and ccN */
-    cell_element = mxGetCell(prhs[5], N);
-    cell = mxGetPr(cell_element);  /* CsN */      
-    for(i=0;i<N;i++){                 
-        dgemm(nTrans, nTrans, &ncN, &nu, &nx, &one_d, cell, &ncN, G[i*N+N-1], &nx, &zero, CcN, &ncN);
-        Block_Fill(ncN, nu, CcN, Cc, N*nc, i*nu, N*nc+ncN);
+    if (ncN>0){   
+        cell_element = mxGetCell(prhs[5], N);
+        cell = mxGetPr(cell_element);  /* CsN */      
+        for(i=0;i<N;i++){                 
+            dgemm(nTrans, nTrans, &ncN, &nu, &nx, &one_d, cell, &ncN, G[i*N+N-1], &nx, &zero, CcN, &ncN);
+            Block_Fill(ncN, nu, CcN, Cc, N*nc, i*nu, N*nc+ncN);
+        }
+
+        memcpy(&lcc[N*nc],&lc[N*nc],ncN*sizeof(double));
+        dgemv(nTrans,&ncN,&nx,&minus_one,cell,&ncN,L+N*nx,&one_i,&one_d,lcc+N*nc,&one_i);
+        memcpy(&ucc[N*nc],&uc[N*nc],ncN*sizeof(double));
+        dgemv(nTrans,&ncN,&nx,&minus_one,cell,&ncN,L+N*nx,&one_i,&one_d,ucc+N*nc,&one_i);
     }
-   
-    memcpy(&lcc[N*nc],&lc[N*nc],ncN*sizeof(double));
-    dgemv(nTrans,&ncN,&nx,&minus_one,cell,&ncN,L+N*nx,&one_i,&one_d,lcc+N*nc,&one_i);
-    memcpy(&ucc[N*nc],&uc[N*nc],ncN*sizeof(double));
-    dgemv(nTrans,&ncN,&nx,&minus_one,cell,&ncN,L+N*nx,&one_i,&one_d,ucc+N*nc,&one_i);
     
         
     /* Free memory */
@@ -261,6 +262,5 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         for (j=i+1;j<N;j++)
             mxFree(G[i*N+j]);
     }
-    mxFree(G);
 
 }

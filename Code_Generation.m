@@ -91,8 +91,8 @@ Jxi = jacobian(obji_vec, states) + SX.zeros(ny, nx);
 Jui = jacobian(obji_vec, controls) + SX.zeros(ny, nu);
 JxN = jacobian(objN_vec, states) + SX.zeros(nyN, nx);
 
-obji=0.5*norm_2(obji_vec)^2;
-objN=0.5*norm_2(objN_vec)^2;
+obji = 0.5*norm_2(obji_vec)^2;
+objN = 0.5*norm_2(objN_vec)^2;
 gxi = jacobian(obji,states)' + SX.zeros(nx,1);
 gui = jacobian(obji,controls)' + SX.zeros(nu,1);
 gxN = jacobian(objN,states)' + SX.zeros(nx,1);
@@ -113,8 +113,18 @@ CN_fun=Function('CN_fun',{states},{CxN},{'states'},{'CxN'});
 dobj = SX.zeros(nx+nu,1) + jacobian(obji,z)';
 dobjN = SX.zeros(nx,1) + jacobian(objN,states)';
 adj_dG = SX.zeros(nx+nu,1) + jtimes(X, z, lambdai, true);
-adj_dB = SX.zeros(nx+nu,1) + jtimes(path_con, z, mui, true);
-adj_dBN = SX.zeros(nx,1) + jtimes(path_con_N, states, muN, true);
+
+if nc>0
+    adj_dB = SX.zeros(nx+nu,1) + jtimes(path_con, z, mui, true);
+else
+    adj_dB =[];
+end
+
+if ncN>0
+    adj_dBN = SX.zeros(nx,1) + jtimes(path_con_N, states, muN, true);
+else
+    adj_dBN = [];
+end
 
 adj_fun = Function('adj_fun',{z,params,refs,Q, lambdai, mui},{dobj, adj_dG, adj_dB});
 adjN_fun = Function('adjN_fun',{states,params,refN, QN, muN},{dobjN, adj_dBN});

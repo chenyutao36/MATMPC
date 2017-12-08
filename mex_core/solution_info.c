@@ -133,8 +133,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             vec_out[1][j] -= lambda[i*nx+j];
         }
         
-        daxpy(&nz, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);
-        daxpy(&nz, &one_d, vec_out[2], &one_i, vec_out[0], &one_i);
+        daxpy(&nz, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);        
+        if (nc>0)
+            daxpy(&nz, &one_d, vec_out[2], &one_i, vec_out[0], &one_i);
         
         vec_out[0] = a+(i+1)*nx;
         
@@ -164,11 +165,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 vec_out[0][j] -= xN[j];
         }
         
-        vec_out[0] = lc + i*nc;
-        path_con_Fun(vec_in, vec_out);
-        for (j=0;j<nc;j++){
-            uc[i*nc+j] = ub[j] - vec_out[0][j];
-            vec_out[0][j] = lb[j] - vec_out[0][j];            
+        if (nc>0){
+            vec_out[0] = lc + i*nc;
+            path_con_Fun(vec_in, vec_out);
+            for (j=0;j<nc;j++){
+                uc[i*nc+j] = ub[j] - vec_out[0][j];
+                vec_out[0][j] = lb[j] - vec_out[0][j];            
+            }
         }
     }
     vec_in[0] = xN;
@@ -179,20 +182,27 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     vec_out[0] = L+N*nz;
     adjN_Fun(vec_in, vec_out);
-    daxpy(&nx, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);
     
-    vec_out[0] = lc + N*nc;
-    path_con_N_Fun(vec_in, vec_out);
-    for (j=0;j<ncN;j++){
-        uc[i*nc+j] = ubN[j] - vec_out[0][j];
-        vec_out[0][j] = lbN[j] - vec_out[0][j];            
+    if (ncN<0)
+        daxpy(&nx, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);
+    
+    if (ncN>0){
+        vec_out[0] = lc + N*nc;
+        path_con_N_Fun(vec_in, vec_out);
+        for (j=0;j<ncN;j++){
+            uc[i*nc+j] = ubN[j] - vec_out[0][j];
+            vec_out[0][j] = lbN[j] - vec_out[0][j];            
+        }
     }
          
     eq_res = dlange(Norm, &neq, &one_i, a, &one_i, work);
     KKT = dlange(Norm, &nw, &one_i, L, &one_i, work);
-    for (i=0;i<nineq;i++){
-        ineq_res += MIN(uc[i],0);
-        ineq_res += MAX(lc[i],0);
+    
+    if (nineq>0){
+        for (i=0;i<nineq;i++){
+            ineq_res += MIN(uc[i],0);
+            ineq_res += MAX(lc[i],0);
+        }
     }
     
     plhs[0] = mxCreateDoubleScalar(eq_res); // eq_res

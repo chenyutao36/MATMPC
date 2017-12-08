@@ -90,14 +90,15 @@ switch settings.model
         ub = inf*ones(nc,1);
         lbN = -inf*ones(ncN,1);
         ubN = inf*ones(ncN,1);
-        
-        input.lbu = -inf*ones(N*nu,1);
-        input.ubu = inf*ones(N*nu,1);
+        lbu = -1e2*ones(nu,1);
+        ubu = 1e2*ones(nu,1);
         
         input.lb=repmat(lb,1,N);
         input.ub=repmat(ub,1,N); 
         input.lbN=lbN;               
         input.ubN=ubN;  
+        input.lbu = repmat(lbu,1,N);
+        input.ubu = repmat(ubu,1,N);
         
         q = [5e0, 5e0, 5e0, 0.1, 0.1, 0.1];
         qN = q(1:nyN);
