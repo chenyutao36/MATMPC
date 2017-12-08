@@ -60,7 +60,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize nz = nx+nu;
     
     /*Outputs*/
-    double  *Hc, *gc, *Cc, *lcc, *ucc, *lcu, *ucu; 
+    double  *Hc, *gc, *Cc, *lcc, *ucc; 
     
     plhs[0] = mxCreateDoubleMatrix(N*nu, N*nu, mxREAL);
     Hc = mxGetPr(plhs[0]);
@@ -71,6 +71,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     plhs[3] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL);
     lcc = mxGetPr(plhs[3]);
     plhs[4] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL);
+    ucc = mxGetPr(plhs[4]);
     
     /*Allocate memory*/
     mwIndex i=0,j=0;
@@ -186,6 +187,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             Hc[j*N*nu+i]=Hc[i*N*nu+j];
     }
     
+    
     /* Compute Cc */
     if (nc>0){   
         for(i=0;i<N;i++){
@@ -198,7 +200,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 Block_Fill(nc, nu, Cci, Cc, j*nc, i*nu, N*nc+ncN);
             }    
         }
-    
+         
         /* Compute cc */
         for(i=0;i<N;i++){
             cell = Cx + i*nc*nx;
@@ -208,7 +210,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             memcpy(&ucc[i*nc],&uc[i*nc],nc*sizeof(double));
             dgemv(nTrans,&nc,&nx,&minus_one,cell,&nc,L+i*nx,&one_i,&one_d,ucc+i*nc,&one_i);
         }
-    }
+        
+    }   
     
     /* Compute CcN and ccN */
     if (ncN>0){   

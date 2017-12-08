@@ -411,7 +411,6 @@ int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, bool fo
            dgetrf(&ldG, &ldG, JGK, &ldG, IPIV, &INFO);
 
            dgemm(nTrans, nTrans, &ldG, &nx, &nx, &one_d, JGx, &ldG, Jac_x, &nx, &zero, JKx, &ldG);
-
            dgemm(nTrans, nTrans, &ldG, &nu, &nx, &one_d, JGx, &ldG, Jac_u, &nx, &one_d, JKu, &ldG);
 
            dgetrs(nTrans, &ldG, &nx, JGK, &ldG, IPIV, JKx, &ldG, &INFO);

@@ -107,7 +107,7 @@ hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
 
 % general inequality path constraints (including bounds on states)
 path_con = []; 
-path_con_N = []; %
+path_con_N = []; 
 
 path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
 path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});

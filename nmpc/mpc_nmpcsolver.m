@@ -14,7 +14,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         %% ----------- QP Preparation
 
         tshoot = tic;
-        [Q_h,S,R,A,B,Cx,Cu,gx,gu,a,ds0,lc,uc,lb_du,ub_du, CxN] = qp_generation(input, settings, mem);
+        [Q_h,S,R,A,B,Cx,Cu,gx,gu,a,ds0,lc,uc,lb_du,ub_du,CxN] = qp_generation(input, settings, mem);
         tSHOOT = toc(tshoot)*1000; 
         
         tcond=tic;
@@ -28,8 +28,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
 
         %% ---------- Line search
 
-        alpha = 1;
-        [z,xN,lambda,mu,muN] = Line_search(dz, dxN, lambda, mu, muN, alpha, input, settings);
+        [z,xN,lambda,mu,muN] = Line_search(dz, dxN, lambda, mu, muN, input, settings);
 
         %% ---------- KKT calculation 
         

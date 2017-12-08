@@ -190,7 +190,9 @@ x_dot=[x_VEST;vx_hex_tri;...
              A_hp_c*states(30+4*n+1:30+5*n)+B_hp_c*phi_dd;...
              A_lp_c*states(30+5*n+1:30+6*n)+B_lp_c*phi_dd;...
          ];
-     
+ 
+xdot = SX.sym('xdot',nx,1);
+impl_f = xdot - x_dot;
 %% Objectives
 
 h = [y_VEST;...
@@ -223,12 +225,9 @@ q4 = ((z + (8507164853856779*sin(-theta_hex))/36028797018963968 - (5935510252496
 q5 = ((x_hex_tri + (1019226764088171*cos(-theta_hex)*cos(-phi_hex))/2251799813685248 + (4809610345653685*cos(-psi_hex)*sin(-phi_hex))/9007199254740992 - 2091^(1/2)/40 + (4809610345653685*cos(-phi_hex)*sin(-theta_hex)*sin(-psi_hex))/9007199254740992)^2 + (y_hex_tri - (4809610345653685*cos(-psi_hex)*cos(-phi_hex))/9007199254740992 + (1019226764088171*cos(-theta_hex)*sin(-phi_hex))/2251799813685248 + (4809610345653685*sin(-theta_hex)*sin(-psi_hex)*sin(-phi_hex))/9007199254740992 + 1/8)^2 + (z + (1019226764088171*sin(-theta_hex))/2251799813685248 - (4809610345653685*cos(-theta_hex)*sin(-psi_hex))/9007199254740992 + 1811/2000)^2)^(1/2);
 q6 = ((y_hex_tri + (300600646603355*cos(-psi_hex)*cos(-phi_hex))/562949953421312 + (8153814112705379*cos(-theta_hex)*sin(-phi_hex))/18014398509481984 - (300600646603355*sin(-theta_hex)*sin(-psi_hex)*sin(-phi_hex))/562949953421312 - 1/8)^2 + (z + (8153814112705379*sin(-theta_hex))/18014398509481984 + (300600646603355*cos(-theta_hex)*sin(-psi_hex))/562949953421312 + 1811/2000)^2 + ((300600646603355*cos(-psi_hex)*sin(-phi_hex))/562949953421312 - (8153814112705379*cos(-theta_hex)*cos(-phi_hex))/18014398509481984 - x_hex_tri + 2091^(1/2)/40 + (300600646603355*cos(-phi_hex)*sin(-theta_hex)*sin(-psi_hex))/562949953421312)^2)^(1/2);
 
-ineq=[q1;q2;q3;q4;q5;q6];  % inequality constraints of the first N stages
-ineqN=[q1;q2;q3;q4;q5;q6]; % inequality constraints of the last stage
-ineq_fun=Function('ineq_fun', {states,controls,params}, {ineq},{'states','controls','params'},{'ineq'});
-ineqN_fun=Function('ineqN_fun', {states,params}, {ineqN},{'states','params'},{'ineqN'});
+% general inequality path constraints (including bounds on states)
+path_con=[q1;q2;q3;q4;q5;q6];  
+path_con_N=[q1;q2;q3;q4;q5;q6]; 
 
-lb_ineq=SX.sym('lb_ineq',length(ineq),1);    % inequality lower bounds of the first N stages
-ub_ineq=SX.sym('ub_ineq',length(ineq),1);    % inequality upper bounds of the first N stages
-lbN_ineq=SX.sym('lbN_ineq',length(ineqN),1); % inequality lower bound of the last stage
-ubN_ineq=SX.sym('ubN_ineq',length(ineqN),1); % inequality upper bound of the last stage
+path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
+path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});

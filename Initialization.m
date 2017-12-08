@@ -27,13 +27,17 @@ switch settings.model
           ub=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints
           lbN=[1.045;1.045;1.045;1.045;1.045;1.045];  % lower bounds for ineq constraints at terminal point
           ubN=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints at terminal point
+          lbu=-inf(nu,1);
+          ubu=inf(nu,1);
           
           input.lb=repmat(lb,1,N);     % a matrix with N rows and nc columns
           input.ub=repmat(ub,1,N);     
           input.lb(:,1)=-inf*ones(nc,1);  % set different values for the constraints at the first stage
           input.ub(:,1)=inf*ones(nc,1);
           input.lbN=lbN;               % a column vector of length ncN              
-          input.ubN=ubN;               
+          input.ubN=ubN;   
+          input.lbu = repmat(lbu,1,N);
+          input.ubu = repmat(ubu,1,N);
           
     case 'InvertedPendulum'
         x0 = [0;pi;0;0];    
@@ -43,20 +47,24 @@ switch settings.model
         Q=diag([10 10 0.1 0.1 0.01]);
         QN=Q(1:nyN,1:nyN);
 
-        lb=[-2;-20];
-        ub=[2;20];
+        lb=-2;
+        ub=2;
         lbN=-2;
         ubN=2;
+        lbu=-20;
+        ubu=20;
         
         input.lb=repmat(lb,1,N);
         input.ub=repmat(ub,1,N); 
-        input.lb(:,1)=[-inf;-20];
-        input.ub(:,1)=[inf;20];
+        input.lb(:,1)=-inf;
+        input.ub(:,1)=inf;
         input.lbN=lbN;               
-        input.ubN=ubN;               
+        input.ubN=ubN; 
+        input.lbu = repmat(lbu,1,N);
+        input.ubu = repmat(ubu,1,N);
         
     case 'ChainofMasses_Lin'
-        n=15;
+        n=9;
         x0=zeros(nx,1);
         for i=1:n
             x0(i)=7.5*i/n;
@@ -72,15 +80,20 @@ switch settings.model
         Q=blkdiag(wx,wv,wu);
         QN=blkdiag(wx,wv);
         
-        lb=[-1;-1;-1];
-        ub=[1;1;1];
-        lbN=-inf*ones(nx,1);
-        ubN=inf*ones(nx,1);
+        lb=-inf(nc,1);
+        ub=inf(nc,1);
+        lbN=-inf(ncN,1);
+        ubN=inf(ncN,1);
+        lbu = [-1;-1;-1];
+        ubu = [1;1;1];
         
         input.lb=repmat(lb,1,N);
         input.ub=repmat(ub,1,N); 
         input.lbN=lbN;               
-        input.ubN=ubN;    
+        input.ubN=ubN;
+        input.lbu = repmat(lbu,1,N);
+        input.ubu = repmat(ubu,1,N);
+        
     case 'Hexacopter'
         x0=zeros(nx,1); %x0(12) =1; x0(13:18) = [4.0699, 4.3772, 5.1754, 4.0504, 4.3580, 5.1781];
         u0=zeros(nu,1);
@@ -124,11 +137,7 @@ input.WN=QN;                 % weights of the terminal stage (nyN by nyN matrix)
 switch settings.model
     case 'DiM'
 
-%         cd('Reference generation')
-
         load REF_DiM_2;
-
-%         cd ..
 
         REF_DiM_2 = [REF_DiM_2, zeros(5000,24)];
 
