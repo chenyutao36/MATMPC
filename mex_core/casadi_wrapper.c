@@ -131,13 +131,12 @@ void F_Fun(double **in, double **out) {
     F(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-void D_Fun(double **in, mxArray **out) {
-
+void D_Fun(double **in, double **out) {
     const double *zi = in[0];
     const double *parai = in[1];
 
-    double *A = mxGetPr(out[0]);
-    double *B = mxGetPr(out[1]);
+    double *A = out[0];
+    double *B = out[1];
 
     int casadi_mem = 0;
     int *casadi_iw = NULL;
@@ -155,15 +154,14 @@ void D_Fun(double **in, mxArray **out) {
     D(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-void Ji_Fun(double **in, mxArray **out) {
-
+void Ji_Fun(double **in, double **out) {
     const double *zi = in[0];
     const double *parai = in[1];
     const double *refi = in[2];
     const double *Qi = in[3];
 
-    double *Jx = mxGetPr(out[0]);
-    double *Ju = mxGetPr(out[1]);
+    double *Jx = out[0];
+    double *Ju = out[1];
 
     int casadi_mem = 0;
     int *casadi_iw = NULL;
@@ -235,12 +233,11 @@ void path_con_Fun(double **in, double **out) {
     path_con_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-void Ci_Fun(double **in, mxArray **out) {
-
+void Ci_Fun(double **in, double **out) {
     const double *zi = in[0];
 
-    double *Cx = mxGetPr(out[0]);
-    double *Cu = mxGetPr(out[1]);
+    double *Cx = out[0];
+    double *Cu = out[1];
 
     int casadi_mem = 0;
     int *casadi_iw = NULL;
@@ -257,14 +254,13 @@ void Ci_Fun(double **in, mxArray **out) {
     Ci_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-void JN_Fun(double **in, mxArray **out) {
-
+void JN_Fun(double **in, double *out) {
     const double *xN = in[0];
     const double *paraN = in[1] ;
     const double *refN = in[2];
     const double *QN = in[3];
 
-    double *JxN = mxGetPr(out[0]);
+    double *JxN = out;
 
     int casadi_mem = 0;
     int *casadi_iw = NULL;
@@ -331,11 +327,10 @@ void path_con_N_Fun(double **in, double **out) {
     path_con_N_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-void CN_Fun(double **in, mxArray **out) {
-
+void CN_Fun(double **in, double *out) {
     const double *xN = in[0];
 
-    double *CxN = mxGetPr(out[0]);
+    double *CxN = out;
 
     int casadi_mem = 0;
     int *casadi_iw = NULL;

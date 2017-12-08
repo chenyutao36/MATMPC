@@ -5,29 +5,11 @@
 #include "string.h"
 
 #include "sim.h"
+#include "mpc_common.h"
 #include "blas.h"
 #include "lapack.h"
 
-void Block_Fill(mwSize m, mwSize n, double *Gi, double *G, mwSize idm, mwSize idn, mwSize ldG){
-       
-    mwSize i,j;
-    mwSize s;
-    for (j=0;j<n;j++){
-        s = idn*ldG + idm + j*ldG;
-        for (i=0;i<m;i++){
-            G[s+i] = Gi[j*m+i];
-        }
-    }
-       
-}
-
-void set_zeros(int dim, double *A){
-    int i;
-    for (i=0;i<dim;i++)
-        A[i] = 0.0;
-}
-
-int sim_erk_calculate_workspace_size(mxArray *mem, bool forw_sens)
+int sim_erk_calculate_workspace_size(const mxArray *mem, bool forw_sens)
 {
     mwSize nx = mxGetScalar( mxGetField(mem, 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(mem, 0, "nu") );
@@ -48,7 +30,7 @@ int sim_erk_calculate_workspace_size(mxArray *mem, bool forw_sens)
     return size;
 }
 
-void *sim_erk_cast_workspace(mxArray *mem, bool forw_sens, void *raw_memory){
+void *sim_erk_cast_workspace(const mxArray *mem, bool forw_sens, void *raw_memory){
     mwSize nx = mxGetScalar( mxGetField(mem, 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(mem, 0, "nu") );
     mwSize num_stages = mxGetScalar( mxGetField(mem, 0, "num_stages") );
@@ -85,8 +67,7 @@ void *sim_erk_cast_workspace(mxArray *mem, bool forw_sens, void *raw_memory){
 
 }
 
-int sim_erk(double **in, double **out, mxArray **Jac, mxArray *mem, bool forw_sens, void *work_){
-    
+int sim_erk(double **in, double **out, double **Jac, const mxArray *mem, bool forw_sens, void *work_){    
     int istep, s, i, j;
     double a,b;
     
@@ -107,8 +88,8 @@ int sim_erk(double **in, double **out, mxArray **Jac, mxArray *mem, bool forw_se
     double *Sx = mxGetPr( mxGetField(mem, 0, "Sx"));
     double *Su = mxGetPr( mxGetField(mem, 0, "Su"));
     
-    double *Jac_x = mxGetPr(Jac[0]);
-    double *Jac_u = mxGetPr(Jac[1]);   
+    double *Jac_x = Jac[0];
+    double *Jac_u = Jac[1];   
     
     sim_erk_workspace *workspace = (sim_erk_workspace *) sim_erk_cast_workspace(mem, forw_sens, work_);
     
@@ -197,7 +178,7 @@ int sim_erk(double **in, double **out, mxArray **Jac, mxArray *mem, bool forw_se
     return 0;      
 }
 
-int sim_irk_calculate_workspace_size(mxArray *mem, bool forw_sens)
+int sim_irk_calculate_workspace_size(const mxArray *mem, bool forw_sens)
 {
     mwSize nx = mxGetScalar( mxGetField(mem, 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(mem, 0, "nu") );
@@ -229,7 +210,7 @@ int sim_irk_calculate_workspace_size(mxArray *mem, bool forw_sens)
     return size;
 }
 
-void *sim_irk_cast_workspace(mxArray *mem, bool forw_sens, void *raw_memory){
+void *sim_irk_cast_workspace(const mxArray *mem, bool forw_sens, void *raw_memory){
     mwSize nx = mxGetScalar( mxGetField(mem, 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(mem, 0, "nu") );
     mwSize num_stages = mxGetScalar( mxGetField(mem, 0, "num_stages") );
@@ -290,8 +271,7 @@ void *sim_irk_cast_workspace(mxArray *mem, bool forw_sens, void *raw_memory){
 
 }
 
-int sim_irk(double **in, double **out, mxArray **Jac, mxArray *mem, bool forw_sens, void *work_){
-    
+int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, bool forw_sens, void *work_){    
     int istep, i, j, k, iter;
     double a,b;
     
@@ -302,8 +282,8 @@ int sim_irk(double **in, double **out, mxArray **Jac, mxArray *mem, bool forw_se
     double *x = in[0];
     double *xn = out[0];
    
-    double *Jac_x = mxGetPr(Jac[0]);
-    double *Jac_u = mxGetPr(Jac[1]);
+    double *Jac_x = Jac[0];
+    double *Jac_u = Jac[1];
     
     double *A = mxGetPr( mxGetField(mem, 0, "A"));
     double *B = mxGetPr( mxGetField(mem, 0, "B"));

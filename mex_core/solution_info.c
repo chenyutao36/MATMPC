@@ -31,10 +31,8 @@ void exitFcn_info(){
         mxFree(a);
         mxFree(lc);
         mxFree(uc);       
-    }
-    
-    if (workspace!=NULL)
         mxFree(workspace);
+    }
 }
 
 void
@@ -86,8 +84,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         vec_out[1] = (double *)mxCalloc(nz, sizeof(double));
         mexMakeMemoryPersistent(vec_out[1]);
         vec_out[2] = (double *)mxCalloc(nz, sizeof(double));
-        mexMakeMemoryPersistent(vec_out[2]);
-      
+        mexMakeMemoryPersistent(vec_out[2]);     
         L = (double *)mxCalloc( nw, sizeof(double));
         mexMakeMemoryPersistent(L);
         a = (double *)mxCalloc( neq, sizeof(double));
@@ -143,14 +140,14 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             F_Fun(vec_in, vec_out);
         }
         if (sim_method == 1){
-            mxArray *Sens[2];
+            double *Sens[2];
             ode_in[0]=z+i*nz;
             ode_in[1]=z+i*nz+nx;
             ode_in[2]=od+i*np;
             sim_erk(ode_in, vec_out, Sens, prhs[6], false, workspace);
         }
         if (sim_method == 2){
-            mxArray *Sens[2];
+            double *Sens[2];
             ode_in[0]=z+i*nz;
             ode_in[1]=z+i*nz+nx;
             ode_in[2]=od+i*np;

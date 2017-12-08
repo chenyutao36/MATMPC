@@ -3,6 +3,7 @@ function [solution,mu_vec,cpt_qp,mem] = mpc_qp_solve_dense(H,g,C,lu,uu,lc,uc,siz
     nu=sizes.nu;
     N=sizes.N;   
     options = qpOASES_options('MPC');
+%     options = qpOASES_options('default');
     if mem.qpoases.warm_start==0
         [QP,solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('i',H,g,C,lu,uu,lc,uc, options); 
         mem.qpoases.warm_start=QP;

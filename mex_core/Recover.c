@@ -14,19 +14,23 @@
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
-    // Q,S,A,B,Cx
+    double *Qh = mxGetPr(prhs[0]);
+    double *S = mxGetPr(prhs[1]);    
+    double *A = mxGetPr(prhs[2]);
+    double *B = mxGetPr(prhs[3]);    
+    double *Cx = mxGetPr(prhs[4]);
+    double *CxN = mxGetPr(prhs[5]);
+    double *a = mxGetPr(prhs[6]);
+    double *gx = mxGetPr(prhs[7]);    
+    double *du = mxGetPr(prhs[8]);
+    double *ds0 = mxGetPr(prhs[9]);
+    double *mu_vec = mxGetPr(prhs[10]);
     
-    double *a = mxGetPr(prhs[5]);
-    double *gx = mxGetPr(prhs[6]);    
-    double *du = mxGetPr(prhs[7]);
-    double *ds0 = mxGetPr(prhs[8]);
-    double *mu_vec = mxGetPr(prhs[9]);
-    
-    mwSize nx = mxGetScalar( mxGetField(prhs[10], 0, "nx") );
-    mwSize nu = mxGetScalar( mxGetField(prhs[10], 0, "nu") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[10], 0, "nc") );
-    mwSize ncN = mxGetScalar( mxGetField(prhs[10], 0, "ncN") );
-    mwSize N = mxGetScalar( mxGetField(prhs[10], 0, "N") );
+    mwSize nx = mxGetScalar( mxGetField(prhs[11], 0, "nx") );
+    mwSize nu = mxGetScalar( mxGetField(prhs[11], 0, "nu") );
+    mwSize nc = mxGetScalar( mxGetField(prhs[11], 0, "nc") );
+    mwSize ncN = mxGetScalar( mxGetField(prhs[11], 0, "ncN") );
+    mwSize N = mxGetScalar( mxGetField(prhs[11], 0, "N") );
     
     mwSize nz = nx+nu;
     
@@ -45,54 +49,51 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     memcpy(&muN[0], &mu_vec[N*nc], ncN*sizeof(double));
  
     int i;
+    double *tmp;
     
     char *nTrans = "N", *Trans="T";
     double one_d = 1.0, zero = 0.0;
     mwSignedIndex one_i = 1;
-    
-    double *A, *B, *Q, *S, *Cx;
-    
+       
     memcpy(&z[0],&ds0[0], nx*sizeof(double)); 
     
-    for (i=0;i<N;i++){
-        A= mxGetPr(mxGetCell(prhs[2],i));
-        B= mxGetPr(mxGetCell(prhs[3],i));
-           
+    for (i=0;i<N;i++){        
         if (i<N-1){
             memcpy(&z[(i+1)*nz],&a[i*nx], nx*sizeof(double));
-            dgemv(nTrans,&nx,&nx,&one_d,A,&nx,z+i*nz,&one_i,&one_d,z+(i+1)*nz,&one_i);
-            dgemv(nTrans,&nx,&nu,&one_d,B,&nx,du+i*nu,&one_i,&one_d,z+(i+1)*nz,&one_i);
+            tmp = A + i*nx*nx;
+            dgemv(nTrans,&nx,&nx,&one_d,tmp,&nx,z+i*nz,&one_i,&one_d,z+(i+1)*nz,&one_i);
+            tmp = B + i*nx*nu;
+            dgemv(nTrans,&nx,&nu,&one_d,tmp,&nx,du+i*nu,&one_i,&one_d,z+(i+1)*nz,&one_i);
         }else{
             memcpy(&xN[0],&a[i*nx], nx*sizeof(double));
-            dgemv(nTrans,&nx,&nx,&one_d,A,&nx,z+i*nz,&one_i,&one_d,xN,&one_i);
-            dgemv(nTrans,&nx,&nu,&one_d,B,&nx,du+i*nu,&one_i,&one_d,xN,&one_i);
+            tmp = A + i*nx*nx;
+            dgemv(nTrans,&nx,&nx,&one_d,tmp,&nx,z+i*nz,&one_i,&one_d,xN,&one_i);
+            tmp = B + i*nx*nu;
+            dgemv(nTrans,&nx,&nu,&one_d,tmp,&nx,du+i*nu,&one_i,&one_d,xN,&one_i);
         }
                 
         memcpy(&z[i*nz+nx],&du[i*nu], nu*sizeof(double));
     }
     
-    Q = mxGetPr(mxGetCell(prhs[0],N));   
+    tmp = Qh + N*nx*nx;
     memcpy(&lambda[N*nx],&gx[N*nx], nx*sizeof(double));
-    dgemv(nTrans,&nx,&nx,&one_d,Q,&nx,xN,&one_i,&one_d,lambda+N*nx,&one_i);
+    dgemv(nTrans,&nx,&nx,&one_d,tmp,&nx,xN,&one_i,&one_d,lambda+N*nx,&one_i);
     
     if (ncN>0){
-        Cx = mxGetPr(mxGetCell(prhs[4],N));
-        dgemv(Trans,&ncN,&nx,&one_d,Cx,&ncN,mu_vec+N*nc,&one_i,&one_d,lambda+N*nx,&one_i);
+        dgemv(Trans,&ncN,&nx,&one_d,CxN,&ncN,mu_vec+N*nc,&one_i,&one_d,lambda+N*nx,&one_i);
     }
     for (i=N-1;i>-1;i--){
-        A = mxGetPr(mxGetCell(prhs[2],i));
-        B = mxGetPr(mxGetCell(prhs[3],i));
-        Q = mxGetPr(mxGetCell(prhs[0],i));
-        S = mxGetPr(mxGetCell(prhs[1],i));
-              
         memcpy(&lambda[i*nx],&gx[i*nx], nx*sizeof(double));
-        dgemv(nTrans,&nx,&nx,&one_d,Q,&nx,z+i*nz,&one_i,&one_d,lambda+i*nx,&one_i);
-        dgemv(nTrans,&nx,&nu,&one_d,S,&nx,du+i*nu,&one_i,&one_d,lambda+i*nx,&one_i);
-        dgemv(Trans,&nx,&nx,&one_d,A,&nx,lambda+(i+1)*nx,&one_i,&one_d,lambda+i*nx,&one_i);
+        tmp = Qh + i*nx*nx;
+        dgemv(nTrans,&nx,&nx,&one_d,tmp,&nx,z+i*nz,&one_i,&one_d,lambda+i*nx,&one_i);
+        tmp = S + i*nx*nu;
+        dgemv(nTrans,&nx,&nu,&one_d,tmp,&nx,du+i*nu,&one_i,&one_d,lambda+i*nx,&one_i);
+        tmp = A + i*nx*nx;
+        dgemv(Trans,&nx,&nx,&one_d,tmp,&nx,lambda+(i+1)*nx,&one_i,&one_d,lambda+i*nx,&one_i);
         
         if (nc>0){
-            Cx = mxGetPr(mxGetCell(prhs[4],i));
-            dgemv(Trans,&nc,&nx,&one_d,Cx,&nc,mu_vec+i*nc,&one_i,&one_d,lambda+i*nx,&one_i);
+            tmp = Cx + i*nc*nx;
+            dgemv(Trans,&nc,&nx,&one_d,tmp,&nc,mu_vec+i*nc,&one_i,&one_d,lambda+i*nx,&one_i);
         }
     }
     

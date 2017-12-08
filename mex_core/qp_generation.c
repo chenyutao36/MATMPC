@@ -14,10 +14,18 @@
 // #endif
 
 static void *workspace = NULL;
+static double *Jac[2];
+static double *Jac_N;
+
+static bool mem_alloc = false;
 
 void exitFcn_sim(){
-    if (workspace!=NULL)
+    if (mem_alloc){
         mxFree(workspace);
+        mxFree(Jac[0]);
+        mxFree(Jac[1]);
+        mxFree(Jac_N);
+    }
 }
 
 void
@@ -49,13 +57,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
     
-    plhs[0] = mxCreateCellMatrix(1, N+1); // Qh
-    plhs[1] = mxCreateCellMatrix(1, N); // S
-    plhs[2] = mxCreateCellMatrix(1, N); // R
-    plhs[3] = mxCreateCellMatrix(1, N); // A
-    plhs[4] = mxCreateCellMatrix(1, N); // B
-    plhs[5] = mxCreateCellMatrix(1, N+1); // Cx
-    plhs[6] = mxCreateCellMatrix(1, N); // Cu
+    plhs[0] = mxCreateDoubleMatrix(nx,nx*(N+1),mxREAL); // Qh
+    plhs[1] = mxCreateDoubleMatrix(nx,nu*N,mxREAL); // S
+    plhs[2] = mxCreateDoubleMatrix(nu,nu*N,mxREAL); // R
+    plhs[3] = mxCreateDoubleMatrix(nx,nx*N,mxREAL); // A
+    plhs[4] = mxCreateDoubleMatrix(nx,nu*N,mxREAL); // B
+    plhs[5] = mxCreateDoubleMatrix(nc,nx*N,mxREAL); // Cx
+    plhs[6] = mxCreateDoubleMatrix(nc,nu*N,mxREAL); // Cu
     plhs[7] = mxCreateDoubleMatrix(nx, N+1, mxREAL); //gx
     plhs[8] = mxCreateDoubleMatrix(nu, N, mxREAL); //gu 
     plhs[9] = mxCreateDoubleMatrix(nx,N, mxREAL); //a
@@ -63,7 +71,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     plhs[11] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL); //lc
     plhs[12] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL); //uc
     plhs[13] = mxCreateDoubleMatrix(N*nu, 1, mxREAL);   // lb_du
-    plhs[14] = mxCreateDoubleMatrix(N*nu, 1, mxREAL);   // ub_du   
+    plhs[14] = mxCreateDoubleMatrix(N*nu, 1, mxREAL);   // ub_du     
+    plhs[15] = mxCreateDoubleMatrix(ncN,nx,mxREAL); // CxN
+    
     
     mwIndex i=0,j=0;
     mwSize nz = nx+nu;
@@ -71,6 +81,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double one_d = 1.0, zero = 0.0, minus_one_d = -1.0;
     mwSignedIndex one_i = 1;
       
+    double *Qh = mxGetPr(plhs[0]);
+    double *S = mxGetPr(plhs[1]);   
+    double *R = mxGetPr(plhs[2]);
+    double *A = mxGetPr(plhs[3]);   
+    double *B = mxGetPr(plhs[4]);
+    double *Cx = mxGetPr(plhs[5]);
+    double *Cu = mxGetPr(plhs[6]);
     double *gx = mxGetPr(plhs[7]);
     double *gu = mxGetPr(plhs[8]);   
     double *a = mxGetPr(plhs[9]);
@@ -79,47 +96,22 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *uc = mxGetPr(plhs[12]);
     double *lb_du = mxGetPr(plhs[13]);
     double *ub_du = mxGetPr(plhs[14]);
+    double *CxN = mxGetPr(plhs[15]);
     
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - z[i];
     
     // allocate memory
-    mxArray **Sens[N];
-    mxArray **Jac[N+1];
-    mxArray **Cons[N+1];
-    mxArray *Qh[N+1];
-    mxArray *S[N];
-    mxArray *R[N];
-    for(i=0;i<N;i++){
-        Sens[i] = (mxArray **) mxMalloc(2 * sizeof(mxArray*));
-        Sens[i][0] = mxCreateDoubleMatrix(nx, nx, mxREAL);
-        Sens[i][1] = mxCreateDoubleMatrix(nx, nu, mxREAL);
-        
-        Jac[i] = (mxArray **) mxMalloc(2 * sizeof(mxArray*));
-        Jac[i][0] = mxCreateDoubleMatrix(ny, nx, mxREAL);
-        Jac[i][1] = mxCreateDoubleMatrix(ny, nu, mxREAL);
-        
-        Qh[i] = mxCreateDoubleMatrix(nx, nx, mxREAL);
-        S[i] = mxCreateDoubleMatrix(nx, nu, mxREAL);
-        R[i] = mxCreateDoubleMatrix(nu, nu, mxREAL);
-        
-        Cons[i] = (mxArray **) mxMalloc(2 * sizeof(mxArray*));
-        Cons[i][0] = mxCreateDoubleMatrix(nc, nx, mxREAL);
-        Cons[i][1] = mxCreateDoubleMatrix(nc, nu, mxREAL);
-    }
-    Jac[N] = (mxArray **) mxMalloc(sizeof(mxArray*));
-    Jac[N][0] = mxCreateDoubleMatrix(nyN, nx, mxREAL);
-    Qh[N] = mxCreateDoubleMatrix(nx, nx, mxREAL);
-    Cons[N] = (mxArray **) mxMalloc(sizeof(mxArray*));
-    Cons[N][0] = mxCreateDoubleMatrix(ncN, nx, mxREAL);
-    
+    double *Sens[2];    
+    double *Cons[2];
+      
     double *vec_in[4];
     double *vec_out[2];    
     vec_in[3] = Q;
    
     double *ode_in[3];
 
-    if (workspace== NULL && sim_method!=0){
+    if (!mem_alloc){
         int size = 0;
         if (sim_method == 1)
             size = sim_erk_calculate_workspace_size(prhs[2],true);
@@ -127,7 +119,16 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             size = sim_irk_calculate_workspace_size(prhs[2],true);    
         
         workspace = mxMalloc(size);
-        mexMakeMemoryPersistent(workspace);        
+        mexMakeMemoryPersistent(workspace); 
+        
+        Jac[0] = (double *) mxCalloc(ny*nx, sizeof(double));
+        mexMakeMemoryPersistent(Jac[0]); 
+        Jac[1] = (double *) mxCalloc(ny*nu, sizeof(double));
+        mexMakeMemoryPersistent(Jac[1]); 
+        Jac_N = (double *) mxCalloc(nyN*nx, sizeof(double));
+        mexMakeMemoryPersistent(Jac_N);
+        
+        mem_alloc=true;
         mexAtExit(exitFcn_sim);
     }
     
@@ -143,24 +144,26 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             ub_du[i*nu+j] = ubu[i*nu+j]-z[i*nz+nx+j];
         }
         
-        // integration
+        // integration      
         vec_out[0] = a+i*nx;
+        Sens[0] = A + i*nx*nx;
+        Sens[1] = B + i*nx*nu;
 
         if (sim_method == 0){
             F_Fun(vec_in, vec_out);
-            D_Fun(vec_in, Sens[i]);  
+            D_Fun(vec_in, Sens);
         }
         if (sim_method == 1){
             ode_in[0]=z+i*nz;
             ode_in[1]=z+i*nz+nx;
             ode_in[2]=od+i*np;          
-            sim_erk(ode_in, vec_out, Sens[i], prhs[2], true, workspace);
+            sim_erk(ode_in, vec_out, Sens, prhs[2], true, workspace);
         }
         if (sim_method == 2){
             ode_in[0]=z+i*nz;
             ode_in[1]=z+i*nz+nx;
             ode_in[2]=od+i*np;
-            sim_irk(ode_in, vec_out, Sens[i], prhs[2], true, workspace);
+            sim_irk(ode_in, vec_out, Sens, prhs[2], true, workspace);
         }
         
         if (i < N-1){
@@ -170,19 +173,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             for (j=0;j<nx;j++)
                 vec_out[0][j] -= xN[j];
         }
-            
-        // sensitiities
-        mxSetCell(plhs[3], i, Sens[i][0]);
-        mxSetCell(plhs[4], i, Sens[i][1]);
+
         
         // Hessian
-        Ji_Fun(vec_in, Jac[i]);
-        dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, mxGetPr(Jac[i][0]), &ny, mxGetPr(Jac[i][0]), &ny, &zero, mxGetPr(Qh[i]), &nx);
-        mxSetCell(plhs[0], i, Qh[i]);
-        dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, mxGetPr(Jac[i][0]), &ny, mxGetPr(Jac[i][1]), &ny, &zero, mxGetPr(S[i]), &nx);
-        mxSetCell(plhs[1], i, S[i]);
-        dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, mxGetPr(Jac[i][1]), &ny, mxGetPr(Jac[i][1]), &ny, &zero, mxGetPr(R[i]), &nu);
-        mxSetCell(plhs[2], i, R[i]);
+        Ji_Fun(vec_in, Jac);
+        dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Qh+i*nx*nx, &nx);
+        dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
+        dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
         
         // gradient
         vec_out[0] = gx+i*nx;
@@ -199,9 +196,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             }
         
             // constraint Jacobian
-            Ci_Fun(vec_in, Cons[i]);
-            mxSetCell(plhs[5], i, Cons[i][0]);
-            mxSetCell(plhs[6], i, Cons[i][1]);
+            Cons[0] = Cx+i*nc*nx;
+            Cons[1] = Cu+i*nc*nu;
+            Ci_Fun(vec_in, Cons);
         }
     }
     
@@ -211,9 +208,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     vec_in[2] = yN;
     vec_in[3] = QN;
     
-    JN_Fun(vec_in, Jac[N]);
-    dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, mxGetPr(Jac[N][0]), &nyN, mxGetPr(Jac[N][0]), &nyN, &zero, mxGetPr(Qh[N]), &nx);
-    mxSetCell(plhs[0], N, Qh[N]);
+    JN_Fun(vec_in, Jac_N);
+    dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, Jac_N, &nyN, Jac_N, &nyN, &zero, Qh+N*nx*nx, &nx);
     
     vec_out[0] = gx+N*nx;
     gN_Fun(vec_in, vec_out);
@@ -226,7 +222,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             vec_out[0][j] = lbN[j] - vec_out[0][j];            
         }
 
-        CN_Fun(vec_in, Cons[N]);
-        mxSetCell(plhs[5], N, Cons[N][0]);
+        CN_Fun(vec_in, CxN);
     }
+    
 }
