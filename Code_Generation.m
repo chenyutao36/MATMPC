@@ -5,7 +5,7 @@ display('-----------------------------------------------------');
 
 
 %% Insert Model here
-settings.model='Hexacopter';
+settings.model='DiM';
 
 switch settings.model
     case 'InvertedPendulum'
@@ -45,7 +45,7 @@ Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'s
 
 %% Explicit Runge-Kutta 4 Integrator for multiple shooting
 
-Ts_st = 0.1; % shooting interval time
+Ts_st = 0.01; % shooting interval time
 s  = 2; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
@@ -138,8 +138,8 @@ if strcmp(generate,'y')
     display('                           ');
     display('Generating source code...');
 
-    if exist([pwd,'Source_Codes'],'dir')~=7
-        mkdir([pwd,'Source_Codes']);
+    if exist([pwd,'/Source_Codes'],'dir')~=7
+        mkdir([pwd,'/Source_Codes']);
     end
     
     cd Source_Codes
