@@ -9,7 +9,7 @@ The most unique feature of MATMPC is that it does not require to install any ext
 
 To use MATMPC, follow the steps below.
 
-1. Download and install CasADi, qpOASES and hpipm (optional) by following instructions given by their developers.
+1. Download and install CasADi, qpOASES and hpipm (optional) by following instructions given by their developers. Note that you only need to install their MATLAB interfaces, not the entire software (e.g. unzip, run "install.m", set and save path, done!).
 
 2. Write your own model following the styles given by examples, e.g. Inverted Pendulum, Chain of Masses.
 
