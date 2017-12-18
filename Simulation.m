@@ -1,9 +1,9 @@
 clear mex; close all;clc;
 
 %% Configuration (complete your configuration here...)
-addpath('/home/yutaochen/Documents/MATLAB/Packages/MATMPC/nmpc');
-addpath('/home/yutaochen/Documents/MATLAB/Packages/MATMPC/Source_Codes');
-addpath('/home/yutaochen/Documents/MATLAB/Packages/MATMPC/mex_core');
+addpath([pwd,'/nmpc']);
+addpath([pwd,'/Source_Codes']);
+addpath([pwd,'/mex_core']);
 
 if exist('settings','file')==2
     load settings
@@ -22,10 +22,17 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
+<<<<<<< HEAD
 N     = 20;             % No. of shooting points
 nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
 neq   = (N+1)*nx;       % No. of equality constraints
 nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
+=======
+N     = 60; % No. of shooting points
+nw    = (N+1)*nx+N*nu; % No. of total optimization varialbes
+neq   = (N+1)*nx; % No. of equality constraints
+nineq = N*nc+ncN; % No. of inequality constraints (by default we assume there are lower and upper bounds)
+>>>>>>> 5ae5df41975938d10cf5d23dff042ff3750f146e
 
 settings.N  = N;
 settings.nw = nw; 
@@ -33,7 +40,7 @@ settings.neq = neq;
 settings.nineq = nineq; 
 
 % solver configurations
-opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
+opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
 opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
@@ -132,7 +139,11 @@ Initialization;
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
+<<<<<<< HEAD
 Tf = 4;               % simulation time
+=======
+Tf = 50;               % simulation time
+>>>>>>> 5ae5df41975938d10cf5d23dff042ff3750f146e
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
@@ -154,8 +165,8 @@ while time(end) < Tf
     input.yN = REF(1:nyN)';
     
     % time-varying reference (no reference preview)
-%     input.y = repmat(REF(iter,:)',1,N);
-%     input.yN = REF(iter,1:nyN)';
+    input.y = repmat(REF(iter,:)',1,N);
+    input.yN = REF(iter,1:nyN)';
     
     %time-varying reference (reference preview)
 %     REF = [];
@@ -224,8 +235,17 @@ end
 
 qpOASES_sequence( 'c', mem.qpoases.warm_start);
 clear mex;
+%% draw pictures (optional)
 
+<<<<<<< HEAD
 %% draw pictures (optional)
 disp('Average CPT:');
+=======
+disp('Average CPT: ')
+>>>>>>> 5ae5df41975938d10cf5d23dff042ff3750f146e
 mean(CPT(2:end,:),1)
+
+disp('Maximum CPT: ')
+max(CPT(2:end,:))
+
 Draw;
