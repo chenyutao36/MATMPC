@@ -43,7 +43,7 @@ for j=1:s
 end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
-%% Explicit Runge-Kutta 4 Integrator for multiple shooting
+%% Integrator for multiple shooting
 
 Ts_st = 0.1; % shooting interval time
 s  = 2; % No. of integration steps per shooting interval

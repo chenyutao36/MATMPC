@@ -57,15 +57,17 @@ HEAD2_PATH = '';
 
 mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim.c','casadi_src.c','mpc_common.c',LIB1,LIB2);
 
-mex(options, CC_FLAGS, OP_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
+% mex(options, CC_FLAGS, OP_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
 
 mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_info.c','casadi_wrapper.c','casadi_src.c','sim.c','mpc_common.c', LIB1, LIB2);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c', LIB1);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c', LIB1);
 
 %% only for testing, don't touch
+
+% mex HPIPM_d_solve_ipm2_hard_ocp_qp.c /home/yutaochen/Documents/MATLAB/Packages/hpipm/lib/libhpipm.a /home/yutaochen/Documents/MATLAB/Packages/blasfeo/lib/libblasfeo.a -I/home/yutaochen/Documents/MATLAB/Packages/hpipm/include -I/home/yutaochen/Documents/MATLAB/Packages/blasfeo/include
 
 % mex(options, OP_FLAGS, CC_FLAGS, HEAD4_PATH, LIB4_PATH, LIB4, 'blasfeo.c');
 

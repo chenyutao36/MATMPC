@@ -1,4 +1,5 @@
 clear mex; close all;clc;
+
 %% Configuration (complete your configuration here...)
 addpath('/home/yutaochen/Documents/MATLAB/Packages/MATMPC/nmpc');
 addpath('/home/yutaochen/Documents/MATLAB/Packages/MATMPC/Source_Codes');
@@ -10,9 +11,9 @@ else
     error('No setting data is detected!');
 end
 
-Ts  = settings.Ts;   % Sampling time
-Ts_st = settings.Ts_st; % Shooting interval
-s = settings.s; % number of integration steps per interval
+Ts  = settings.Ts;       % Sampling time
+Ts_st = settings.Ts_st;  % Shooting interval
+s = settings.s;      % number of integration steps per interval
 nx = settings.nx;    % No. of states
 nu = settings.nu;    % No. of controls
 ny = settings.ny;    % No. of outputs (references)    
@@ -21,10 +22,10 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
-N     = 20; % No. of shooting points
-nw    = (N+1)*nx+N*nu; % No. of total optimization varialbes
-neq   = (N+1)*nx; % No. of equality constraints
-nineq = N*nc+ncN; % No. of inequality constraints (by default we assume there are lower and upper bounds)
+N     = 20;             % No. of shooting points
+nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
+neq   = (N+1)*nx;       % No. of equality constraints
+nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
 
 settings.N  = N;
 settings.nw = nw; 
@@ -89,7 +90,6 @@ input.muN=zeros(ncN,1);
 
 % Integrator settings
 
-
 switch opt.integrator
     case 'ERK4-CASADI'
         mem.sim_method = 0;
@@ -129,11 +129,10 @@ end
 
 Initialization;
 
-% memory_init(sim_irk_mem);
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
-Tf = 5;               % simulation time
+Tf = 4;               % simulation time
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
@@ -151,23 +150,23 @@ while time(end) < Tf
     % the reference input.yN is a nyN by 1 vector
     
     % time-invariant reference
-%     input.y = repmat(REF',1,N);
-%     input.yN = REF(1:nyN)';
+    input.y = repmat(REF',1,N);
+    input.yN = REF(1:nyN)';
     
     % time-varying reference (no reference preview)
 %     input.y = repmat(REF(iter,:)',1,N);
 %     input.yN = REF(iter,1:nyN)';
     
     %time-varying reference (reference preview)
-    REF = [];
-    for i=1:N+1
-        y = sin(time(end)+(i-1)*Ts_st);
-        REF = [REF [0 y 0 0 0 0]'];
-    end    
-    ref_traj=[ref_traj,REF(2,1)];
+%     REF = [];
+%     for i=1:N+1
+%         y = sin(time(end)+(i-1)*Ts_st);
+%         REF = [REF [0 y 0 0 0 0]'];
+%     end    
+%     ref_traj=[ref_traj,REF(2,1)];
 %     
-    input.y = REF(:,1:N);
-    input.yN = REF(1:nyN,N+1);
+%     input.y = REF(:,1:N);
+%     input.yN = REF(1:nyN,N+1);
            
     % obtain the state measurement
     input.x0 = state_sim(end,:)';
@@ -223,9 +222,10 @@ while time(end) < Tf
     CPT = [CPT; cpt, tshooting, tcond, tqp];
 end
 
-%% draw pictures (optional)
 qpOASES_sequence( 'c', mem.qpoases.warm_start);
 clear mex;
 
+%% draw pictures (optional)
+disp('Average CPT:');
 mean(CPT(2:end,:),1)
 Draw;

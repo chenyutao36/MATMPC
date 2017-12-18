@@ -64,7 +64,7 @@ switch settings.model
         input.ubu = repmat(ubu,1,N);
         
     case 'ChainofMasses_Lin'
-        n=9;
+        n=5;
         x0=zeros(nx,1);
         for i=1:n
             x0(i)=7.5*i/n;
@@ -103,8 +103,8 @@ switch settings.model
         ub = inf*ones(nc,1);
         lbN = -inf*ones(ncN,1);
         ubN = inf*ones(ncN,1);
-        lbu = -1e2*ones(nu,1);
-        ubu = 1e2*ones(nu,1);
+        lbu = -2e2*ones(nu,1);
+        ubu = 2e2*ones(nu,1);
         
         input.lb=repmat(lb,1,N);
         input.ub=repmat(ub,1,N); 
