@@ -57,46 +57,28 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
     
-    plhs[0] = mxCreateDoubleMatrix(nx,nx*(N+1),mxREAL); // Qh
-    plhs[1] = mxCreateDoubleMatrix(nx,nu*N,mxREAL); // S
-    plhs[2] = mxCreateDoubleMatrix(nu,nu*N,mxREAL); // R
-    plhs[3] = mxCreateDoubleMatrix(nx,nx*N,mxREAL); // A
-    plhs[4] = mxCreateDoubleMatrix(nx,nu*N,mxREAL); // B
-    plhs[5] = mxCreateDoubleMatrix(nc,nx*N,mxREAL); // Cx
-    plhs[6] = mxCreateDoubleMatrix(nc,nu*N,mxREAL); // Cu
-    plhs[7] = mxCreateDoubleMatrix(nx, N+1, mxREAL); //gx
-    plhs[8] = mxCreateDoubleMatrix(nu, N, mxREAL); //gu 
-    plhs[9] = mxCreateDoubleMatrix(nx,N, mxREAL); //a
-    plhs[10] = mxCreateDoubleMatrix(nx,1,mxREAL); // ds0    
-    plhs[11] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL); //lc
-    plhs[12] = mxCreateDoubleMatrix(N*nc+ncN, 1, mxREAL); //uc
-    plhs[13] = mxCreateDoubleMatrix(N*nu, 1, mxREAL);   // lb_du
-    plhs[14] = mxCreateDoubleMatrix(N*nu, 1, mxREAL);   // ub_du     
-    plhs[15] = mxCreateDoubleMatrix(ncN,nx,mxREAL); // CxN
-    
-    
     mwIndex i=0,j=0;
     mwSize nz = nx+nu;
     char *nTrans = "N", *Trans="T";
     double one_d = 1.0, zero = 0.0, minus_one_d = -1.0;
     mwSignedIndex one_i = 1;
       
-    double *Qh = mxGetPr(plhs[0]);
-    double *S = mxGetPr(plhs[1]);   
-    double *R = mxGetPr(plhs[2]);
-    double *A = mxGetPr(plhs[3]);   
-    double *B = mxGetPr(plhs[4]);
-    double *Cx = mxGetPr(plhs[5]);
-    double *Cu = mxGetPr(plhs[6]);
-    double *gx = mxGetPr(plhs[7]);
-    double *gu = mxGetPr(plhs[8]);   
-    double *a = mxGetPr(plhs[9]);
-    double *ds0 = mxGetPr(plhs[10]);   
-    double *lc = mxGetPr(plhs[11]);
-    double *uc = mxGetPr(plhs[12]);
-    double *lb_du = mxGetPr(plhs[13]);
-    double *ub_du = mxGetPr(plhs[14]);
-    double *CxN = mxGetPr(plhs[15]);
+    double *Qh = mxGetPr( mxGetField(prhs[2], 0, "Q_h") );
+    double *S = mxGetPr( mxGetField(prhs[2], 0, "S") );
+    double *R = mxGetPr( mxGetField(prhs[2], 0, "R") );
+    double *A = mxGetPr( mxGetField(prhs[2], 0, "A_sens") );
+    double *B = mxGetPr( mxGetField(prhs[2], 0, "B_sens") );
+    double *Cx = mxGetPr( mxGetField(prhs[2], 0, "Cx") );
+    double *Cu = mxGetPr( mxGetField(prhs[2], 0, "Cu") );
+    double *gx = mxGetPr( mxGetField(prhs[2], 0, "gx") );
+    double *gu = mxGetPr( mxGetField(prhs[2], 0, "gu") );   
+    double *a = mxGetPr( mxGetField(prhs[2], 0, "a") );
+    double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
+    double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
+    double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
+    double *lb_du = mxGetPr( mxGetField(prhs[2], 0, "lb_du") );
+    double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
+    double *CxN = mxGetPr( mxGetField(prhs[2], 0, "CxN") );
     
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - z[i];

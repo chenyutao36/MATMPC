@@ -28,14 +28,13 @@
 #include "mex.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 /*#include <math.h>*/
 
 #include "hpipm_d_ocp_qp_dim.h"
 #include "hpipm_d_ocp_qp.h"
 #include "hpipm_d_ocp_qp_sol.h"
 #include "hpipm_d_ocp_qp_ipm.h"
-
-
 
 
 // z = beta*y + alpha*A*x
@@ -69,7 +68,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	// get data 
 	int k_max;
 	double mu0, tol, *A, *B, *b, *Q, *Qf, *R, *S, *q, *qf, *r, *x, *u, *lb, *ub, *C, *D, *lg, *ug, *CN, *lgN, *ugN, *stat, *kkk, *inf_norm_res, *pi, *lam/*, *t*/;
-	
+// 	double *dx0;
+    
 	kkk   = mxGetPr(prhs[0]);
 	k_max = (int) mxGetScalar(prhs[1]);
 	mu0   = mxGetScalar(prhs[2]);
@@ -103,30 +103,34 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	CN   = mxGetPr(prhs[29]);
 	lgN  = mxGetPr(prhs[30]);
 	ugN  = mxGetPr(prhs[31]);
-	x    = mxGetPr(prhs[32]);
-	u    = mxGetPr(prhs[33]);
-	pi  = mxGetPr(prhs[34]);
-	lam = mxGetPr(prhs[35]);
-//	t   = mxGetPr(prhs[36]);
-//	inf_norm_res = mxGetPr(prhs[37]);
-//	stat = mxGetPr(prhs[38]);
-	inf_norm_res = mxGetPr(prhs[36]);
-	stat = mxGetPr(prhs[37]);
-	
-	int kk = -1;
+//     dx0  = mxGetPr(prhs[32]);
+    x = mxGetPr(prhs[32]);
+    u = mxGetPr(prhs[33]);
+    pi = mxGetPr(prhs[34]);
+    lam = mxGetPr(prhs[35]);
+    stat = mxGetPr(prhs[36]);
+    inf_norm_res = mxGetPr(prhs[37]);
+    
+//     plhs[0] = mxCreateDoubleMatrix(nx,N+1,mxREAL); // x
+//     x = mxGetPr(plhs[0]);
+//     plhs[1] = mxCreateDoubleMatrix(nu,N,mxREAL); // u
+//     u = mxGetPr(plhs[1]);
+//     plhs[2] = mxCreateDoubleMatrix(nx,N,mxREAL); // lambda
+//     pi = mxGetPr(plhs[2]);
+//     plhs[3] = mxCreateDoubleMatrix(2*(nb+ng)*N+2*(nb+ngN),1,mxREAL); //mu
+//     lam = mxGetPr(plhs[3]);
+//     plhs[4] = mxCreateDoubleMatrix(5,k_max,mxREAL); // stats
+//     stat = mxGetPr(plhs[4]);
+//     plhs[5] = mxCreateDoubleMatrix(1,4,mxREAL); // inf_norm
+//     inf_norm_res = mxGetPr(plhs[5]);
+    
+//     memcpy(&x[0], &dx0[0], nx*sizeof(double));
 
-
-
-	// 
 	int ii, jj;
 	int i_tmp;
 
-
-
 	int nb0 = nb<nu ? nb : nu;
 	int nbN = nb-nu>0 ? nb-nu : 0;
-
-
 
 	int nx_v[N+1];
 	nx_v[0] = 0;
@@ -364,12 +368,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	
 	for(ii=0; ii<N; ii++)
 		hpi[ii] = pi+ii*nx;
-	
-//	for(ii=0; ii<=N; ii++)
-//		hlam[ii] = lam+ii*(2*nb+2*ng);
-
-//	for(ii=0; ii<=N; ii++)
-//		ht[ii] = t+ii*(2*nb+2*ng);
 
 	for(ii=0; ii<=N; ii++)
 		{
@@ -378,20 +376,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		hlam_lg[ii] = lam+2*(N+1)*nb+ii*ng;
 		hlam_ug[ii] = lam+2*(N+1)*nb+(N+1)*ng+ii*ng;
 		}
-
-	// Partial condensing horizon
-//	int N2 = N;
-
-//	int work_space_size = hpmpc_d_ip_ocp_hard_tv_work_space_size_bytes(N, nx_v, nu_v, nb_v, hidxb, ng_v, N2);
-//	void *work = malloc( work_space_size );
-
-
-
-	// call solver 
-//	fortran_order_d_ip_ocp_hard_tv(&kk, k_max, mu0, tol, N, nx_v, nu_v, nb_v, hidxb, ng_v, N2, warm_start, hA, hB, hb, hQ, hS, hR, hq, hr, hlb, hub, hC, hD, hlg, hug, hx, hu, hpi, hlam, /*ht,*/ inf_norm_res, work, stat);
-
-
-
 
 	// qp dim
 	int dim_size = d_memsize_ocp_qp_dim(N);
@@ -429,15 +413,15 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	d_set_default_ocp_qp_ipm_arg(&arg);
 
 //	arg.alpha_min = 1e-12;
-//	arg.res_g_max = 1e-4;
-//	arg.res_b_max = 1e-4;
-//	arg.res_d_max = 1e-4;
-//	arg.res_m_max = 1e-4;
-//	arg.mu0 = 2.0;
-//	arg.iter_max = 10;
+	arg.res_g_max = 1e-4;
+	arg.res_b_max = 1e-4;
+	arg.res_d_max = 1e-4;
+	arg.res_m_max = 1e-4;
+	arg.mu0 = mu0;
+	arg.iter_max = k_max;
 //	arg.stat_max = 100;
 //	arg.pred_corr = 1;
-//	arg.cond_pred_corr = 1;
+	arg.cond_pred_corr = 1;
 
 
 	// ipm
@@ -464,9 +448,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		for(ii=0; ii<5; ii++)
 			stat[ii+5*jj] = workspace.stat[ii+5*jj];
 
-
-
-	*kkk = (double) workspace.iter;
+	double num_it = (double) workspace.iter;
+    plhs[0] = mxCreateDoubleScalar(num_it);
 
 
 	free(ptr_idx);

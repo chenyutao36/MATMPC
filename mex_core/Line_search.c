@@ -15,17 +15,17 @@
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
-    double *z_old = mxGetPr( mxGetField(prhs[5], 0, "z") );
-    double *xN_old = mxGetPr( mxGetField(prhs[5], 0, "xN") );
-    double *lambda_old = mxGetPr( mxGetField(prhs[5], 0, "lambda") );
-    double *mu_old = mxGetPr( mxGetField(prhs[5], 0, "mu") );
-    double *muN_old = mxGetPr( mxGetField(prhs[5], 0, "muN") );
+    double *z = mxGetPr( mxGetField(prhs[1], 0, "z") );
+    double *xN = mxGetPr( mxGetField(prhs[1], 0, "xN") );
+    double *lambda = mxGetPr( mxGetField(prhs[1], 0, "lambda") );
+    double *mu = mxGetPr( mxGetField(prhs[1], 0, "mu") );
+    double *muN = mxGetPr( mxGetField(prhs[1], 0, "muN") );
     
-    mwSize nx = mxGetScalar( mxGetField(prhs[6], 0, "nx") );
-    mwSize nu = mxGetScalar( mxGetField(prhs[6], 0, "nu") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[6], 0, "nc") );
-    mwSize ncN = mxGetScalar( mxGetField(prhs[6], 0, "ncN") );
-    mwSize N = mxGetScalar( mxGetField(prhs[6], 0, "N") );
+    mwSize nx = mxGetScalar( mxGetField(prhs[2], 0, "nx") );
+    mwSize nu = mxGetScalar( mxGetField(prhs[2], 0, "nu") );
+    mwSize nc = mxGetScalar( mxGetField(prhs[2], 0, "nc") );
+    mwSize ncN = mxGetScalar( mxGetField(prhs[2], 0, "ncN") );
+    mwSize N = mxGetScalar( mxGetField(prhs[2], 0, "N") );
     
     mwSize nz = nx+nu;
     mwSize nw = N*nz;
@@ -33,47 +33,29 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize nineq = N*nc;
     
     mwSignedIndex one_i = 1;
-       
-    double *dz = mxGetPr(prhs[0]);
-    double *dxN = mxGetPr(prhs[1]);
-    double *lambda = mxGetPr(prhs[2]);
-    double *mu = mxGetPr(prhs[3]);
-    double *muN = mxGetPr(prhs[4]);
+    
+    double *dz = mxGetPr( mxGetField(prhs[0], 0, "dz") );
+    double *dxN = mxGetPr( mxGetField(prhs[0], 0, "dxN") );
+    double *lambda_new = mxGetPr( mxGetField(prhs[0], 0, "lambda_new") );
+    double *mu_new = mxGetPr( mxGetField(prhs[0], 0, "mu_new") );
+    double *muN_new = mxGetPr( mxGetField(prhs[0], 0, "muN_new") );
     
     double alpha = 1.0;
     double inc = 1.0 - alpha;
-    
-    plhs[0] = mxCreateDoubleMatrix(nz, N, mxREAL); // z
-    plhs[1] = mxCreateDoubleMatrix(nx, 1, mxREAL); // xN
-    plhs[2] = mxCreateDoubleMatrix(nx, N+1, mxREAL); // lambda
-    plhs[3] = mxCreateDoubleMatrix(nc, N, mxREAL); // mu
-    plhs[4] = mxCreateDoubleMatrix(ncN, 1, mxREAL); // muN
-    
-    double *z = mxGetPr(plhs[0]);
-    double *xN = mxGetPr(plhs[1]);
-    double *lambda_new = mxGetPr(plhs[2]);
-    double *mu_new = mxGetPr(plhs[3]);
-    double *muN_new = mxGetPr(plhs[4]);
-    
-    memcpy(&z[0], &z_old[0], nw*sizeof(double));
-    daxpy(&nw, &alpha, dz, &one_i, z, &one_i);
-    
-    memcpy(&xN[0], &xN_old[0], nx*sizeof(double));
+     
+    daxpy(&nw, &alpha, dz, &one_i, z, &one_i); 
     daxpy(&nx, &alpha, dxN, &one_i, xN, &one_i);
     
-    dscal(&neq, &alpha, lambda, &one_i);
-    memcpy(&lambda_new[0], &lambda[0], neq*sizeof(double));
-    daxpy(&neq, &inc, lambda_old, &one_i, lambda_new, &one_i);
+    dscal(&neq, &inc, lambda, &one_i);
+    daxpy(&neq, &alpha, lambda_new, &one_i, lambda, &one_i);
     
     if (nc>0){
-        dscal(&nineq, &alpha, mu, &one_i);
-        memcpy(&mu_new[0], &mu[0], nineq*sizeof(double));
-        daxpy(&nineq, &inc, mu_old, &one_i, mu_new, &one_i);
+        dscal(&nineq, &inc, mu, &one_i);
+        daxpy(&nineq, &alpha, mu_new, &one_i, mu, &one_i);
     }
     
     if (ncN>0){
-        dscal(&ncN, &alpha, muN, &one_i);
-        memcpy(&muN_new[0], &muN[0], ncN*sizeof(double));
-        daxpy(&ncN, &inc, muN_old, &one_i, muN_new, &one_i);
+        dscal(&ncN, &inc, muN, &one_i);
+        daxpy(&ncN, &alpha, muN_new, &one_i, muN, &one_i);
     }
 }

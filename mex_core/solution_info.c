@@ -27,46 +27,44 @@ void exitFcn_info(){
     if (mem_alloc_info){
         mxFree(vec_out[1]);
         mxFree(vec_out[2]);
-        mxFree(L);
-        mxFree(a);
-        mxFree(lc);
-        mxFree(uc);       
+        mxFree(L);      
         mxFree(workspace);
     }
 }
 
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
-{
-
-    double *lambda = mxGetPr(prhs[0]);
-    double *mu = mxGetPr(prhs[1]);
-    double *muN = mxGetPr(prhs[2]);
-    double *ds0 = mxGetPr(prhs[3]);
+{    
+    double *z = mxGetPr( mxGetField(prhs[0], 0, "z") );
+    double *xN = mxGetPr( mxGetField(prhs[0], 0, "xN") );
+    double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda") );
+    double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu") );
+    double *muN = mxGetPr( mxGetField(prhs[0], 0, "muN") );
+    double *y = mxGetPr( mxGetField(prhs[0], 0, "y") );
+    double *yN = mxGetPr( mxGetField(prhs[0], 0, "yN") );
+    double *od = mxGetPr( mxGetField(prhs[0], 0, "od") );
+    double *Q = mxGetPr( mxGetField(prhs[0], 0, "W") );
+    double *QN = mxGetPr( mxGetField(prhs[0], 0, "WN") );
+    double *lb = mxGetPr( mxGetField(prhs[0], 0, "lb") );
+    double *ub = mxGetPr( mxGetField(prhs[0], 0, "ub") );
+    double *lbN = mxGetPr( mxGetField(prhs[0], 0, "lbN") );
+    double *ubN = mxGetPr( mxGetField(prhs[0], 0, "ubN") );
     
-    double *z = mxGetPr( mxGetField(prhs[4], 0, "z") );
-    double *xN = mxGetPr( mxGetField(prhs[4], 0, "xN") );
-    double *y = mxGetPr( mxGetField(prhs[4], 0, "y") );
-    double *yN = mxGetPr( mxGetField(prhs[4], 0, "yN") );
-    double *od = mxGetPr( mxGetField(prhs[4], 0, "od") );
-    double *Q = mxGetPr( mxGetField(prhs[4], 0, "W") );
-    double *QN = mxGetPr( mxGetField(prhs[4], 0, "WN") );
-    double *lb = mxGetPr( mxGetField(prhs[4], 0, "lb") );
-    double *ub = mxGetPr( mxGetField(prhs[4], 0, "ub") );
-    double *lbN = mxGetPr( mxGetField(prhs[4], 0, "lbN") );
-    double *ubN = mxGetPr( mxGetField(prhs[4], 0, "ubN") );
-    double *x0 = mxGetPr( mxGetField(prhs[4], 0, "x0") );
+    double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
+    double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
+    double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
+    double *a = mxGetPr( mxGetField(prhs[2], 0, "a") );
+     
+    mwSize nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
+    mwSize nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
+    mwSize np = mxGetScalar( mxGetField(prhs[1], 0, "np") ); if(np==0) np++;
+    mwSize ny = mxGetScalar( mxGetField(prhs[1], 0, "ny") );
+    mwSize nyN = mxGetScalar( mxGetField(prhs[1], 0, "nyN") );
+    mwSize nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") );
+    mwSize ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
+    mwSize N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
     
-    mwSize nx = mxGetScalar( mxGetField(prhs[5], 0, "nx") );
-    mwSize nu = mxGetScalar( mxGetField(prhs[5], 0, "nu") );
-    mwSize np = mxGetScalar( mxGetField(prhs[5], 0, "np") ); if(np==0) np++;
-    mwSize ny = mxGetScalar( mxGetField(prhs[5], 0, "ny") );
-    mwSize nyN = mxGetScalar( mxGetField(prhs[5], 0, "nyN") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[5], 0, "nc") );
-    mwSize ncN = mxGetScalar( mxGetField(prhs[5], 0, "ncN") );
-    mwSize N = mxGetScalar( mxGetField(prhs[5], 0, "N") );
-    
-    int sim_method = mxGetScalar( mxGetField(prhs[6], 0, "sim_method") );
+    int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
       
     mwIndex i=0,j=0;
     mwSize nz = nx+nu;
@@ -87,19 +85,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexMakeMemoryPersistent(vec_out[2]);     
         L = (double *)mxCalloc( nw, sizeof(double));
         mexMakeMemoryPersistent(L);
-        a = (double *)mxCalloc( neq, sizeof(double));
-        mexMakeMemoryPersistent(a);
-        lc = (double *)mxCalloc( nineq, sizeof(double));
-        mexMakeMemoryPersistent(lc);
-        uc = (double *)mxCalloc( nineq, sizeof(double));
-        mexMakeMemoryPersistent(uc);
         
         if (sim_method!=0){
             int size = 0;
             if (sim_method == 1)
-                size = sim_erk_calculate_workspace_size(prhs[6],false);
+                size = sim_erk_calculate_workspace_size(prhs[2],false);
             if (sim_method ==2)
-                size = sim_irk_calculate_workspace_size(prhs[6],false);
+                size = sim_irk_calculate_workspace_size(prhs[2],false);
 
             workspace = mxMalloc(size);
             mexMakeMemoryPersistent(workspace);  
@@ -144,14 +136,14 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             ode_in[0]=z+i*nz;
             ode_in[1]=z+i*nz+nx;
             ode_in[2]=od+i*np;
-            sim_erk(ode_in, vec_out, Sens, prhs[6], false, workspace);
+            sim_erk(ode_in, vec_out, Sens, prhs[2], false, workspace);
         }
         if (sim_method == 2){
             double *Sens[2];
             ode_in[0]=z+i*nz;
             ode_in[1]=z+i*nz+nx;
             ode_in[2]=od+i*np;
-            sim_irk(ode_in, vec_out, Sens, prhs[6], false, workspace);
+            sim_irk(ode_in, vec_out, Sens, prhs[2], false, workspace);
         }
         
         if (i < N-1){
