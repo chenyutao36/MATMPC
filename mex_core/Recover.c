@@ -14,37 +14,36 @@
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
-    double *Qh = mxGetPr(prhs[0]);
-    double *S = mxGetPr(prhs[1]);    
-    double *A = mxGetPr(prhs[2]);
-    double *B = mxGetPr(prhs[3]);    
-    double *Cx = mxGetPr(prhs[4]);
-    double *CxN = mxGetPr(prhs[5]);
-    double *a = mxGetPr(prhs[6]);
-    double *gx = mxGetPr(prhs[7]);    
-    double *du = mxGetPr(prhs[8]);
-    double *ds0 = mxGetPr(prhs[9]);
-    double *mu_vec = mxGetPr(prhs[10]);
+
+    double *Qh = mxGetPr( mxGetField(prhs[2], 0, "Q_h") );
+    double *S = mxGetPr( mxGetField(prhs[2], 0, "S") );
+    double *R = mxGetPr( mxGetField(prhs[2], 0, "R") );
+    double *A = mxGetPr( mxGetField(prhs[2], 0, "A_sens") );
+    double *B = mxGetPr( mxGetField(prhs[2], 0, "B_sens") );
+    double *Cx = mxGetPr( mxGetField(prhs[2], 0, "Cx") );
+    double *CxN = mxGetPr( mxGetField(prhs[2], 0, "CxN") );
+    double *Cu = mxGetPr( mxGetField(prhs[2], 0, "Cu") );
+    double *gx = mxGetPr( mxGetField(prhs[2], 0, "gx") );
+    double *a = mxGetPr( mxGetField(prhs[2], 0, "a") );
+    double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
     
-    mwSize nx = mxGetScalar( mxGetField(prhs[11], 0, "nx") );
-    mwSize nu = mxGetScalar( mxGetField(prhs[11], 0, "nu") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[11], 0, "nc") );
-    mwSize ncN = mxGetScalar( mxGetField(prhs[11], 0, "ncN") );
-    mwSize N = mxGetScalar( mxGetField(prhs[11], 0, "N") );
+    double *du = mxGetPr(prhs[0]);
+    double *mu_vec = mxGetPr(prhs[1]);
+    
+    mwSize nx = mxGetScalar( mxGetField(prhs[3], 0, "nx") );
+    mwSize nu = mxGetScalar( mxGetField(prhs[3], 0, "nu") );
+    mwSize nc = mxGetScalar( mxGetField(prhs[3], 0, "nc") );
+    mwSize ncN = mxGetScalar( mxGetField(prhs[3], 0, "ncN") );
+    mwSize N = mxGetScalar( mxGetField(prhs[3], 0, "N") );
     
     mwSize nz = nx+nu;
     
-    plhs[0] = mxCreateDoubleMatrix(nz, N, mxREAL); //z
-    plhs[1] = mxCreateDoubleMatrix(nx, 1, mxREAL); //xN
-    plhs[2] = mxCreateDoubleMatrix(nx, N+1, mxREAL); //lambda
-    plhs[3] = mxCreateDoubleMatrix(nc, N, mxREAL); //mu
-    plhs[4] = mxCreateDoubleMatrix(ncN,1, mxREAL); //muN
-    
-    double *z = mxGetPr(plhs[0]);
-    double *xN = mxGetPr(plhs[1]);
-    double *lambda = mxGetPr(plhs[2]);
-    double *mu = mxGetPr(plhs[3]);
-    double *muN = mxGetPr(plhs[4]);
+    double *z = mxGetPr( mxGetField(prhs[2], 0, "dz") );
+    double *xN = mxGetPr( mxGetField(prhs[2], 0, "dxN") );
+    double *lambda = mxGetPr( mxGetField(prhs[2], 0, "lambda_new") );
+    double *mu = mxGetPr( mxGetField(prhs[2], 0, "mu_new") );
+    double *muN = mxGetPr( mxGetField(prhs[2], 0, "muN_new") );
+   
     memcpy(&mu[0], &mu_vec[0], nc*N*sizeof(double));
     memcpy(&muN[0], &mu_vec[N*nc], ncN*sizeof(double));
  

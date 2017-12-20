@@ -1,8 +1,16 @@
-function [solution,mu_vec,cpt_qp,mem] = mpc_qp_solve_dense(H,g,C,lu,uu,lc,uc,sizes,mem)
+function [solution,mu_vec,cpt_qp,mem] = mpc_qp_solve_dense(sizes,mem)
 
     nu=sizes.nu;
     N=sizes.N;   
     options = qpOASES_options('MPC');
+    
+    H=mem.Hc;
+    g=mem.gc;
+    C=mem.Cc;
+    lu=mem.lb_du;
+    uu=mem.ub_du;
+    lc=mem.lcc;
+    uc=mem.ucc;
 %     options = qpOASES_options('default');
     if mem.qpoases.warm_start==0
         [QP,solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('i',H,g,C,lu,uu,lc,uc, options); 

@@ -5,7 +5,7 @@ display('-----------------------------------------------------');
 
 
 %% Insert Model here
-settings.model='DiM';
+settings.model='Hexacopter';
 
 switch settings.model
     case 'InvertedPendulum'
@@ -45,7 +45,7 @@ Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'s
 
 %% Integrator for multiple shooting
 
-Ts_st = 0.01; % shooting interval time
+Ts_st = 0.1; % shooting interval time
 s  = 2; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});

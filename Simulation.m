@@ -22,17 +22,10 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
-<<<<<<< HEAD
 N     = 20;             % No. of shooting points
 nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
 neq   = (N+1)*nx;       % No. of equality constraints
 nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
-=======
-N     = 60; % No. of shooting points
-nw    = (N+1)*nx+N*nu; % No. of total optimization varialbes
-neq   = (N+1)*nx; % No. of equality constraints
-nineq = N*nc+ncN; % No. of inequality constraints (by default we assume there are lower and upper bounds)
->>>>>>> 5ae5df41975938d10cf5d23dff042ff3750f146e
 
 settings.N  = N;
 settings.nw = nw; 
@@ -40,7 +33,7 @@ settings.neq = neq;
 settings.nineq = nineq; 
 
 % solver configurations
-opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
+opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
 opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
@@ -132,6 +125,37 @@ switch opt.integrator
         mem.JFK = mem.h*[mem.B(1)*eye(nx,nx), mem.B(2)*eye(nx,nx), mem.B(3)*eye(nx,nx)];
         
 end
+
+%%
+mem.A_sens = zeros(nx,nx*N);
+mem.B_sens = zeros(nx,nu*N);
+mem.Q_h = zeros(nx,nx*(N+1));
+mem.S = zeros(nx,nu*N);
+mem.R = zeros(nu,nu*N);
+mem.Cx = zeros(nc,nx*N);
+mem.Cu = zeros(nc,nu*N);
+mem.gx = zeros(nx,N+1);
+mem.gu = zeros(nu,N);
+mem.a = zeros(nx,N);
+mem.ds0 = zeros(nx,1);
+mem.lc = zeros(N*nc+ncN,1);
+mem.uc = zeros(N*nc+ncN,1);
+mem.lb_du = zeros(N*nu,1);
+mem.ub_du = zeros(N*nu,1);
+mem.CxN = zeros(ncN,nx);
+
+mem.Hc = zeros(N*nu,N*nu);
+mem.Cc = zeros(N*nc+ncN,N*nu);
+mem.gc = zeros(N*nu,1);
+mem.lcc = zeros(N*nc+ncN,1);
+mem.ucc = zeros(N*nc+ncN,1);
+
+mem.dz = zeros(nx+nu,N);
+mem.dxN= zeros(nx,1);
+mem.lambda_new = zeros(nx,N+1);
+mem.mu_new = zeros(nc,N);
+mem.muN_new = zeros(nx,N+1);
+
 %% Initialzation (initialize your simulation properly...)
 
 Initialization;
@@ -139,11 +163,7 @@ Initialization;
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
-<<<<<<< HEAD
 Tf = 4;               % simulation time
-=======
-Tf = 50;               % simulation time
->>>>>>> 5ae5df41975938d10cf5d23dff042ff3750f146e
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
@@ -165,8 +185,8 @@ while time(end) < Tf
     input.yN = REF(1:nyN)';
     
     % time-varying reference (no reference preview)
-    input.y = repmat(REF(iter,:)',1,N);
-    input.yN = REF(iter,1:nyN)';
+%     input.y = repmat(REF(iter,:)',1,N);
+%     input.yN = REF(iter,1:nyN)';
     
     %time-varying reference (reference preview)
 %     REF = [];
@@ -235,17 +255,12 @@ end
 
 qpOASES_sequence( 'c', mem.qpoases.warm_start);
 clear mex;
-%% draw pictures (optional)
 
-<<<<<<< HEAD
 %% draw pictures (optional)
 disp('Average CPT:');
-=======
-disp('Average CPT: ')
->>>>>>> 5ae5df41975938d10cf5d23dff042ff3750f146e
-mean(CPT(2:end,:),1)
+mean(CPT(2:end-1,:),1)
 
 disp('Maximum CPT: ')
-max(CPT(2:end,:))
+max(CPT(2:end-1,:))
 
 Draw;
