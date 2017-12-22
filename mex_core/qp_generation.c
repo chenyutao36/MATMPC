@@ -21,7 +21,8 @@ static bool mem_alloc = false;
 
 void exitFcn_sim(){
     if (mem_alloc){
-        mxFree(workspace);
+        if (workspace!=NULL)
+            mxFree(workspace);
         mxFree(Jac[0]);
         mxFree(Jac[1]);
         mxFree(Jac_N);
@@ -173,8 +174,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             vec_out[0] = lc + i*nc;
             path_con_Fun(vec_in, vec_out);
             for (j=0;j<nc;j++){
-                uc[i*nc+j] = ub[j] - vec_out[0][j];
-                vec_out[0][j] = lb[j] - vec_out[0][j];            
+                uc[i*nc+j] = ub[i*nc+j] - vec_out[0][j];
+                vec_out[0][j] = lb[i*nc+j] - vec_out[0][j];            
             }
         
             // constraint Jacobian

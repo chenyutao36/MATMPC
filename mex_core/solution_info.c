@@ -19,7 +19,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 static double *vec_out[3];
-static double *L = NULL,*a = NULL,*lc = NULL,*uc = NULL;
+static double *L = NULL;
 static void *workspace = NULL;
 static bool mem_alloc_info = false;
 
@@ -27,8 +27,9 @@ void exitFcn_info(){
     if (mem_alloc_info){
         mxFree(vec_out[1]);
         mxFree(vec_out[2]);
-        mxFree(L);      
-        mxFree(workspace);
+        mxFree(L);
+        if (workspace!=NULL)
+            mxFree(workspace);
     }
 }
 
@@ -158,8 +159,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             vec_out[0] = lc + i*nc;
             path_con_Fun(vec_in, vec_out);
             for (j=0;j<nc;j++){
-                uc[i*nc+j] = ub[j] - vec_out[0][j];
-                vec_out[0][j] = lb[j] - vec_out[0][j];            
+                uc[i*nc+j] = ub[i*nc+j] - vec_out[0][j];
+                vec_out[0][j] = lb[i*nc+j] - vec_out[0][j];            
             }
         }
     }
