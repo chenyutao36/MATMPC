@@ -1,12 +1,5 @@
 %% set path for your computer
 
-currentFolder = pwd;
-objFolder = '/home/yutaochen/Documents/MATLAB/Packages/MATMPC/mex_core';
-
-if ~strcmp(currentFolder, objFolder)
-    cd /home/yutaochen/Documents/MATLAB/Packages/MATMPC/mex_core
-end
-
 %% detect OS type
 
 OS_MAC = 0;
@@ -31,7 +24,7 @@ if OS_WIN
    CC_FLAGS='';
 end
 if OS_LINUX 
-   CC_FLAGS = 'GCC="/usr/bin/gcc-4.9"';
+   CC_FLAGS = '';
 end
 
 OP_FLAGS='';
@@ -57,13 +50,13 @@ HEAD2_PATH = '';
 
 mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim.c','casadi_src.c','mpc_common.c',LIB1,LIB2);
 
-mex(options, CC_FLAGS, OP_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
+% mex(options, CC_FLAGS, OP_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_info.c','casadi_wrapper.c','casadi_src.c','sim.c','mpc_common.c', LIB1, LIB2);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_info.c','casadi_wrapper.c','casadi_src.c','sim.c','mpc_common.c', LIB1, LIB2);
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c', LIB1);
+% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c', LIB1);
 
 %% only for testing, don't touch
 
