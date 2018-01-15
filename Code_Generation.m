@@ -136,7 +136,7 @@ generate=input('Would you like to generate the source code?(y/n)','s');
 if strcmp(generate,'y')
 
     display('                           ');
-    display('Generating source code...');
+    display('    Generating source code...');
 
     if exist([pwd,'/Source_Codes'],'dir')~=7
         mkdir([pwd,'/Source_Codes']);
@@ -174,55 +174,53 @@ if strcmp(generate,'y')
         P.generate();
     cd ../Source_Codes
 
-display('                           ');
-display('Code generation completed!');
+display('    Code generation completed!');
 
 end
 
+display('                           ');
 compile=input('Would you like to compile the source code?(y/n)','s');
 if strcmp(compile,'y')
     
-    display('                           ');
-    display('Compiling...(turn off optimization flag is recommended)');
-    op_flag=input('Would you like to turn OFF the optimization flag?(y/n)','s');
+    display('    Compiling...');
+    
+    OS_MAC = 0;
+    OS_LINUX = 0;
+    OS_WIN = 0;
 
-    if isempty(op_flag)
-        op_flag = 'y';
+    if ismac
+        OS_MAC = 1;
+    elseif isunix
+        OS_LINUX = 1;
+    elseif ispc
+        OS_WIN = 1;
+    else
+        disp('    Platform not supported')
     end
+    
+    options = '-largeArrayDims';
 
-    if strcmp(op_flag,'n')
-        display('Optimization flag turned on');
-        display('                           ');
-        
-       mex -largeArrayDims path_con_fun.c
-       mex -largeArrayDims path_con_N_fun.c
-       mex -largeArrayDims h_fun.c
-       mex -largeArrayDims Simulate_system.c
+    if OS_WIN
+       CC_FLAGS=''; % use MinGW not VS studio
+    end
+    if OS_LINUX 
+       CC_FLAGS = 'GCC="/usr/bin/gcc-4.9"';
+    end
+    
+    OP_FLAGS='-O';
+    PRINT_FLAGS='-silent';
+    
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_fun.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_N_fun.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'h_fun.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Simulate_system.c');
        
-       cd ../mex_core
-       Compile_Mex;
-       cd ../Source_Codes
-              
-    end
-
-    if strcmp(op_flag,'y')
-        display('Optimization flag turned off');
-        display('                            ');
-        
-        mex -largeArrayDims -g path_con_fun.c
-        mex -largeArrayDims -g path_con_N_fun.c
-        mex -largeArrayDims -g h_fun.c
-        mex -largeArrayDims -g Simulate_system.c
-        
-        cd ../mex_core
-        Compile_Mex
-        cd ../Source_Codes
-
-    end
+    cd ../mex_core
+    Compile_Mex;
+    cd ../Source_Codes
 
 cd ..
-display('                           ');
-display('Compilation completed!');
+display('    Compilation completed!');
 
 end
 %% NMPC preparation
@@ -245,6 +243,5 @@ save('settings','settings');
 
 clear all;
 
-display('                           ');
 display('NMPC solver prepared! Enjoy solving...');
 display('                           ');

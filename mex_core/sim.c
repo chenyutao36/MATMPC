@@ -6,6 +6,8 @@
 
 #include "sim.h"
 #include "mpc_common.h"
+#include "casadi_wrapper.h"
+
 #include "blas.h"
 #include "lapack.h"
 

@@ -33,7 +33,7 @@ settings.neq = neq;
 settings.nineq = nineq; 
 
 % solver configurations
-opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
+opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
 opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
