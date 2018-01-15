@@ -46,8 +46,8 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
 
         %% ---------- KKT calculation 
         
-        [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
-        
+%         [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
+        eq_res = 0; ineq_res = 0; KKT = 0;
         
         %% ---------- Multiple call management and convergence check
                         

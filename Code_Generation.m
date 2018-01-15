@@ -28,7 +28,7 @@ muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality co
 Ts    = 0.01;  % NMPC sampling time [s]
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 10; % No. of integration steps per sample interval
+s  = 2; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
