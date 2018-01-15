@@ -3,6 +3,9 @@
 #include "mex.h"
 #include "string.h"
 
+#include "casadi_wrapper.h"
+#include "sim.h"
+
 // for builtin blas
 #include "blas.h"
 

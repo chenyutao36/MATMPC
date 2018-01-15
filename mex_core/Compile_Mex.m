@@ -21,13 +21,14 @@ end
 options = '-largeArrayDims';
 
 if OS_WIN
-   CC_FLAGS='';
+   CC_FLAGS='CXXFLAGS="$CXXFLAGS -Wall"'; % use MinGW not VS studio
 end
 if OS_LINUX 
-   CC_FLAGS = '';
+   CC_FLAGS = 'GCC="/usr/bin/gcc-4.9"';
 end
 
-OP_FLAGS='';
+OP_FLAGS='-O';
+PRINT_FLAGS='-silent';
 
 LIB1 = '-lmwblas';
 LIB2 = '-lmwlapack';
@@ -48,15 +49,15 @@ HEAD2_PATH = '';
 % HEAD5_PATH='-I/home/yutaochen/Documents/MATLAB/Packages/qpOASES_C/qpOASES/include';
 %% These functions should be all compiled
 
-mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim.c','casadi_src.c','mpc_common.c',LIB1,LIB2);
+mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim.c','casadi_src.c','mpc_common.c',LIB1,LIB2);
 
-% mex(options, CC_FLAGS, OP_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
+mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
 
-% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
+mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
 
 % mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_info.c','casadi_wrapper.c','casadi_src.c','sim.c','mpc_common.c', LIB1, LIB2);
 
-% mex(options, OP_FLAGS, CC_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c', LIB1);
+mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c', LIB1);
 
 %% only for testing, don't touch
 
