@@ -5,7 +5,7 @@ display('-----------------------------------------------------');
 
 
 %% Insert Model here
-settings.model='Hexacopter';
+settings.model='ChainofMasses_Lin';
 
 switch settings.model
     case 'InvertedPendulum'
@@ -25,7 +25,7 @@ lambdai=SX.sym('lambdai',nx,1);            % the i th multiplier for equality co
 mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality constraints
 muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
 
-Ts    = 0.01;  % NMPC sampling time [s]
+Ts    = 0.2;  % NMPC sampling time [s]
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
 s  = 2; % No. of integration steps per sample interval
@@ -45,7 +45,7 @@ Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'s
 
 %% Integrator for multiple shooting
 
-Ts_st = 0.1; % shooting interval time
+Ts_st = 0.2; % shooting interval time
 s  = 2; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});

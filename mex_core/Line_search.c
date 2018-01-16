@@ -32,6 +32,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize neq = (N+1)*nx;
     mwSize nineq = N*nc;
     
+    double one_d = 1.0;
     mwSignedIndex one_i = 1;
     
     double *dz = mxGetPr( mxGetField(prhs[0], 0, "dz") );
@@ -39,6 +40,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lambda_new = mxGetPr( mxGetField(prhs[0], 0, "lambda_new") );
     double *mu_new = mxGetPr( mxGetField(prhs[0], 0, "mu_new") );
     double *muN_new = mxGetPr( mxGetField(prhs[0], 0, "muN_new") );
+    
+    double *q = mxGetPr( mxGetField(prhs[0], 0, "q") );
+    daxpy(&nw, &one_d, dz, &one_i, q, &one_i);
     
     double alpha = 1.0;
     double inc = 1.0 - alpha;
