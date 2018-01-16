@@ -64,7 +64,7 @@ switch settings.model
         input.ubu = repmat(ubu,1,N);
         
     case 'ChainofMasses_Lin'
-        n=5;
+        n=9;
         x0=zeros(nx,1);
         for i=1:n
             x0(i)=7.5*i/n;

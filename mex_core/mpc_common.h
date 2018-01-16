@@ -36,4 +36,8 @@ void Block_Fill(size_t m, size_t n, double *Gi, double *G,
 
 void set_zeros(size_t dim, double *A);
 
+void print_matrix(double *A, size_t m, size_t n);
+
+void print_vector(double *x, size_t m);
+
 #endif

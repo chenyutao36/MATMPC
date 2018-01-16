@@ -14,7 +14,8 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         %% ----------- QP Preparation
 
         tshoot = tic;
-        qp_generation(input, settings, mem);
+%         qp_generation(input, settings, mem);
+        qp_generation_cmon(input, settings, mem);
         tSHOOT = toc(tshoot)*1e3; 
         
                

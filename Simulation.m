@@ -22,7 +22,7 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
-N     = 20;             % No. of shooting points
+N     = 40;             % No. of shooting points
 nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
 neq   = (N+1)*nx;       % No. of equality constraints
 nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
@@ -156,6 +156,13 @@ mem.lambda_new = zeros(nx,N+1);
 mem.mu_new = zeros(nc,N);
 mem.muN_new = zeros(nx,N+1);
 
+% for CMON-RTI
+mem.F_old = zeros(nx,N);
+mem.CMON = zeros(N,1);
+mem.q = zeros(nx+nu,N);
+mem.threshold = 0.05;
+mem.perc=0;
+
 %% Initialzation (initialize your simulation properly...)
 
 Initialization;
@@ -163,7 +170,7 @@ Initialization;
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
-Tf = 4;               % simulation time
+Tf = 50;               % simulation time
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
@@ -248,6 +255,9 @@ while time(end) < Tf
     nextTime = iter*Ts; 
     iter = iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT)]);
+    disp(['Percentage:' num2str(mem.perc)]);
+    disp('   ');
+    
     time = [time nextTime];
     
     CPT = [CPT; cpt, tshooting, tcond, tqp];
