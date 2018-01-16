@@ -1,6 +1,6 @@
 %------------------------------------------%
 
-% Model
+% Model TiltHex
 
 %------------------------------------------%
 
@@ -31,20 +31,39 @@ QN       = SX.sym('QN',nyN,nyN);
 %Gravity
 g=9.81;
 %Distance between CoM and rotor i
-l=0.315;
-%Mass of Hexacopter
-m=2.4;
+l=0.4;
+%l=0.315;
+%Mass of TiltHex
+m=1.8;
+% m=2.4;
 %Constant
 c_tau=1.7*10^-2;
 %Inertia
-Ix=0.04;
-Iy=0.0422;
-Iz=0.0827;
+% Ix=0.04;
+% Iy=0.0422;
+% Iz=0.0827;
+%Inertia
+% Ix=11.5e-6;
+% Iy=11.4e-6;
+% Iz=19.4e-6;
+Ix=11549*10^(-6);
+Iy=11368*10^(-6);
+Iz=19444*10^(-6);
 %Tilted angle
-alpha=30*pi/180;
+alpha=35*pi/180;
+beta=-10*pi/180;
 
-k1 = l*cos(alpha) + c_tau*sin(alpha);
-k2 = -l*sin(alpha) + c_tau*cos(alpha);
+%Costants for the thrust
+fx1 = 0.5*sin(beta)-sqrt(3)*0.5*cos(beta)*sin(alpha);
+fx2 = 0.5*sin(beta)+sqrt(3)*0.5*cos(beta)*sin(alpha);
+fy1 = sqrt(3)*0.5*sin(beta)+0.5*cos(beta)*sin(alpha);
+fy2 = -sqrt(3)*0.5*sin(beta)+0.5*cos(beta)*sin(alpha);
+taux1 = -0.5*c_tau*sin(beta)+sqrt(3)*0.5*(l*cos(alpha)+c_tau*sin(alpha))*cos(beta);
+taux2 = -0.5*c_tau*sin(beta)-sqrt(3)*0.5*(l*cos(alpha)+c_tau*sin(alpha))*cos(beta);
+tauy1 = (l*cos(alpha)+c_tau*sin(alpha))*cos(beta);
+tauy2 = sqrt(3)*0.5*c_tau*sin(beta)+0.5*(l*cos(alpha)+c_tau*sin(alpha))*cos(beta);
+tauy3 = -sqrt(3)*0.5*c_tau*sin(beta)+0.5*(l*cos(alpha)+c_tau*sin(alpha))*cos(beta);
+tauz1 = (l*sin(alpha)-c_tau*cos(alpha))*cos(beta);
 
 phi=states(1);
 theta=states(2);
@@ -75,12 +94,12 @@ f6=controls(6);
 x_dot = [ p+r*cos(phi)*tan(theta)+q*sin(phi)*tan(theta);...
           q*cos(phi) - r*sin(phi);...
           r*cos(phi)/cos(theta) + q*sin(phi)/cos(theta);...
-          q*r*(Iy-Iz)/Ix + sqrt(3)/2*k1*(f2+f3-f5-f6)/Ix;...
-          r*p*(Iz-Ix)/Iy + k1*(-f1-0.5*f2+0.5*f3+f4+0.5*f5-0.5*f6)/Iy;...
-          q*p*(Ix-Iy)/Iz + k2*(f1-f2+f3-f4+f5-f6)/Iz;...
-          g*sin(theta) + sqrt(3)*sin(alpha)/2/m*(-f2+f3-f5+f6) + r*v-q*w;...
-          -g*sin(phi)*cos(theta) + sin(alpha)/m*(-f1+0.5*f2+0.5*f3-f4+0.5*f5+0.5*f6) + p*w-r*u;...
-          -g*cos(theta)*cos(phi) + cos(alpha)/m*(f1+f2+f3+f4+f5+f6) + q*u-p*v;...
+          q*r*(Iy-Iz)/Ix + (c_tau*sin(beta)*(f1+f4)+taux1*(f2+f3)+taux2*(f5+f6))/Ix;...
+          r*p*(Iz-Ix)/Iy + (tauy1*(-f1+f4)+tauy2*(-f2+f3)+tauy3*(f5-f6))/Iy;...
+          q*p*(Ix-Iy)/Iz + tauz1*(-f1+f2-f3+f4-f5+f6)/Iz;...
+          g*sin(theta) + (sin(beta)*(f1-f4)+fx1*(f2-f3)+fx2*(f6-f5))/m + r*v-q*w;...
+          -g*sin(phi)*cos(theta) + (cos(beta)*sin(alpha)*(-f1-f4)+fy1*(f2+f3)+fy2*(f5+f6))/m + p*w-r*u;...
+          -g*cos(theta)*cos(phi) + cos(beta)*cos(alpha)*(f1+f2+f3+f4+f5+f6)/m + q*u-p*v;...
           w*(sin(phi)*sin(psi)+cos(phi)*cos(psi)*sin(theta)) - v*(cos(phi)*sin(psi)-cos(psi)*sin(phi)*sin(theta)) + u*cos(psi)*cos(theta);...
           v*(cos(phi)*cos(psi)+sin(phi)*sin(psi)*sin(theta)) - w*(sin(phi)*cos(psi)-sin(psi)*cos(phi)*sin(theta)) + u*sin(psi)*cos(theta);...
           w*cos(phi)*cos(theta)-u*sin(theta)+v*cos(theta)*sin(phi);
@@ -107,12 +126,12 @@ hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
 
 % general inequality path constraints (including bounds on states)
 path_con = []; 
-path_con_N = []; 
+path_con_N = []; %
 
 path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
 path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});
 
 %% NMPC sampling time [s]
 
-Ts = 0.01; % simulation sample time
+Ts = 0.002; % simulation sample time
 Ts_st = 0.1; % shooting interval time

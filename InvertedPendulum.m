@@ -63,3 +63,8 @@ path_con_N = p;
 
 path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
 path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});
+
+%% NMPC sampling time [s]
+
+Ts = 0.05; % simulation sample time
+Ts_st = 0.05; % shooting interval time

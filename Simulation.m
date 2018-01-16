@@ -22,7 +22,7 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
-N     = 40;             % No. of shooting points
+N     = 10;             % No. of shooting points
 nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
 neq   = (N+1)*nx;       % No. of equality constraints
 nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
@@ -160,8 +160,8 @@ mem.muN_new = zeros(nx,N+1);
 mem.F_old = zeros(nx,N);
 mem.CMON = zeros(N,1);
 mem.q = zeros(nx+nu,N);
-mem.threshold = 0.05;
-mem.perc=0;
+mem.threshold = 0.06;
+mem.perc=100;
 
 %% Initialzation (initialize your simulation properly...)
 
@@ -170,7 +170,7 @@ Initialization;
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
-Tf = 50;               % simulation time
+Tf = 10;               % simulation time
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
@@ -188,23 +188,24 @@ while time(end) < Tf
     % the reference input.yN is a nyN by 1 vector
     
     % time-invariant reference
-    input.y = repmat(REF',1,N);
-    input.yN = REF(1:nyN)';
+%     input.y = repmat(REF',1,N);
+%     input.yN = REF(1:nyN)';
     
     % time-varying reference (no reference preview)
 %     input.y = repmat(REF(iter,:)',1,N);
 %     input.yN = REF(iter,1:nyN)';
     
     %time-varying reference (reference preview)
-%     REF = [];
-%     for i=1:N+1
-%         y = sin(time(end)+(i-1)*Ts_st);
-%         REF = [REF [0 y 0 0 0 0]'];
-%     end    
-%     ref_traj=[ref_traj,REF(2,1)];
+    REF = zeros(ny,N+1);
+    for i=1:N+1
+        x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_x);
+        theta = amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_theta);
+        REF(:,i) = [x 0 0 0 theta 0]';
+    end
+    ref_traj=[ref_traj, REF(:,1)];
 %     
-%     input.y = REF(:,1:N);
-%     input.yN = REF(1:nyN,N+1);
+    input.y = REF(:,1:N);
+    input.yN = REF(1:nyN,N+1);
            
     % obtain the state measurement
     input.x0 = state_sim(end,:)';
@@ -255,7 +256,7 @@ while time(end) < Tf
     nextTime = iter*Ts; 
     iter = iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT)]);
-    disp(['Percentage:' num2str(mem.perc)]);
+    disp(['exactly updated sensitivities:' num2str(mem.perc) '%']);
     disp('   ');
     
     time = [time nextTime];

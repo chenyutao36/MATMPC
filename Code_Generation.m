@@ -3,9 +3,8 @@ display('-----------------------------------------------------');
 display('This framework is developed by Yutao Chen, DEI, UniPD');
 display('-----------------------------------------------------');
 
-
 %% Insert Model here
-settings.model='ChainofMasses_Lin';
+settings.model='TiltHex';
 
 switch settings.model
     case 'InvertedPendulum'
@@ -16,6 +15,8 @@ switch settings.model
         ChainofMasses_Lin;
     case 'Hexacopter'
         Hexacopter;
+    case 'TiltHex'
+        TiltHex;
 end
 
 %%
@@ -24,8 +25,6 @@ import casadi.*
 lambdai=SX.sym('lambdai',nx,1);            % the i th multiplier for equality constraints
 mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality constraints
 muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
-
-Ts    = 0.2;  % NMPC sampling time [s]
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
 s  = 2; % No. of integration steps per sample interval
@@ -44,8 +43,6 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-
-Ts_st = 0.2; % shooting interval time
 s  = 2; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
@@ -201,7 +198,7 @@ if strcmp(compile,'y')
     options = '-largeArrayDims';
 
     if OS_WIN
-       CC_FLAGS=''; % use MinGW not VS studio
+       CC_FLAGS='CXXFLAGS="$CXXFLAGS -Wall"'; % use MinGW not VS studio
     end
     if OS_LINUX 
        CC_FLAGS = 'GCC="/usr/bin/gcc-4.9"';
