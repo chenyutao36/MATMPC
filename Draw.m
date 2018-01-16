@@ -316,5 +316,88 @@ switch settings.model
 %         grid on;
 %         plot(time(1:end-1),y_sim(:,12),'Color',red);
 %         title('df6');
+
+    case 'TiltHex'
+        figure();      
+        subplot(321)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,1),'Color',red);
+        if isempty(ref_traj) ~=1
+            plot(time(1:end-1),ref_traj(1,:), 'k--');
+        end
+        title('x');
+        legend('x','ref');
+        
+        subplot(322)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,2),'Color',red);     
+        title('y');
+        
+        subplot(323)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,3),'Color',red);
+        title('z');
+        
+        subplot(324)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,4),'Color',red);
+        title('phi');
+        
+        subplot(325)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,5),'Color',red);
+        if isempty(ref_traj) ~=1
+            plot(time(1:end-1),ref_traj(5,:), 'k--');
+        end
+        title('theta');
+        legend('theta','ref');
+        
+        subplot(326)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,6),'Color',red);
+        title('psi');
+        
+        figure();
+        subplot(321)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,1),'Color',red);
+        title('f1');
+        
+        subplot(322)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,2),'Color',red);
+        title('f2');
+        
+        subplot(323)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,3),'Color',red);
+        title('f3');
+        
+        subplot(324)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,4),'Color',red);
+        title('f4');
+        
+        subplot(325)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,5),'Color',red);
+        title('f5');
+        
+        subplot(326)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,6),'Color',red);
+        title('f6');
 end
 
