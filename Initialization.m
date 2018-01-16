@@ -117,6 +117,43 @@ switch settings.model
         qN = q(1:nyN);
         Q = diag(q);
         QN = diag(qN);
+        
+    case 'TiltHex'
+        x0=zeros(nx,1);
+        u0=zeros(nu,1);
+        para0=0;
+        
+        q =[5,5,5,0.1,1,0.1];
+        qN = q(1:nyN);
+        Q = diag(q);
+        QN = diag(qN);
+        
+        lb = -inf*ones(nc,1);
+        ub = inf*ones(nc,1);
+        lbN = -inf*ones(ncN,1);
+        ubN = inf*ones(ncN,1);
+        lbu = 0*ones(nu,1);
+        ubu = 12*ones(nu,1);
+        
+        input.lb=repmat(lb,1,N);
+        input.ub=repmat(ub,1,N); 
+        input.lbN=lbN;               
+        input.ubN=ubN;  
+        input.lbu = repmat(lbu,1,N);
+        input.ubu = repmat(ubu,1,N);
+        
+        %Frequency for x(t) in rad/s 
+        f_rif_x=1.2;
+        %Same frequency used in MPC algorithm
+        f_x=f_rif_x*0.5/pi;
+        %Amplitude of x(t)
+        amplitude_x=1.2;
+        %Frequency for theta(t) in rad/s
+        f_rif_theta=1.2;
+        %Same frequency used in MPC algorithm
+        f_theta=f_rif_theta*0.5/pi;
+        %Amplitude of theta(t)
+        amplitude_theta=pi/18;
 end
 
 % prepare the data
@@ -154,5 +191,8 @@ switch settings.model
     case 'Hexacopter'
         
         REF = [1 1 1 0 0 0];
+
+    case 'TiltHex'
+        
 end
    
