@@ -20,6 +20,7 @@
 
 static double *vec_out[3];
 static double *L = NULL;
+static double *eq_res_vec = NULL;
 static void *workspace = NULL;
 static bool mem_alloc_info = false;
 
@@ -28,6 +29,7 @@ void exitFcn_info(){
         mxFree(vec_out[1]);
         mxFree(vec_out[2]);
         mxFree(L);
+        mxFree(eq_res_vec);
         if (workspace!=NULL)
             mxFree(workspace);
     }
@@ -54,7 +56,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
     double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
     double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
-    double *a = mxGetPr( mxGetField(prhs[2], 0, "a") );
      
     mwSize nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -87,6 +88,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         L = (double *)mxCalloc( nw, sizeof(double));
         mexMakeMemoryPersistent(L);
         
+        eq_res_vec = (double *)mxCalloc( neq, sizeof(double));
+        mexMakeMemoryPersistent(eq_res_vec);
+        
         if (sim_method!=0){
             int size = 0;
             if (sim_method == 1)
@@ -104,10 +108,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
     
     vec_in[3] = Q;
-    memcpy(&a[0], &ds0[0], nx*sizeof(double));
+    memcpy(&eq_res_vec[0], &ds0[0], nx*sizeof(double));
     
     double *work;
-    double KKT=0,eq_res=0,ineq_res=0;
+    double KKT=0, eq_res=0, ineq_res=0;
     
     for (i=0;i<N;i++){
         vec_in[0] = z+i*nz;
@@ -127,7 +131,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         if (nc>0)
             daxpy(&nz, &one_d, vec_out[2], &one_i, vec_out[0], &one_i);
         
-        vec_out[0] = a+(i+1)*nx;
+        vec_out[0] = eq_res_vec+(i+1)*nx;
         
         if (sim_method == 0){
             F_Fun(vec_in, vec_out);
@@ -185,7 +189,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
     }
          
-    eq_res = dlange(Norm, &neq, &one_i, a, &one_i, work);
+    eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &one_i, work);
     KKT = dlange(Norm, &nw, &one_i, L, &one_i, work);
     
     if (nineq>0){

@@ -161,7 +161,7 @@ mem.F_old = zeros(nx,N);
 mem.CMON = zeros(N,1);
 mem.q = zeros(nx+nu,N);
 mem.threshold = 0.05;
-mem.perc=0;
+mem.perc=100;
 
 %% Initialzation (initialize your simulation properly...)
 
