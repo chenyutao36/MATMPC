@@ -19,6 +19,8 @@
 // static void *workspace = NULL;
 static double *Jac[2];
 static double *Jac_N;
+static double *num;
+static double *den;
 
 static bool mem_alloc = false;
 
@@ -29,6 +31,8 @@ void exitFcn_sim(){
         mxFree(Jac[0]);
         mxFree(Jac[1]);
         mxFree(Jac_N);
+        mxFree(num);
+        mxFree(den);
     }
 }
 
@@ -105,14 +109,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ode_in[3];
 
     if (!mem_alloc){
-//         int size = 0;
-//         if (sim_method == 1)
-//             size = sim_erk_calculate_workspace_size(prhs[2],true);
-//         if (sim_method ==2)
-//             size = sim_irk_calculate_workspace_size(prhs[2],true);    
-//         
-//         workspace = mxMalloc(size);
-//         mexMakeMemoryPersistent(workspace); 
         
         Jac[0] = (double *) mxCalloc(ny*nx, sizeof(double));
         mexMakeMemoryPersistent(Jac[0]); 
@@ -121,12 +117,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         Jac_N = (double *) mxCalloc(nyN*nx, sizeof(double));
         mexMakeMemoryPersistent(Jac_N);
         
+        num = (double *) mxCalloc(nx, sizeof(double));
+        mexMakeMemoryPersistent(num);
+        den = (double *) mxCalloc(nx, sizeof(double));
+        mexMakeMemoryPersistent(den);
+        
         mem_alloc=true;
         mexAtExit(exitFcn_sim);
     }
     
-    double *num = (double *) mxCalloc(nx, sizeof(double));
-    double *den = (double *) mxCalloc(nx, sizeof(double));
     double num_norm, den_norm;
     int num_updated = 0;
     
@@ -173,18 +172,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 set_zeros(nz,q+i*nz);
             }
         }
-//         if (sim_method == 1){
-//             ode_in[0]=z+i*nz;
-//             ode_in[1]=z+i*nz+nx;
-//             ode_in[2]=od+i*np;          
-//             sim_erk(ode_in, vec_out, Sens, prhs[2], true, workspace);
-//         }
-//         if (sim_method == 2){
-//             ode_in[0]=z+i*nz;
-//             ode_in[1]=z+i*nz+nx;
-//             ode_in[2]=od+i*np;
-//             sim_irk(ode_in, vec_out, Sens, prhs[2], true, workspace);
-//         }
         
         if (i < N-1){
             for (j=0;j<nx;j++)
@@ -246,8 +233,5 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
     
     perc[0] = 100*num_updated/N;
-    
-    mxFree(num);
-    mxFree(den);
     
 }

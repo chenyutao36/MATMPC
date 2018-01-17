@@ -67,6 +67,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
     
     int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
+    
+    sim_opts opts;
+    opts.forw_sens = false;
       
     mwIndex i=0,j=0;
     mwSize nz = nx+nu;
@@ -79,31 +82,40 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     double *vec_in[6];
     double *ode_in[3];
+    double *Sens[2];
     
     if (!mem_alloc_info){
-        vec_out[1] = (double *)mxCalloc(nz, sizeof(double));
+        vec_out[1] = (double *)mxMalloc(nz * sizeof(double));
         mexMakeMemoryPersistent(vec_out[1]);
-        vec_out[2] = (double *)mxCalloc(nz, sizeof(double));
+        vec_out[2] = (double *)mxMalloc(nz * sizeof(double));
         mexMakeMemoryPersistent(vec_out[2]);     
-        L = (double *)mxCalloc( nw, sizeof(double));
+        L = (double *)mxMalloc( nw * sizeof(double));
         mexMakeMemoryPersistent(L);
         
-        eq_res_vec = (double *)mxCalloc( neq, sizeof(double));
+        eq_res_vec = (double *)mxMalloc( neq * sizeof(double));
         mexMakeMemoryPersistent(eq_res_vec);
         
-        if (sim_method!=0){
-            int size = 0;
-            if (sim_method == 1)
-                size = sim_erk_calculate_workspace_size(prhs[2],false);
-            if (sim_method ==2)
-                size = sim_irk_calculate_workspace_size(prhs[2],false);
+        int size;
+        switch(sim_method){
+            case 0:
+                size = 0;
+                break;
+            case 1:
+                size = sim_erk_calculate_workspace_size(prhs[2],&opts);
+                break;
+            case 2:
+                size = sim_irk_calculate_workspace_size(prhs[2],&opts);
+                break;
+            default:
+                mexErrMsgTxt("Please choose a supported integrator");
+                break;
 
-            workspace = mxMalloc(size);
-            mexMakeMemoryPersistent(workspace);  
-        }
+            
+        }     
+        workspace = mxMalloc(size);
+        mexMakeMemoryPersistent(workspace);  
         
-        mem_alloc_info = true;
-        
+        mem_alloc_info = true;     
         mexAtExit(exitFcn_info);
     }
     
@@ -133,22 +145,25 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
         vec_out[0] = eq_res_vec+(i+1)*nx;
         
-        if (sim_method == 0){
-            F_Fun(vec_in, vec_out);
-        }
-        if (sim_method == 1){
-            double *Sens[2];
-            ode_in[0]=z+i*nz;
-            ode_in[1]=z+i*nz+nx;
-            ode_in[2]=od+i*np;
-            sim_erk(ode_in, vec_out, Sens, prhs[2], false, workspace);
-        }
-        if (sim_method == 2){
-            double *Sens[2];
-            ode_in[0]=z+i*nz;
-            ode_in[1]=z+i*nz+nx;
-            ode_in[2]=od+i*np;
-            sim_irk(ode_in, vec_out, Sens, prhs[2], false, workspace);
+        switch(sim_method){
+            case 0:
+                F_Fun(vec_in, vec_out);
+                break;
+            case 1:               
+                ode_in[0]=z+i*nz;
+                ode_in[1]=z+i*nz+nx;
+                ode_in[2]=od+i*np;
+                sim_erk(ode_in, vec_out, Sens, prhs[2], &opts, workspace);
+                break;
+            case 2:                         
+                ode_in[0]=z+i*nz;
+                ode_in[1]=z+i*nz+nx;
+                ode_in[2]=od+i*np;
+                sim_irk(ode_in, vec_out, Sens, prhs[2], &opts, workspace);
+                break;
+            default :
+                mexErrMsgTxt("Please choose a supported integrator");
+                break;
         }
         
         if (i < N-1){

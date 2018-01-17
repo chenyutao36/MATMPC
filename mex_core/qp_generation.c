@@ -96,22 +96,35 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     vec_in[3] = Q;
    
     double *ode_in[3];
-
+    
+    sim_opts opts;
+    opts.forw_sens = true;
+    
+    int size;
     if (!mem_alloc){
-        int size = 0;
-        if (sim_method == 1)
-            size = sim_erk_calculate_workspace_size(prhs[2],true);
-        if (sim_method ==2)
-            size = sim_irk_calculate_workspace_size(prhs[2],true);    
+        switch(sim_method){
+            case 0:
+                size = 0;
+                break;
+            case 1:
+                size = sim_erk_calculate_workspace_size(prhs[2],&opts);
+                break;
+            case 2:
+                size = sim_irk_calculate_workspace_size(prhs[2],&opts);
+                break;
+            default:
+                mexErrMsgTxt("Please choose a supported integrator");
+                break;
+        }
         
         workspace = mxMalloc(size);
         mexMakeMemoryPersistent(workspace); 
         
-        Jac[0] = (double *) mxCalloc(ny*nx, sizeof(double));
+        Jac[0] = (double *) mxMalloc(ny*nx * sizeof(double));
         mexMakeMemoryPersistent(Jac[0]); 
-        Jac[1] = (double *) mxCalloc(ny*nu, sizeof(double));
+        Jac[1] = (double *) mxMalloc(ny*nu * sizeof(double));
         mexMakeMemoryPersistent(Jac[1]); 
-        Jac_N = (double *) mxCalloc(nyN*nx, sizeof(double));
+        Jac_N = (double *) mxMalloc(nyN*nx * sizeof(double));
         mexMakeMemoryPersistent(Jac_N);
         
         mem_alloc=true;
@@ -134,22 +147,27 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         vec_out[0] = a+i*nx;
         Sens[0] = A + i*nx*nx;
         Sens[1] = B + i*nx*nu;
-
-        if (sim_method == 0){
-            F_Fun(vec_in, vec_out);
-            D_Fun(vec_in, Sens);
-        }
-        if (sim_method == 1){
-            ode_in[0]=z+i*nz;
-            ode_in[1]=z+i*nz+nx;
-            ode_in[2]=od+i*np;          
-            sim_erk(ode_in, vec_out, Sens, prhs[2], true, workspace);
-        }
-        if (sim_method == 2){
-            ode_in[0]=z+i*nz;
-            ode_in[1]=z+i*nz+nx;
-            ode_in[2]=od+i*np;
-            sim_irk(ode_in, vec_out, Sens, prhs[2], true, workspace);
+        
+        switch(sim_method){
+            case 0:
+                F_Fun(vec_in, vec_out);
+                D_Fun(vec_in, Sens);
+                break;
+            case 1:
+                ode_in[0]=z+i*nz;
+                ode_in[1]=z+i*nz+nx;
+                ode_in[2]=od+i*np;          
+                sim_erk(ode_in, vec_out, Sens, prhs[2], &opts, workspace);
+                break;
+            case 2:
+                ode_in[0]=z+i*nz;
+                ode_in[1]=z+i*nz+nx;
+                ode_in[2]=od+i*np;
+                sim_irk(ode_in, vec_out, Sens, prhs[2], &opts, workspace);
+                break;
+            default:
+                mexErrMsgTxt("Please choose a supported integrator");
+                break;
         }
         
         if (i < N-1){

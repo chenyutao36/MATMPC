@@ -74,28 +74,28 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
      
     if (!mem_alloc_cond){       
         
-        L = (double *)mxCalloc((N+1)*nx, sizeof(double));
+        L = (double *)mxMalloc((N+1)*nx * sizeof(double));
         mexMakeMemoryPersistent(L);
         
-        w_vec = (double *)mxCalloc(nx, sizeof(double));
+        w_vec = (double *)mxMalloc(nx * sizeof(double));
         mexMakeMemoryPersistent(w_vec);
         
-        W_mat = (double *)mxCalloc(nx*nu, sizeof(double));
+        W_mat = (double *)mxMalloc(nx*nu * sizeof(double));
         mexMakeMemoryPersistent(W_mat);
         
-        w_vec_dup = (double *)mxCalloc(nx, sizeof(double));
+        w_vec_dup = (double *)mxMalloc(nx * sizeof(double));
         mexMakeMemoryPersistent(w_vec_dup);
         
-        W_mat_dup = (double *)mxCalloc(nx*nu, sizeof(double));
+        W_mat_dup = (double *)mxMalloc(nx*nu * sizeof(double));
         mexMakeMemoryPersistent(W_mat_dup);
         
-        Hi = (double *)mxCalloc(nu*nu, sizeof(double));
+        Hi = (double *)mxMalloc(nu*nu * sizeof(double));
         mexMakeMemoryPersistent(Hi);
         
-        Cci = (double *)mxCalloc(nc*nu, sizeof(double));
+        Cci = (double *)mxMalloc(nc*nu * sizeof(double));
         mexMakeMemoryPersistent(Cci);
         
-        CcN = (double *)mxCalloc(ncN*nu,sizeof(double)); 
+        CcN = (double *)mxMalloc(ncN*nu * sizeof(double)); 
         mexMakeMemoryPersistent(CcN);
 
         mem_alloc_cond = true;       
@@ -110,11 +110,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     /* compute G */
     double *G[N*N];
+//     double *G[N*(N+1)/2];
     for(i=0;i<N;i++){
         G[i*N+i] = B+i*nx*nu; // Bi
         for (j=i+1;j<N;j++){
             cell = A+j*nx*nx;
-            G[i*N+j] = (double *)mxCalloc(nx*nu, sizeof(double));
+            G[i*N+j] = (double *)mxMalloc(nx*nu * sizeof(double)); // i-th col and j-th row
             dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, cell, &nx, G[i*N+j-1], &nx, &zero, G[i*N+j], &nx);
         }
     }
