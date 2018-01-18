@@ -411,3 +411,53 @@ void adjN_Fun(double **in, double **out) {
 
     adjN_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
+
+void obji_Fun(double **in, double **out){
+    const double *zi = in[0];
+    const double *parai = in[1];
+    const double *refi = in[2];
+    const double *Qi = in[3];
+
+    double *obj = out[0];
+
+    void *casadi_mem = NULL;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[4];
+    double *casadi_res[1];
+
+    casadi_arg[0] = zi;
+    casadi_arg[1] = parai;
+    casadi_arg[2] = refi;
+    casadi_arg[3] = Qi;
+
+    casadi_res[0] = obj;
+
+    obji_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
+
+void objN_Fun(double **in, double **out){
+    const double *xN = in[0];
+    const double *parai = in[1];
+    const double *refN = in[2];
+    const double *QN = in[3];
+
+    double *objN = out[0];
+
+    void *casadi_mem = NULL;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[4];
+    double *casadi_res[1];
+
+    casadi_arg[0] = xN;
+    casadi_arg[1] = parai;
+    casadi_arg[2] = refN;
+    casadi_arg[3] = QN;
+
+    casadi_res[0] = objN;
+
+    objN_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}

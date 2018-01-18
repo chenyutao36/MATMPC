@@ -15,34 +15,34 @@ void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
 
-    double *Qh = mxGetPr( mxGetField(prhs[2], 0, "Q_h") );
-    double *S = mxGetPr( mxGetField(prhs[2], 0, "S") );
-    double *R = mxGetPr( mxGetField(prhs[2], 0, "R") );
-    double *A = mxGetPr( mxGetField(prhs[2], 0, "A_sens") );
-    double *B = mxGetPr( mxGetField(prhs[2], 0, "B_sens") );
-    double *Cx = mxGetPr( mxGetField(prhs[2], 0, "Cx") );
-    double *CxN = mxGetPr( mxGetField(prhs[2], 0, "CxN") );
-    double *Cu = mxGetPr( mxGetField(prhs[2], 0, "Cu") );
-    double *gx = mxGetPr( mxGetField(prhs[2], 0, "gx") );
-    double *a = mxGetPr( mxGetField(prhs[2], 0, "a") );
-    double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
+    double *Qh = mxGetPr( mxGetField(prhs[0], 0, "Q_h") );
+    double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
+    double *R = mxGetPr( mxGetField(prhs[0], 0, "R") );
+    double *A = mxGetPr( mxGetField(prhs[0], 0, "A_sens") );
+    double *B = mxGetPr( mxGetField(prhs[0], 0, "B_sens") );
+    double *Cx = mxGetPr( mxGetField(prhs[0], 0, "Cx") );
+    double *CxN = mxGetPr( mxGetField(prhs[0], 0, "CxN") );
+    double *Cu = mxGetPr( mxGetField(prhs[0], 0, "Cu") );
+    double *gx = mxGetPr( mxGetField(prhs[0], 0, "gx") );
+    double *a = mxGetPr( mxGetField(prhs[0], 0, "a") );
+    double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
     
-    double *du = mxGetPr(prhs[0]);
-    double *mu_vec = mxGetPr(prhs[1]);
+    double *du = mxGetPr(prhs[2]);
+    double *mu_vec = mxGetPr(prhs[3]);
     
-    mwSize nx = mxGetScalar( mxGetField(prhs[3], 0, "nx") );
-    mwSize nu = mxGetScalar( mxGetField(prhs[3], 0, "nu") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[3], 0, "nc") );
-    mwSize ncN = mxGetScalar( mxGetField(prhs[3], 0, "ncN") );
-    mwSize N = mxGetScalar( mxGetField(prhs[3], 0, "N") );
+    mwSize nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
+    mwSize nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
+    mwSize nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") );
+    mwSize ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
+    mwSize N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
     
     mwSize nz = nx+nu;
     
-    double *z = mxGetPr( mxGetField(prhs[2], 0, "dz") );
-    double *xN = mxGetPr( mxGetField(prhs[2], 0, "dxN") );
-    double *lambda = mxGetPr( mxGetField(prhs[2], 0, "lambda_new") );
-    double *mu = mxGetPr( mxGetField(prhs[2], 0, "mu_new") );
-    double *muN = mxGetPr( mxGetField(prhs[2], 0, "muN_new") );
+    double *z = mxGetPr( mxGetField(prhs[0], 0, "dz") );
+    double *xN = mxGetPr( mxGetField(prhs[0], 0, "dxN") );
+    double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda_new") );
+    double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu_new") );
+    double *muN = mxGetPr( mxGetField(prhs[0], 0, "muN_new") );
    
     memcpy(&mu[0], &mu_vec[0], nc*N*sizeof(double));
     memcpy(&muN[0], &mu_vec[N*nc], ncN*sizeof(double));
