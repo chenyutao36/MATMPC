@@ -21,6 +21,7 @@
 static double *vec_out[3];
 static double *L = NULL;
 static double *eq_res_vec = NULL;
+static double *lu, *uu;
 static void *workspace = NULL;
 static bool mem_alloc_info = false;
 
@@ -30,6 +31,8 @@ void exitFcn_info(){
         mxFree(vec_out[2]);
         mxFree(L);
         mxFree(eq_res_vec);
+        mxFree(lu);
+        mxFree(uu);
         if (workspace!=NULL)
             mxFree(workspace);
     }
@@ -52,10 +55,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ub = mxGetPr( mxGetField(prhs[0], 0, "ub") );
     double *lbN = mxGetPr( mxGetField(prhs[0], 0, "lbN") );
     double *ubN = mxGetPr( mxGetField(prhs[0], 0, "ubN") );
+    double *lbu = mxGetPr( mxGetField(prhs[0], 0, "lbu") );
+    double *ubu = mxGetPr( mxGetField(prhs[0], 0, "ubu") );
     
     double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
     double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
     double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
+    double *mu_u = mxGetPr( mxGetField(prhs[2], 0, "mu_u") );
      
     mwSize nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -95,6 +101,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         eq_res_vec = (double *)mxMalloc( neq * sizeof(double));
         mexMakeMemoryPersistent(eq_res_vec);
         
+        lu = (double *)mxMalloc( N*nu * sizeof(double));
+        mexMakeMemoryPersistent(lu);
+        uu = (double *)mxMalloc( N*nu * sizeof(double));
+        mexMakeMemoryPersistent(uu);
+        
         int size;
         switch(sim_method){
             case 0:
@@ -109,11 +120,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
                 break;
-
-            
-        }     
-        workspace = mxMalloc(size);
-        mexMakeMemoryPersistent(workspace);  
+         
+        }   
+        
+        if (size > 0){
+            workspace = mxMalloc(size);
+            mexMakeMemoryPersistent(workspace);  
+        }
         
         mem_alloc_info = true;     
         mexAtExit(exitFcn_info);
@@ -139,7 +152,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             vec_out[1][j] -= lambda[i*nx+j];
         }
         
-        daxpy(&nz, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);        
+        daxpy(&nz, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);
+        daxpy(&nu, &one_d, mu_u, &one_i, vec_out[0]+nx, &one_i);
         if (nc>0)
             daxpy(&nz, &one_d, vec_out[2], &one_i, vec_out[0], &one_i);
         
@@ -174,7 +188,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 vec_out[0][j] -= xN[j];
         }
         
+        for (j=0;j<nu;j++){
+            lu[i*nu+j] = lbu[i*nu+j] - z[i*nz+nx+j];
+            uu[i*nu+j] = ubu[i*nu+j] - z[i*nz+nx+j];
+        }
+        
         if (nc>0){
+            vec_in[0]=z+i*nz;
+            vec_in[1]=z+i*nz+nx;
+            vec_in[2]=od+i*np;
             vec_out[0] = lc + i*nc;
             path_con_Fun(vec_in, vec_out);
             for (j=0;j<nc;j++){
@@ -192,12 +214,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     vec_out[0] = L+N*nz;
     adjN_Fun(vec_in, vec_out);
     
-    if (ncN<0)
+    if (ncN>0)
         daxpy(&nx, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);
     
     if (ncN>0){
         vec_out[0] = lc + N*nc;
-        path_con_N_Fun(vec_in, vec_out);
+        path_con_N_Fun(vec_in, vec_out); 
         for (j=0;j<ncN;j++){
             uc[i*nc+j] = ubN[j] - vec_out[0][j];
             vec_out[0][j] = lbN[j] - vec_out[0][j];            
@@ -207,12 +229,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &one_i, work);
     KKT = dlange(Norm, &nw, &one_i, L, &one_i, work);
     
-    if (nineq>0){
-        for (i=0;i<nineq;i++){
-            ineq_res += MIN(uc[i],0);
-            ineq_res += MAX(lc[i],0);
-        }
-    }
+    for (i=0;i<N*nu;i++)
+        ineq_res += MIN(uu[i],0) + MAX(lu[i],0);  
+    for (i=0;i<nineq;i++)
+        ineq_res += MIN(uc[i],0) + MAX(lc[i],0);
     
     plhs[0] = mxCreateDoubleScalar(eq_res); // eq_res
     plhs[1] = mxCreateDoubleScalar(ineq_res); // ineq_res

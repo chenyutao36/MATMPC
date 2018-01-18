@@ -1,10 +1,10 @@
 clear all;clc;
-display('-----------------------------------------------------');
-display('This framework is developed by Yutao Chen, DEI, UniPD');
-display('-----------------------------------------------------');
+disp('---------------------------------------------');
+disp('MATMPC is developed by Yutao Chen, DEI, UniPD');
+disp('---------------------------------------------');
 
 %% Insert Model here
-settings.model='TiltHex';
+settings.model='DiM';
 
 switch settings.model
     case 'InvertedPendulum'
@@ -27,7 +27,7 @@ mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality co
 muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 2; % No. of integration steps per sample interval
+s  = 1; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
@@ -43,7 +43,7 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-s  = 2; % No. of integration steps per shooting interval
+s  = 1; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
 jacX = SX.zeros(nx,nx)+jacobian(x_dot,states);
@@ -98,6 +98,9 @@ Cxi = jacobian(path_con, states) + SX.zeros(nc, nx);
 Cui = jacobian(path_con, controls) + SX.zeros(nc, nu);
 CxN = jacobian(path_con_N, states) + SX.zeros(ncN, nx);
 
+obji_fun = Function('obji_fun',{z,params,refs,Q},{obji+SX.zeros(1,1)},{'z','params','refs','Q'},{'obji'});
+objN_fun = Function('objN_fun',{states,params,refN,QN},{objN+SX.zeros(1,1)},{'states','params','refN','QN'},{'objN'});
+
 Ji_fun=Function('Ji_fun',{z,params,refs,Q},{Jxi,Jui},{'z','params','refs','Q'},{'Jxi','Jui'});
 JN_fun=Function('JN_fun',{states,params,refN,QN},{JxN},{'states','params','refN','QN'},{'JxN'});
 
@@ -114,13 +117,13 @@ adj_dG = SX.zeros(nx+nu,1) + jtimes(X, z, lambdai, true);
 if nc>0
     adj_dB = SX.zeros(nx+nu,1) + jtimes(path_con, z, mui, true);
 else
-    adj_dB =[];
+    adj_dB = SX.zeros(nx+nu,1);
 end
 
 if ncN>0
     adj_dBN = SX.zeros(nx,1) + jtimes(path_con_N, states, muN, true);
 else
-    adj_dBN = [];
+    adj_dBN = SX.zeros(nx,1);
 end
 
 adj_fun = Function('adj_fun',{z,params,refs,Q, lambdai, mui},{dobj, adj_dG, adj_dB});
@@ -159,6 +162,8 @@ if strcmp(generate,'y')
         P.add(h_fun);
         P.add(path_con_fun);
         P.add(path_con_N_fun);
+        P.add(obji_fun);
+        P.add(objN_fun);
         P.add(gi_fun);
         P.add(gN_fun);
         P.add(Ji_fun);

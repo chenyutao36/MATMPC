@@ -22,7 +22,7 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
-N     = 10;             % No. of shooting points
+N     = 30;             % No. of shooting points
 nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
 neq   = (N+1)*nx;       % No. of equality constraints
 nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
@@ -75,7 +75,7 @@ if strcmp(opt.qpsolver,'qpoases')
     mem.qpoases.warm_start=0;
     mem.qpoases.hot_start=0;
     if strcmp(opt.hotstart, 'yes')
-        mem.qpoases_hot_start=1;
+        mem.qpoases.hot_start=1;
     end
 end
 
@@ -87,6 +87,8 @@ end
 input.lambda=ones(nx,N+1);
 input.mu=zeros(nc,N);
 input.muN=zeros(ncN,1);
+
+mem.mu_u = zeros(N*nu,1);
 
 % Integrator settings
 
@@ -128,6 +130,17 @@ switch opt.integrator
         error('Please choose a correct integrator');
         
 end
+
+% Backtracking
+
+mem.sqp_maxit = 20;
+mem.kkt_lim = 1;
+
+mem.mu_merit=0;              % initialize the parameter
+mem.eta=1e-4;                % merit function parameter
+mem.tau=0.8;                 % step length damping factor
+mem.mu_safty=1.1;            % constraint weight update factor (for merit function)
+mem.rho=0.5;                 % merit function parameter
 
 %%
 mem.A_sens = zeros(nx,nx*N);
@@ -173,7 +186,7 @@ Initialization;
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
-Tf = 10;               % simulation time
+Tf = 50;               % simulation time
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
@@ -195,20 +208,19 @@ while time(end) < Tf
 %     input.yN = REF(1:nyN)';
     
     % time-varying reference (no reference preview)
-%     input.y = repmat(REF(iter,:)',1,N);
-%     input.yN = REF(iter,1:nyN)';
+    input.y = repmat(REF(iter,:)',1,N);
+    input.yN = REF(iter,1:nyN)';
     
     %time-varying reference (reference preview)
-    REF = zeros(ny,N+1);
-    for i=1:N+1
-        x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_x);
-        theta = amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_theta);
-        REF(:,i) = [x 0 0 0 theta 0]';
-    end
-    ref_traj=[ref_traj, REF(:,1)];
-%     
-    input.y = REF(:,1:N);
-    input.yN = REF(1:nyN,N+1);
+%     REF = zeros(ny,N+1);
+%     for i=1:N+1
+%         x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_x);
+%         theta = amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_theta);
+%         REF(:,i) = [x 0 0 0 theta 0]';
+%     end
+%     ref_traj=[ref_traj, REF(:,1)];
+%     input.y = REF(:,1:N);
+%     input.yN = REF(1:nyN,N+1);
            
     % obtain the state measurement
     input.x0 = state_sim(end,:)';
@@ -259,7 +271,8 @@ while time(end) < Tf
     nextTime = iter*Ts; 
     iter = iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT)]);
-    disp(['exactly updated sensitivities:' num2str(mem.perc) '%']);
+%     disp(['exactly updated sensitivities:' num2str(mem.perc) '%']);
+    disp(['No. of SQP Iteration: ' num2str(output.info.iteration_num)]);
     disp('   ');
     
     time = [time nextTime];

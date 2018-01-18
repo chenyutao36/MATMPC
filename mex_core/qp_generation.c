@@ -117,8 +117,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
         }
         
-        workspace = mxMalloc(size);
-        mexMakeMemoryPersistent(workspace); 
+        if (size > 0){
+            workspace = mxMalloc(size);
+            mexMakeMemoryPersistent(workspace); 
+        }
         
         Jac[0] = (double *) mxMalloc(ny*nx * sizeof(double));
         mexMakeMemoryPersistent(Jac[0]); 
@@ -191,7 +193,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         gi_Fun(vec_in, vec_out);
         
         // constraint residual
-        if (nc>0){        
+        if (nc>0){  
+            vec_in[0]=z+i*nz;
+            vec_in[1]=z+i*nz+nx;
+            vec_in[2]=od+i*np; 
             vec_out[0] = lc + i*nc;
             path_con_Fun(vec_in, vec_out);
             for (j=0;j<nc;j++){
