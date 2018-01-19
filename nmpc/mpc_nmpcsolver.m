@@ -8,7 +8,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
     CPT.COND=0;
     CPT.QP=0;
    
-    while(i < mem.sqp_maxit  &&  KKT > mem.kkt_lim) % RTI or multiple call
+    while(i < mem.sqp_maxit  &&  KKT > mem.kkt_lim ) % RTI or multiple call
         
         %% ----------- QP Preparation
 
@@ -60,6 +60,10 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
 %         CPT.QP=tQP;
                
         i=i+1;
+        
+        if norm(mem.dz,1)+norm(mem.dxN,1)<1e-4
+            break;
+        end
     end
 
     output.info.cpuTime=toc*1e3;   % Total CPU time for the current sampling instant
