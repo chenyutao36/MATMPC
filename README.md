@@ -13,13 +13,13 @@ To use MATMPC, follow the steps below.
 
 2. Write your own model following the styles given by examples, e.g. Inverted Pendulum, Chain of Masses.
 
-3. In Code_generation.m, set your own sampling time and multiple shooting time.
+3. In the model file you created, set your own sampling time and multiple shooting time. In Code_generation.m, set the number of integration steps per shooting interval.
 
 4. Run Code_generation.m
 
 5. In Initialization.m, set your own initialization data, e.g. initial states, referecnes and etc.
 
-6. In Simulation.m, choose your integrator, prediction horizon and the solver. You may also need to modify the reference for constant or time-varying reference tracking problems.
+6. In Simulation.m, choose your integrator, set the prediction horizon and the solver options. You may also need to modify the reference for constant or time-varying reference tracking problems.
 
 7. In Draw.m, write your own plot fuctions to display your results.
 
