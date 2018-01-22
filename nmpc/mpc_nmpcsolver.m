@@ -1,14 +1,14 @@
 function [output, mem] = mpc_nmpcsolver(input,settings, mem)
     tic;
 
-    i=0;
-    KKT = 1e8;
-    
-    CPT.SHOOT=0;
-    CPT.COND=0;
-    CPT.QP=0;
+%     i=0;
+%     KKT = 1e8;
+%     
+%     CPT.SHOOT=0;
+%     CPT.COND=0;
+%     CPT.QP=0;
    
-    while(i < mem.sqp_maxit  &&  KKT > mem.kkt_lim ) % RTI or multiple call
+%     while(i < mem.sqp_maxit  &&  KKT > mem.kkt_lim ) % RTI or multiple call
         
         %% ----------- QP Preparation
 
@@ -51,20 +51,20 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         
         %% ---------- Multiple call management and convergence check
                         
-        CPT.SHOOT=CPT.SHOOT+tSHOOT;
-        CPT.COND=CPT.COND+tCOND;
-        CPT.QP=CPT.QP+tQP;
+%         CPT.SHOOT=CPT.SHOOT+tSHOOT;
+%         CPT.COND=CPT.COND+tCOND;
+%         CPT.QP=CPT.QP+tQP;
     
-%         CPT.SHOOT=tSHOOT;
-%         CPT.COND=tCOND;
-%         CPT.QP=tQP;
+        CPT.SHOOT=tSHOOT;
+        CPT.COND=tCOND;
+        CPT.QP=tQP;
                
-        i=i+1;
+%         i=i+1;
         
-        if norm(mem.dz,1)+norm(mem.dxN,1)<1e-4
-            break;
-        end
-    end
+%         if norm(mem.dz,1)+norm(mem.dxN,1)<1e-4
+%             break;
+%         end
+%     end
 
     output.info.cpuTime=toc*1e3;   % Total CPU time for the current sampling instant
     
@@ -74,7 +74,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
     output.mu=input.mu;
     output.muN=input.muN;
 
-    output.info.iteration_num=i;    
+%     output.info.iteration_num=i;    
     output.info.kktValue=KKT;
     output.info.eq_res=eq_res;
     output.info.ineq_res=ineq_res;
