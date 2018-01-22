@@ -259,8 +259,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     double one_d = 1.0;
     mwSignedIndex one_i = 1;
-//     char *Norm="O";
-//     double *work;
     
     double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q_h") );
     double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
@@ -277,8 +275,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
     double *a = mxGetPr( mxGetField(prhs[0], 0, "a") );
        
-    double *q = mxGetPr( mxGetField(prhs[0], 0, "q") );
-    daxpy(&nw, &one_d, dz, &one_i, q, &one_i);
+//     double *q = mxGetPr( mxGetField(prhs[0], 0, "q") );
+//     daxpy(&nw, &one_d, dz, &one_i, q, &one_i);
     
     double rho = mxGetScalar( mxGetField(prhs[0], 0, "rho") );
     double eta = mxGetScalar( mxGetField(prhs[0], 0, "eta") );
@@ -335,47 +333,28 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double sigma = 0.0, pd, grad, mu_lb=0, obj, obj_new, dir_grad;
     double alpha = 1.0;
     bool newpoint = false;
-//     double step_len = dlange(Norm, &nw, &one_i, dz, &one_i, work) + dlange(Norm, &nx, &one_i, dxN, &one_i, work);
     if (sqp_maxit > 1 ){
         cons_res = eval_cons_res(z, xN, od, ds0, lb, ub, lc, uc,
                                  lbN, ubN, lbu, ubu, nx, nu, nc, ncN,
                                  N, np, sim_method, workspace, &opts, eq_res_vec, prhs[0]);
-        
-//         mexPrintf("%5.3f\n", cons_res);
-                
-//         memcpy(&eq_res_vec[0], &ds0[0], nx*sizeof(double));
-//         memcpy(&eq_res_vec[nx], &a[0], nx*N*sizeof(double));
-//         char *Norm="O";
-//         size_t one_i = 1;
-//         double *work;
-//         cons_res = dlange(Norm, &neq, &one_i, eq_res_vec, &one_i, work);
-//         mexPrintf("%5.3f\n", cons_res);
-      
+              
         pd = eval_curv(Q, S, R, dz, dxN, nx, nu, N);
         grad = eval_grad(gx, gu, dz, dxN, nx, nu, N);
-        
-//         mexPrintf("%5.3f, %5.3f, %5.3f\n", cons_res, pd, grad);
-        
+                
         if (pd>0)
             sigma = 0.5;
         
         if (cons_res>0)
             mu_lb=(grad+sigma*pd)/(1-rho)/cons_res;
-        
-//         mexPrintf("mu_lb = %5.3f\n", mu_lb);
-        
+                
         if (mu_merit[0]<mu_lb)
             mu_merit[0]=mu_lb*mu_safty;
         
         obj = eval_obj(z, xN, od, y, yN, W, WN,
                        nx, nu, np, ny, N) + mu_merit[0]*cons_res;
-        
-//         mexPrintf("obj = %8.4e\n", obj);
-        
-        dir_grad = grad - mu_merit[0] * cons_res;
-        
-//         mexPrintf("D = %8.4e\n", dir_grad);
                 
+        dir_grad = grad - mu_merit[0] * cons_res;
+                        
         while (!newpoint && alpha > 0.001){
             memcpy(&z_new[0], &z[0], nw*sizeof(double));
             memcpy(&xN_new[0], &xN[0], nx*sizeof(double));
@@ -385,14 +364,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             cons_res = eval_cons_res(z_new, xN_new, od, ds0, lb, ub, lc, uc,
                                      lbN, ubN, lbu, ubu, nx, nu, nc, ncN,
                                      N, np, sim_method, workspace, &opts, eq_res_vec, prhs[0]);
-            
-//             mexPrintf("%e\n", cons_res);
-            
+                        
             obj_new = eval_obj(z_new, xN_new, od, y, yN, W, WN,
                                nx, nu, np, ny, N) + mu_merit[0]*cons_res;
-            
-//             mexPrintf("obj_new = %8.4e\n", obj_new);
-            
+                        
             if (obj_new <= obj + eta*alpha*dir_grad)
                 newpoint = true;
             else
@@ -400,33 +375,23 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
         
     }
-    
-//     mexPrintf("alpha = %5.4f\n", alpha);
-           
+               
     // update
-//     if (!newpoint)
-//         alpha = 1.0;
     double inc = 1.0 - alpha;
      
     daxpy(&nw, &alpha, dz, &one_i, z, &one_i); 
     daxpy(&nx, &alpha, dxN, &one_i, xN, &one_i);
-//     memcpy(&z[0], &z_new[0], nw*sizeof(double));
-//     memcpy(&xN[0], &xN_new[0], nx*sizeof(double));
-    
-//     dscal(&neq, &inc, lambda, &one_i);
     for (i=0;i<neq;i++)
         lambda[i] *= inc;
     daxpy(&neq, &alpha, lambda_new, &one_i, lambda, &one_i);
     
     if (nc>0){
-//         dscal(&nineq, &inc, mu, &one_i);
         for (i=0;i<nineq;i++)
             mu[i] *= inc;
         daxpy(&nineq, &alpha, mu_new, &one_i, mu, &one_i);
     }
     
     if (ncN>0){
-//         dscal(&ncN, &inc, muN, &one_i);
         for (i=0;i<ncN;i++)
             muN[i] *= inc;
         daxpy(&ncN, &alpha, muN_new, &one_i, muN, &one_i);

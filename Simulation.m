@@ -40,14 +40,6 @@ opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
 
-% globalization configurations (require advanced knowledge on globilization)
-% input.opt.meritfun.mu_merit=0;              % initialize the parameter
-% input.opt.meritfun.eta=1e-4;                % merit function parameter
-% input.opt.meritfun.tau=0.8;                 % step length damping factor
-% input.opt.meritfun.mu_safty=1.1;            % constraint weight update factor (for merit function)
-% input.opt.meritfun.rho=0.5;                 % merit function parameter
-% input.opt.meritfun.second_order_correction='no';  % trigger on second_order_correction
-
 %% Initialize all solvers (skip if you don't understand, we will take care of everything)
 
 % if strcmp(input.opt.qpsolver,'ipopt')
@@ -133,9 +125,8 @@ end
 
 % Backtracking
 
-mem.sqp_maxit = 20;
-mem.kkt_lim = 1;
-
+mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
+mem.kkt_lim = 1;             % tolerance on optimality
 mem.mu_merit=0;              % initialize the parameter
 mem.eta=1e-4;                % merit function parameter
 mem.tau=0.8;                 % step length damping factor
@@ -173,11 +164,11 @@ mem.mu_new = zeros(nc,N);
 mem.muN_new = zeros(nx,N+1);
 
 % for CMON-RTI
-mem.F_old = zeros(nx,N);
-mem.CMON = zeros(N,1);
-mem.q = zeros(nx+nu,N);
-mem.threshold = 0.06;
-mem.perc=100;
+% mem.F_old = zeros(nx,N);
+% mem.CMON = zeros(N,1);
+% mem.q = zeros(nx+nu,N);
+% mem.threshold = 0.06;
+% mem.perc=100;
 
 %% Initialzation (initialize your simulation properly...)
 
@@ -194,9 +185,6 @@ constraints = [];
 CPT = [];
 
 ref_traj = [];
-
-% mpc_callnum=1;         % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-% kkt_lim=1e-2;           % tolerance on optimality
 
 while time(end) < Tf
     
@@ -272,8 +260,8 @@ while time(end) < Tf
     iter = iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT)]);
 %     disp(['exactly updated sensitivities:' num2str(mem.perc) '%']);
-    disp(['No. of SQP Iteration: ' num2str(output.info.iteration_num)]);
-    disp('   ');
+%     disp(['No. of SQP Iteration: ' num2str(output.info.iteration_num)]);
+%     disp('   ');
     
     time = [time nextTime];
     
