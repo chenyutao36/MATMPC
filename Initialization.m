@@ -56,8 +56,8 @@ switch settings.model
         
         input.lb=repmat(lb,1,N);
         input.ub=repmat(ub,1,N); 
-        input.lb(:,1)=-inf;
-        input.ub(:,1)=inf;
+        input.lb(:,1)=-1e8;
+        input.ub(:,1)=1e8;
         input.lbN=lbN;               
         input.ubN=ubN; 
         input.lbu = repmat(lbu,1,N);
