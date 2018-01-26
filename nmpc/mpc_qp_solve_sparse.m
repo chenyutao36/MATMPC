@@ -1,4 +1,22 @@
-function [dz, dxN, lambda, mu, muN, cpt_qp] = mpc_qp_solve_sparse(Q_h,S,R,A,B,Cx,Cu,gx,gu,a,ds0,lc,uc,lb_du,ub_du,CxN,sizes,input)
+function [dz, dxN, lambda, mu, muN, cpt_qp] = mpc_qp_solve_sparse(sizes,mem)
+
+Q_h=mem.Q_h;
+S=mem.S;
+R=mem.R;
+A=mem.A_sens;
+B=mem.B_sens;
+Cx=mem.Cx;
+CxN=mem.CxN;
+Cu=mem.Cu;
+gx=mem.gx;
+gu=mem.gu;
+a=mem.a;
+ds0=mem.ds0;
+lc=mem.lc;
+uc=mem.uc;
+lb_du=mem.lb_du;
+ub_du=mem.ub_du;
+
 
 nx = sizes.nx;
 nu = sizes.nu;
@@ -37,11 +55,11 @@ DD = Cu;
 llb = [reshape(lb_du,[nu,N]), lb_du(1:nu)];
 uub = [reshape(ub_du,[nu,N]), ub_du(1:nu)];
 % general constraints
-llg = reshape(lc,[ng,N]);
-uug = reshape(uc,[ng,N]);
+llg = reshape(lc(1:N*ng),[ng,N]);
+uug = reshape(uc(1:N*ng),[ng,N]);
 % general constraints last stage
-lgN = zeros(ngN,1);
-ugN = zeros(ngN,1);
+lgN = lc(N*ng+1:end,1);
+ugN = uc(N*ng+1:end,1);;
 
 % initial guess for states and inputs
 x = zeros(nx, N+1); x(:,1) = ds0; % initial condition
