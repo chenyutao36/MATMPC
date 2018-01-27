@@ -29,9 +29,9 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
 
         %% hpipm test
         
-        [dz_hpipm, dxN_hpipm, lambda_hpipm, mu_hpipm, muN_hpipm, tQP_hpipm] = mpc_qp_solve_sparse(settings,mem);
+%         [dz_hpipm, dxN_hpipm, lambda_hpipm, mu_hpipm, muN_hpipm, tQP_hpipm] = mpc_qp_solve_sparse(settings,mem);
 %         tCOND = 0;        
-        err = [norm(mem.dz-dz_hpipm), norm(mem.dxN-dxN_hpipm), norm(mem.lambda_new(:,2:end)-lambda_hpipm), norm(mem.mu_new-mu_hpipm) norm(mem.muN_new-muN_hpipm)]
+%         err = [norm(mem.dz-dz_hpipm), norm(mem.dxN-dxN_hpipm), norm(mem.lambda_new(:,2:end)-lambda_hpipm), norm(mem.mu_new-mu_hpipm) norm(mem.muN_new-muN_hpipm)]
         
 %         dz = dz_hpipm;
 %         dxN = dxN_hpipm;

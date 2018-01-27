@@ -123,17 +123,17 @@ switch settings.model
         u0=zeros(nu,1);
         para0=0;
         
-        q =[5,5,5,0.1,1,0.1];
+        q =[5,5,5,0.1,1,0.1,1e-5*ones(1,nu)];
         qN = q(1:nyN);
         Q = diag(q);
         QN = diag(qN);
         
-        lb = -inf*ones(nc,1);
-        ub = inf*ones(nc,1);
-        lbN = -inf*ones(ncN,1);
-        ubN = inf*ones(ncN,1);
-        lbu = 0*ones(nu,1);
-        ubu = 12*ones(nu,1);
+        lb = 0*ones(nc,1);
+        ub = 12*ones(nc,1);
+        lbN = 0*ones(ncN,1);
+        ubN = 12*ones(ncN,1);
+        lbu = -80*ones(nu,1);
+        ubu = 80*ones(nu,1);
         
         input.lb=repmat(lb,1,N);
         input.ub=repmat(ub,1,N); 
