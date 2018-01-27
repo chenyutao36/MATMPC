@@ -22,7 +22,7 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
-N     = 30;             % No. of shooting points
+N     = 10;             % No. of shooting points
 nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
 neq   = (N+1)*nx;       % No. of equality constraints
 nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
@@ -161,7 +161,7 @@ mem.dz = zeros(nx+nu,N);
 mem.dxN= zeros(nx,1);
 mem.lambda_new = zeros(nx,N+1);
 mem.mu_new = zeros(nc,N);
-mem.muN_new = zeros(nx,N+1);
+mem.muN_new = zeros(ncN,1);
 
 % for CMON-RTI
 % mem.F_old = zeros(nx,N);
@@ -177,7 +177,7 @@ Initialization;
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
-Tf = 50;               % simulation time
+Tf = 10;               % simulation time
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
@@ -196,19 +196,19 @@ while time(end) < Tf
 %     input.yN = REF(1:nyN)';
     
     % time-varying reference (no reference preview)
-    input.y = repmat(REF(iter,:)',1,N);
-    input.yN = REF(iter,1:nyN)';
+%     input.y = repmat(REF(iter,:)',1,N);
+%     input.yN = REF(iter,1:nyN)';
     
     %time-varying reference (reference preview)
-%     REF = zeros(ny,N+1);
-%     for i=1:N+1
-%         x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_x);
-%         theta = amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_theta);
-%         REF(:,i) = [x 0 0 0 theta 0]';
-%     end
-%     ref_traj=[ref_traj, REF(:,1)];
-%     input.y = REF(:,1:N);
-%     input.yN = REF(1:nyN,N+1);
+    REF = zeros(ny,N+1);
+    for i=1:N+1
+        x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_x);
+        theta = amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_theta);
+        REF(:,i) = [x 0 0 0 theta 0 zeros(1,nu)]';
+    end
+    ref_traj=[ref_traj, REF(:,1)];
+    input.y = REF(:,1:N);
+    input.yN = REF(1:nyN,N+1);
            
     % obtain the state measurement
     input.x0 = state_sim(end,:)';
