@@ -164,6 +164,33 @@ switch settings.model
         ylim([-1 1]);
         zlim([-6 0.5]);
         
+   case 'ChainofMasses_NLin'
+        figure(1);
+        subplot(311);
+        plot(time,controls_MPC(:,1));
+        ylabel('$u_x$','Interpreter','latex');
+        subplot(312);
+        plot(time,controls_MPC(:,2));
+        ylabel('$u_y$','Interpreter','latex');
+        subplot(313);
+        plot(time,controls_MPC(:,3));
+        ylabel('$u_z$','Interpreter','latex');
+
+        figure(2);
+        plot3([0,state_sim(1,1:n)], [0,state_sim(1,n+1:2*n)], [0,state_sim(1,2*n+1:3*n)],'Color',red,'LineStyle','--');
+        hold on;
+        grid on;
+        plot3([0,state_sim(end,1:n)], [0,state_sim(end,n+1:2*n)],[0,state_sim(end,2*n+1:3*n)],'Color',blue,'LineStyle','-');
+        scatter3([0,state_sim(1,1:n)], [0,state_sim(1,n+1:2*n)], [0,state_sim(1,2*n+1:3*n)],10,'MarkerFaceColor','none');
+        scatter3([0,state_sim(end,1:n)], [0,state_sim(end,n+1:2*n)],[0,state_sim(end,2*n+1:3*n)],10,'MarkerFaceColor',red);
+        xlabel('X[m]');
+        ylabel('Y[m]');
+        zlabel('Z[m]');
+        
+        xlim([-1.2 1.2]);
+        ylim([-1.2 1.2]);
+%         zlim([-1.2 1.2]);
+        
     case 'Hexacopter'
         figure();      
         subplot(321)

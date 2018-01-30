@@ -75,7 +75,37 @@ switch settings.model
         wu=blkdiag(wu,0.1, 0.1, 0.1);
         for i=1:3
             wx=blkdiag(wx,25);
-            wv=blkdiag(wv,diag(0.25*ones(1,n-1),0));
+            wv=blkdiag(wv,diag(0.25*ones(1,n-1)));
+        end
+        Q=blkdiag(wx,wv,wu);
+        QN=blkdiag(wx,wv);
+        
+        lb=-inf(nc,1);
+        ub=inf(nc,1);
+        lbN=-inf(ncN,1);
+        ubN=inf(ncN,1);
+        lbu = [-1;-1;-1];
+        ubu = [1;1;1];
+        
+        input.lb=repmat(lb,1,N);
+        input.ub=repmat(ub,1,N); 
+        input.lbN=lbN;               
+        input.ubN=ubN;
+        input.lbu = repmat(lbu,1,N);
+        input.ubu = repmat(ubu,1,N);
+        
+    case 'ChainofMasses_NLin'
+        n=10;
+%         x0=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
+        x0=[rand(1,n), 0.6*rand(1,n)-1, -0.6*rand(1,n) , zeros(1,3*(n-1))]';
+%         xref=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
+        u0=zeros(nu,1);
+        para0=0;
+        wv=[];wx=[];wu=[];
+        wu=blkdiag(wu,0.01, 0.01, 0.01);
+        for i=1:3
+            wx=blkdiag(wx,25);
+            wv=blkdiag(wv,diag(1*ones(1,n-1)));
         end
         Q=blkdiag(wx,wv,wu);
         QN=blkdiag(wx,wv);
@@ -159,6 +189,7 @@ end
 % prepare the data
 
 x = repmat(x0,1,N+1);  % initialize all shooting points with the same initial state 
+% x = repmat(xref,1,N+1); 
 u = repmat(u0,1,N);    % initialize all controls with the same initial control
 para = repmat(para0,1,N+1); % initialize all parameters with the same initial para
 
@@ -187,6 +218,10 @@ switch settings.model
     case 'ChainofMasses_Lin'
         
         REF=[7.5,0,0,zeros(1,3*(n-1)),zeros(1,nu)];
+        
+    case 'ChainofMasses_NLin'
+        
+        REF=[1,0,0,zeros(1,3*(n-1)),zeros(1,nu)];
         
     case 'Hexacopter'
         
