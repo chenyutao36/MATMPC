@@ -1,14 +1,5 @@
-%------------------------------------------%
-% Chain of masses connected by linear springs
 
-% from "Efficient direct multiple shooting for nonlinear model predictive
-% control on long horizons", Kirches, 2012
-
-%------------------------------------------%
-
-%% Dimensions
-
-n=9;
+n=10;
 nx=n*3+(n-1)*3;
 nu=3;
 np=0;
@@ -29,12 +20,13 @@ refN     = SX.sym('refs',nyN,1);
 Q        = SX.sym('Q',ny,ny);
 QN       = SX.sym('QN',nyN,nyN);
 
-k=0.1;
-lr=0.55;
-m=0.45;
+D=1;
+D1=-0.03;
+L=0.033;
+m=0.03;
 g=9.81;
 
-xend=1;yend=0;zend=0;
+xend=1;yp=0;zend=0;
 
 px=states(1:n,1);
 py=states(n+1:2*n,1);
@@ -55,17 +47,17 @@ ay=SX(n-1,1);
 az=SX(n-1,1);
 
 dist(1)= ((px(1)-p0x)^2+(py(1)-p0y)^2+(pz(1)-p0z)^2)^0.5 ;
-Fx(1)=(px(1)-p0x)*k*(n-lr/dist(1));
-Fy(1)=(py(1)-p0y)*k*(n-lr/dist(1));
-Fz(1)=(pz(1)-p0z)*k*(n-lr/dist(1));
+Fx(1)=( D*(1-L/dist(1))+ D1*(dist(1)-L)^3/dist(1) )*(px(1)-p0x);
+Fy(1)=( D*(1-L/dist(1))+ D1*(dist(1)-L)^3/dist(1) )*(py(1)-p0y);
+Fz(1)=( D*(1-L/dist(1))+ D1*(dist(1)-L)^3/dist(1) )*(pz(1)-p0z);
 for i=2:n
     dist(i)= ((px(i)-px(i-1))^2+(py(i)-py(i-1))^2+(pz(i)-pz(i-1))^2)^0.5 ;
-    Fx(i)= (px(i)-px(i-1))*k*(n-lr/dist(i)) ;
-    Fy(i)= (py(i)-py(i-1))*k*(n-lr/dist(i)) ;
-    Fz(i)= (pz(i)-pz(i-1))*k*(n-lr/dist(i)) ;
-    ax(i-1,1)= (Fx(i)-Fx(i-1))*n/m ;
-    ay(i-1,1)= (Fy(i)-Fy(i-1))*n/m ;
-    az(i-1,1)= (Fz(i)-Fz(i-1))*n/m-g ;
+    Fx(i)= ( D*(1-L/dist(i))+ D1*(dist(i)-L)^3/dist(i) )*(px(i)-px(i-1));
+    Fy(i)= ( D*(1-L/dist(i))+ D1*(dist(i)-L)^3/dist(i) )*(py(i)-py(i-1));
+    Fz(i)= ( D*(1-L/dist(i))+ D1*(dist(i)-L)^3/dist(i) )*(pz(i)-pz(i-1));
+    ax(i-1,1)= (Fx(i)-Fx(i-1))/m ;
+    ay(i-1,1)= (Fy(i)-Fy(i-1))/m ;
+    az(i-1,1)= (Fz(i)-Fz(i-1))/m-g ;
 end
 
 x_dot=[vx;ux;vy;uy;vz;uz;ax;ay;az];

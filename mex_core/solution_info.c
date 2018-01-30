@@ -2,6 +2,7 @@
 #include "string.h"
 #include <stdbool.h>
 
+#include "casadi_wrapper.h"
 #include "sim.h"
 
 // for builtin blas
@@ -153,7 +154,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
         
         daxpy(&nz, &one_d, vec_out[1], &one_i, vec_out[0], &one_i);
-        daxpy(&nu, &one_d, mu_u, &one_i, vec_out[0]+nx, &one_i);
+        daxpy(&nu, &one_d, mu_u+i*nu, &one_i, vec_out[0]+nx, &one_i);
         if (nc>0)
             daxpy(&nz, &one_d, vec_out[2], &one_i, vec_out[0], &one_i);
         
