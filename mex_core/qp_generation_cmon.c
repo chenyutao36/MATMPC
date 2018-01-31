@@ -4,41 +4,28 @@
 #include "string.h"
 
 #include "casadi_wrapper.h"
-#include "sim.h"
 #include "mpc_common.h"
 
-// for builtin blas
 #include "blas.h"
 
-// for openblas
-// #include "f77blas.h"
-// #if !defined(_WIN32)
-// #define dgemm dgemm_
-// #define dgemv dgemv_
-// #endif
-
-// static void *workspace = NULL;
-static double *dL = NULL;
-static double *vec_out[3];
 static double *Jac[2];
 static double *Jac_N;
-static double *num;
-static double *den;
+static double *num_pri;
+static double *den_pri;
+static double *num_dual;
+static double *den_dual;
 
 static bool mem_alloc = false;
 
 void exitFcn_sim(){
     if (mem_alloc){
-//         if (workspace!=NULL)
-//             mxFree(workspace);
-        mxFree(dL);
-        mxFree(vec_out[1]);
-        mxFree(vec_out[2]);
         mxFree(Jac[0]);
         mxFree(Jac[1]);
         mxFree(Jac_N);
-        mxFree(num);
-        mxFree(den);
+        mxFree(num_pri);
+        mxFree(den_pri);
+        mxFree(num_dual);
+        mxFree(den_dual);
     }
 }
 
@@ -62,7 +49,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda") );
     double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu") );
     double *muN = mxGetPr( mxGetField(prhs[0], 0, "muN") );
-    
     
     mwSize nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -101,10 +87,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *mu_u = mxGetPr( mxGetField(prhs[2], 0, "mu_u") );
     
     double *F_old = mxGetPr( mxGetField(prhs[2], 0, "F_old") );
-    double *CMON = mxGetPr( mxGetField(prhs[2], 0, "CMON") );
+    double *CMON_pri = mxGetPr( mxGetField(prhs[2], 0, "CMON_pri") );
+    double *CMON_dual = mxGetPr( mxGetField(prhs[2], 0, "CMON_dual") );
 //     double *q = mxGetPr( mxGetField(prhs[2], 0, "q") );
-    double *q = mxGetPr( mxGetField(prhs[2], 0, "dz") );
-    double threshold = mxGetScalar( mxGetField(prhs[2], 0, "threshold") );
+    double *q_pri = mxGetPr( mxGetField(prhs[2], 0, "dz") );
+    double *q_dual = mxGetPr( mxGetField(prhs[2], 0, "q_dual") );
+    double threshold_pri = mxGetScalar( mxGetField(prhs[2], 0, "threshold_pri") );
+    double threshold_dual = mxGetScalar( mxGetField(prhs[2], 0, "threshold_dual") );
     double *perc = mxGetPr( mxGetField(prhs[2], 0, "perc") );
     
     for (i=0;i<nx;i++)
@@ -115,20 +104,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *Cons[2];
       
 //     double *vec_in[4];
-    double *vec_in[6];
+    double *vec_in[6];    
 //     double *vec_out[2];
-//     double *vec_out[3];  
+    double *vec_out[3];
     vec_in[3] = Q;
-   
+    double *tmp = (double *)mxMalloc(nz * sizeof(double));
+    vec_out[2] = (double *)mxMalloc(nz * sizeof(double));   
     double *ode_in[3];
 
     if (!mem_alloc){
-        dL = (double *)mxMalloc( nw * sizeof(double));
-        mexMakeMemoryPersistent(dL);
-        vec_out[1] = (double *)mxMalloc(nz * sizeof(double));
-        mexMakeMemoryPersistent(vec_out[1]);
-        vec_out[2] = (double *)mxMalloc(nz * sizeof(double));
-        mexMakeMemoryPersistent(vec_out[2]);    
         
         Jac[0] = (double *) mxCalloc(ny*nx, sizeof(double));
         mexMakeMemoryPersistent(Jac[0]); 
@@ -137,16 +121,21 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         Jac_N = (double *) mxCalloc(nyN*nx, sizeof(double));
         mexMakeMemoryPersistent(Jac_N);
         
-        num = (double *) mxCalloc(nx, sizeof(double));
-        mexMakeMemoryPersistent(num);
-        den = (double *) mxCalloc(nx, sizeof(double));
-        mexMakeMemoryPersistent(den);
+        num_pri = (double *) mxCalloc(nx, sizeof(double));
+        mexMakeMemoryPersistent(num_pri);
+        den_pri = (double *) mxCalloc(nx, sizeof(double));
+        mexMakeMemoryPersistent(den_pri);
+        
+        num_dual = (double *) mxCalloc(nz, sizeof(double));
+        mexMakeMemoryPersistent(num_dual);
+        den_dual = (double *) mxCalloc(nz, sizeof(double));
+        mexMakeMemoryPersistent(den_dual);
         
         mem_alloc=true;
         mexAtExit(exitFcn_sim);
     }
     
-    double num_norm, den_norm;
+    double num_norm_pri, den_norm_pri, num_norm_dual, den_norm_dual;
     int num_updated = 0;
     
     // start loop
@@ -165,34 +154,49 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         vec_out[0] = a+i*nx;
         Sens[0] = A + i*nx*nx;
         Sens[1] = B + i*nx*nu;
-
-        if (sim_method == 0){
-            F_Fun(vec_in, vec_out);
-                      
-            dgemv(nTrans, &nx, &nx, &one_d, Sens[0], &nx, q+i*nz, &one_i, &zero, den, &one_i);            
-            dgemv(nTrans, &nx, &nu, &one_d, Sens[1], &nx, q+i*nz+nx, &one_i, &one_d, den, &one_i);            
-            den_norm = dnrm2(&nx, den, &one_i);
-                                   
-            if (den_norm>0){           
-                memcpy(&num[0], &a[i*nx], nx*sizeof(double));
-                daxpy(&nx, &minus_one_d, F_old+i*nx, &one_i, num, &one_i);
-                dgemv(nTrans, &nx, &nx, &minus_one_d, A+i*nx*nx, &nx, q+i*nz, &one_i, &one_d, num, &one_i);
-                dgemv(nTrans, &nx, &nu, &minus_one_d, B+i*nx*nu, &nx, q+i*nz+nx, &one_i, &one_d, num, &one_i);
-                num_norm=dnrm2(&nx, num, &one_i);                
-                CMON[i] = num_norm/den_norm;
-            }else {
-                CMON[i] = 10000000;
-            }
-            
-            if (CMON[i]>threshold){
-                num_updated++;
-                D_Fun(vec_in, Sens);
-                
-//                 memcpy(&F_old[i*nx], &a[i*nx], nx*sizeof(double));
-//                 set_zeros(nz,q+i*nz);
-            }
-            memcpy(&F_old[i*nx], &a[i*nx], nx*sizeof(double));
+     
+        F_Fun(vec_in, vec_out);
+        
+        // primal CMON              
+        dgemv(nTrans, &nx, &nx, &one_d, Sens[0], &nx, q_pri+i*nz, &one_i, &zero, den_pri, &one_i);            
+        dgemv(nTrans, &nx, &nu, &one_d, Sens[1], &nx, q_pri+i*nz+nx, &one_i, &one_d, den_pri, &one_i);            
+        den_norm_pri = dnrm2(&nx, den_pri, &one_i);                                  
+        if (den_norm_pri>0){           
+            memcpy(&num_pri[0], &a[i*nx], nx*sizeof(double));
+            daxpy(&nx, &minus_one_d, F_old+i*nx, &one_i, num_pri, &one_i);
+//             dgemv(nTrans, &nx, &nx, &minus_one_d, A+i*nx*nx, &nx, q+i*nz, &one_i, &one_d, num_pri, &one_i);
+//             dgemv(nTrans, &nx, &nu, &minus_one_d, B+i*nx*nu, &nx, q+i*nz+nx, &one_i, &one_d, num_pri, &one_i);
+            daxpy(&nx, &minus_one_d, den_pri, &one_i, num_pri, &one_i);
+            num_norm_pri=dnrm2(&nx, num_pri, &one_i);                
+            CMON_pri[i] = num_norm_pri/den_norm_pri;
+        }else {
+            CMON_pri[i] = 10000000;
         }
+          
+        // dual CMON
+        dgemv(Trans, &nx, &nx, &one_d, Sens[0], &nx, q_dual+(i+1)*nx, &one_i, &zero, den_dual, &one_i);
+        dgemv(Trans, &nx, &nu, &one_d, Sens[1], &nx, q_dual+(i+1)*nx, &one_i, &zero, den_dual+nx, &one_i);
+        den_norm_dual = dnrm2(&nz, den_dual, &one_i);
+        if (den_norm_dual>0){   
+            vec_in[4] = q_dual+(i+1)*nx;
+            vec_in[5] = mu+i*nc;
+            vec_out[0] = tmp;
+            vec_out[1] = num_dual;
+            adj_Fun(vec_in, vec_out);
+            daxpy(&nz, &minus_one_d, den_dual, &one_i, num_dual, &one_i);
+            num_norm_dual=dnrm2(&nz, num_dual, &one_i); 
+            CMON_dual[i] = num_norm_dual/den_norm_dual;
+        }else {
+            CMON_dual[i] = 10000000;
+        }
+        
+        if (CMON_pri[i]>threshold_pri && CMON_dual[i]>threshold_dual){
+            num_updated++;
+            D_Fun(vec_in, Sens);
+//             memcpy(&F_old[i*nx], &a[i*nx], nx*sizeof(double));
+//             set_zeros(nz,q+i*nz);
+        }
+        memcpy(&F_old[i*nx], &a[i*nx], nx*sizeof(double));
         
         if (i < N-1){
             for (j=0;j<nx;j++)
@@ -201,8 +205,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             for (j=0;j<nx;j++)
                 vec_out[0][j] -= xN[j];
         }
-
-        
+       
         // Hessian
         Ji_Fun(vec_in, Jac);
         dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Qh+i*nx*nx, &nx);
@@ -210,26 +213,25 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
         
         // gradient
-//         vec_out[0] = gx+i*nx;
-//         vec_out[1] = gu+i*nu;
-//         gi_Fun(vec_in, vec_out);
+        vec_out[0] = gx+i*nx;
+        vec_out[1] = gu+i*nu;
+        gi_Fun(vec_in, vec_out);
         
-        vec_in[4] = lambda+(i+1)*nx;
-        vec_in[5] = mu+i*nc;         
-        vec_out[0] = dL+i*nz;
-        adj_Fun(vec_in, vec_out);      
-        for (j=0;j<nx;j++)
-            gx[i*nx+j] =vec_out[0][j] + vec_out[1][j] - lambda[i*nx+j];        
-        for (j=0;j<nu;j++)
-            gu[i*nu+j] =vec_out[0][nx+j] + vec_out[1][nx+j] + mu_u[i*nu+j];       
-        if (nc>0){
-            for (j=0;j<nx;j++)
-                gx[i*nx+j] += vec_out[2][j];
-            for (j=0;j<nu;j++)
-                gu[i*nu+j] += vec_out[2][nx+j];
-        }
-        
-        
+//         vec_in[4] = lambda+(i+1)*nx;
+//         vec_in[5] = mu+i*nc;         
+//         vec_out[0] = dL+i*nz;
+//         adj_Fun(vec_in, vec_out);      
+//         for (j=0;j<nx;j++)
+//             gx[i*nx+j] =vec_out[0][j] + vec_out[1][j] - lambda[i*nx+j];        
+//         for (j=0;j<nu;j++)
+//             gu[i*nu+j] =vec_out[0][nx+j] + vec_out[1][nx+j] + mu_u[i*nu+j];       
+//         if (nc>0){
+//             for (j=0;j<nx;j++)
+//                 gx[i*nx+j] += vec_out[2][j];
+//             for (j=0;j<nu;j++)
+//                 gu[i*nu+j] += vec_out[2][nx+j];
+//         }
+               
         // constraint residual
         if (nc>0){        
             vec_out[0] = lc + i*nc;
@@ -255,16 +257,16 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     JN_Fun(vec_in, Jac_N);
     dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, Jac_N, &nyN, Jac_N, &nyN, &zero, Qh+N*nx*nx, &nx);
     
-//     vec_out[0] = gx+N*nx;
-//     gN_Fun(vec_in, vec_out);
-    
-    vec_in[4] = muN;    
     vec_out[0] = gx+N*nx;
-    adjN_Fun(vec_in, vec_out);
-    if (ncN>0){
-        for (j=0;j<nx;j++)
-            gx[N*nx+j] += vec_out[1][j];
-    }
+    gN_Fun(vec_in, vec_out);
+    
+//     vec_in[4] = muN;    
+//     vec_out[0] = gx+N*nx;
+//     adjN_Fun(vec_in, vec_out);
+//     if (ncN>0){
+//         for (j=0;j<nx;j++)
+//             gx[N*nx+j] += vec_out[1][j];
+//     }
 
     if (ncN>0){
         vec_out[0] = lc + N*nc;
@@ -278,5 +280,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
     
     perc[0] = 100*num_updated/N;
+    
+    mxFree(tmp);
+    mxFree(vec_out[2]);
     
 }

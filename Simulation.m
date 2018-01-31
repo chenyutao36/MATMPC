@@ -22,7 +22,7 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
-N     = 10;             % No. of shooting points
+N     = 40;             % No. of shooting points
 nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
 neq   = (N+1)*nx;       % No. of equality constraints
 nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
@@ -33,7 +33,7 @@ settings.neq = neq;
 settings.nineq = nineq; 
 
 % solver configurations
-opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
+opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
 opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
@@ -115,7 +115,7 @@ switch opt.integrator
         mem.nu = nu;
         mem.Sx = eye(nx);
         mem.Su = zeros(nx,nu);
-        mem.newton_iter = 3;
+        mem.newton_iter = 10;
         mem.JFK = mem.h*[mem.B(1)*eye(nx,nx), mem.B(2)*eye(nx,nx), mem.B(3)*eye(nx,nx)];
         
     otherwise 
@@ -162,13 +162,22 @@ mem.dxN= zeros(nx,1);
 mem.lambda_new = zeros(nx,N+1);
 mem.mu_new = zeros(nc,N);
 mem.muN_new = zeros(ncN,1);
+mem.mu_u = zeros(N*nu,1);
 
 % for CMON-RTI
-% mem.F_old = zeros(nx,N);
-% mem.CMON = zeros(N,1);
-% mem.q = zeros(nx+nu,N);
-% mem.threshold = 0.06;
-% mem.perc=100;
+mem.F_old = zeros(nx,N);
+mem.CMON_pri = zeros(N,1);
+mem.CMON_dual = zeros(N,1);
+% mem.q_pri = zeros(nx+nu,N);
+mem.q_dual = zeros(nx,N);
+mem.threshold_pri = 0;
+mem.threshold_dual = 0;
+mem.tol=1e-1;
+mem.alpha = 1;
+mem.beta = 1;
+mem.c1 = 0.2;
+mem.rho_cmon = 1e0;
+mem.perc=100;
 
 %% Initialzation (initialize your simulation properly...)
 
@@ -177,7 +186,7 @@ Initialization;
 %% Simulation (start your simulation...)
 
 iter = 1; time = 0.0;
-Tf = 10;               % simulation time
+Tf = 50;               % simulation time
 state_sim= x0';
 controls_MPC = u0';
 y_sim = [];
@@ -192,23 +201,23 @@ while time(end) < Tf
     % the reference input.yN is a nyN by 1 vector
     
     % time-invariant reference
-%     input.y = repmat(REF',1,N);
-%     input.yN = REF(1:nyN)';
+    input.y = repmat(REF',1,N);
+    input.yN = REF(1:nyN)';
     
     % time-varying reference (no reference preview)
 %     input.y = repmat(REF(iter,:)',1,N);
 %     input.yN = REF(iter,1:nyN)';
     
     %time-varying reference (reference preview)
-    REF = zeros(ny,N+1);
-    for i=1:N+1
-        x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_x);
-        theta = amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_theta);
-        REF(:,i) = [x 0 0 0 theta 0 zeros(1,nu)]';
-    end
-    ref_traj=[ref_traj, REF(:,1)];
-    input.y = REF(:,1:N);
-    input.yN = REF(1:nyN,N+1);
+%     REF = zeros(ny,N+1);
+%     for i=1:N+1
+%         x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_x);
+%         theta = amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_theta);
+%         REF(:,i) = [x 0 0 0 theta 0 zeros(1,nu)]';
+%     end
+%     ref_traj=[ref_traj, REF(:,1)];
+%     input.y = REF(:,1:N);
+%     input.yN = REF(1:nyN,N+1);
            
     % obtain the state measurement
     input.x0 = state_sim(end,:)';
@@ -259,9 +268,10 @@ while time(end) < Tf
     nextTime = iter*Ts; 
     iter = iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT)]);
-%     disp(['exactly updated sensitivities:' num2str(mem.perc) '%']);
+    disp(['exactly updated sensitivities:' num2str(mem.perc) '%']);
+    disp(['threshold:' num2str(mem.threshold)]);
 %     disp(['No. of SQP Iteration: ' num2str(output.info.iteration_num)]);
-%     disp('   ');
+    disp('   ');
     
     time = [time nextTime];
     

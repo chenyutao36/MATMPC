@@ -49,6 +49,7 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
 %         eq_res = 0; ineq_res = 0; KKT = 0;
         
+        adaptive_eta(mem,settings);
         %% ---------- Multiple call management and convergence check
                         
 %         CPT.SHOOT=CPT.SHOOT+tSHOOT;
