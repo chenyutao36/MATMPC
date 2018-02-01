@@ -26,12 +26,13 @@ ncN = settings.ncN;  % No. of constraints at terminal stage
 N  = 40;             % No. of shooting points
 settings.N = N;
 
-opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
+opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
 opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
+opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 
 %% Initialize Data (all users have to do this)
 
@@ -64,26 +65,25 @@ while time(end) < Tf
     % the reference input.y is a ny by N matrix
     % the reference input.yN is a nyN by 1 vector
     
-    % time-invariant reference
-    input.y = repmat(data.REF',1,N);
-    input.yN = data.REF(1:nyN)';
-    
-    % time-varying reference (no reference preview)
-%     input.y = repmat(data.REF(iter,:)',1,N);
-%     input.yN = data.REF(iter,1:nyN)';
-    
-    %time-varying reference (reference preview)
-%     REF = zeros(ny,N+1);
-%     for i=1:N+1
-%         x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_x);
-%         theta = amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*f_theta);
-%         REF(:,i) = [x 0 0 0 theta 0 zeros(1,nu)]';
-%     end
-%     ref_traj=[ref_traj, REF(:,1)];
-
-%     input.y = data.REF(iter:iter+N-1,:)';
-%     input.yN = data.REF(iter+N,1:nyN)';
-           
+    switch opt.ref_type
+        case 0 % time-invariant reference
+            input.y = repmat(data.REF',1,N);
+            input.yN = data.REF(1:nyN)';
+        case 1 % time-varying reference (no reference preview)
+            input.y = repmat(data.REF(iter,:)',1,N);
+            input.yN = data.REF(iter,1:nyN)';
+        case 2 %time-varying reference (reference preview)
+            %     REF = zeros(ny,N+1);
+            %     for i=1:N+1
+            %         x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*data.pi*f_x);
+            %         theta = data.amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*data.f_theta);
+            %         REF(:,i) = [x 0 0 0 theta 0 zeros(1,nu)]';
+            %     end
+         %     ref_traj=[ref_traj, REF(:,1)];
+            input.y = data.REF(iter:iter+N-1,:)';
+            input.yN = data.REF(iter+N,1:nyN)';
+    end
+              
     % obtain the state measurement
     input.x0 = state_sim(end,:)';
     
