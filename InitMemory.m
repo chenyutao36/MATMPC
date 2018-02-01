@@ -83,6 +83,7 @@ function [input, mem] = InitMemory(settings, opt, input)
     mem.ub_du = zeros(N*nu,1);
     mem.CxN = zeros(ncN,nx);
 
+    mem.G = zeros(nx,N^2*nu);
     mem.Hc = zeros(N*nu,N*nu);
     mem.Cc = zeros(N*nc+ncN,N*nu);
     mem.gc = zeros(N*nu,1);
@@ -108,8 +109,8 @@ function [input, mem] = InitMemory(settings, opt, input)
     mem.perc=100;
     
     % user setting
-    mem.tol_abs=1e-2;
-    mem.tol_ref=1e-2;  
+    mem.tol_abs=1e-1;
+    mem.tol_ref=1e-1;  
     mem.alpha = 1;
     mem.beta = 1;
     mem.c1 = 0.1;

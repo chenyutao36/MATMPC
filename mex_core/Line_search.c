@@ -4,18 +4,8 @@
 #include "sim.h"
 #include "casadi_wrapper.h"
 
-// for builtin blas
 #include "blas.h"
 #include "lapack.h"
-
-
-
-// for openblas
-// #include "f77blas.h"
-// #if !defined(_WIN32)
-// #define dgemm dgemm_
-// #define dgemv dgemv_
-// #endif
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -60,7 +50,7 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
     double *lu = (double *)mxMalloc( N*nu * sizeof(double));        
     double *uu = (double *)mxMalloc( N*nu * sizeof(double));
     
-    memcpy(&eq_res_vec[0], &ds0[0], nx*sizeof(double));
+    memcpy(eq_res_vec, ds0, nx*sizeof(double));
            
     for (i=0;i<N;i++){
         vec_out[0] = eq_res_vec+(i+1)*nx;
@@ -359,8 +349,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         dir_grad = grad - mu_merit[0] * cons_res;
                         
         while (!newpoint && alpha > 0.001){
-            memcpy(&z_new[0], &z[0], nw*sizeof(double));
-            memcpy(&xN_new[0], &xN[0], nx*sizeof(double));
+            memcpy(z_new, z, nw*sizeof(double));
+            memcpy(xN_new, xN, nx*sizeof(double));
             
             daxpy(&nw, &alpha, dz, &one_i, z_new, &one_i); 
             daxpy(&nx, &alpha, dxN, &one_i, xN_new, &one_i);

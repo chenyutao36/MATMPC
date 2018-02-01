@@ -5,7 +5,6 @@
 #include "casadi_wrapper.h"
 #include "sim.h"
 
-// for builtin blas
 #include "lapack.h"
 #include "blas.h"
 
@@ -127,7 +126,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
     
     vec_in[3] = Q;
-    memcpy(&eq_res_vec[0], &ds0[0], nx*sizeof(double));
+    memcpy(eq_res_vec, ds0, nx*sizeof(double));
     
     double *work;
     double KKT=0, eq_res=0, ineq_res=0;

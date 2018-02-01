@@ -5,15 +5,7 @@
 
 #include "mpc_common.h"
 
-// for builtin blas
 #include "blas.h"
-
-// for openblas
-// #include "f77blas.h"
-// #if !defined(_WIN32)
-// #define dgemm dgemm_
-// #define dgemv dgemv_
-// #endif
 
 static double *L = NULL, *w_vec = NULL, *W_mat = NULL, *w_vec_dup = NULL, *W_mat_dup = NULL;
 static double *Hi = NULL, *Cci = NULL, *CcN = NULL;
@@ -60,8 +52,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize nz = nx+nu;
     
     /*Outputs*/
-    double  *Hc, *gc, *Cc, *lcc, *ucc; 
+    double  *Hc, *gc, *Cc, *lcc, *ucc, *G; 
     
+    G = mxGetPr( mxGetField(prhs[0], 0, "G")  );
     Hc = mxGetPr( mxGetField(prhs[0], 0, "Hc")  );
     gc = mxGetPr( mxGetField(prhs[0], 0, "gc")  );
     Cc = mxGetPr( mxGetField(prhs[0], 0, "Cc")  );
@@ -70,34 +63,25 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     /*Allocate memory*/
     mwIndex i=0,j=0;
-    double *cell; /* from cells */
      
-    if (!mem_alloc_cond){       
-        
+    if (!mem_alloc_cond){              
         L = (double *)mxMalloc((N+1)*nx * sizeof(double));
-        mexMakeMemoryPersistent(L);
-        
+        mexMakeMemoryPersistent(L);        
         w_vec = (double *)mxMalloc(nx * sizeof(double));
-        mexMakeMemoryPersistent(w_vec);
-        
+        mexMakeMemoryPersistent(w_vec);        
         W_mat = (double *)mxMalloc(nx*nu * sizeof(double));
-        mexMakeMemoryPersistent(W_mat);
-        
+        mexMakeMemoryPersistent(W_mat);        
         w_vec_dup = (double *)mxMalloc(nx * sizeof(double));
-        mexMakeMemoryPersistent(w_vec_dup);
-        
+        mexMakeMemoryPersistent(w_vec_dup);       
         W_mat_dup = (double *)mxMalloc(nx*nu * sizeof(double));
-        mexMakeMemoryPersistent(W_mat_dup);
-        
+        mexMakeMemoryPersistent(W_mat_dup);        
         Hi = (double *)mxMalloc(nu*nu * sizeof(double));
-        mexMakeMemoryPersistent(Hi);
-        
+        mexMakeMemoryPersistent(Hi);       
         Cci = (double *)mxMalloc(nc*nu * sizeof(double));
-        mexMakeMemoryPersistent(Cci);
-        
+        mexMakeMemoryPersistent(Cci);       
         CcN = (double *)mxMalloc(ncN*nu * sizeof(double)); 
         mexMakeMemoryPersistent(CcN);
-
+        
         mem_alloc_cond = true;       
         mexAtExit(exitFcn);
     }
@@ -109,125 +93,95 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     /*Start the loop*/
     
     /* compute G */
-    double *G[N*N];
-//     double *G[N*(N+1)/2];
     for(i=0;i<N;i++){
-        G[i*N+i] = B+i*nx*nu; // Bi
+        memcpy(G+(i*N+i)*nx*nu, B+i*nx*nu, nx*nu*sizeof(double));
         for (j=i+1;j<N;j++){
-            cell = A+j*nx*nx;
-            G[i*N+j] = (double *)mxMalloc(nx*nu * sizeof(double)); // i-th col and j-th row
-            dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, cell, &nx, G[i*N+j-1], &nx, &zero, G[i*N+j], &nx);
+            dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, A+j*nx*nx, &nx, G+(i*N+j-1)*nx*nu, &nx, &zero, G+(i*N+j)*nx*nu, &nx);
         }
     }
          
     /* compute L */
-    memcpy(&L[0],&ds0[0], nx*sizeof(double)); 
+    memcpy(L,ds0, nx*sizeof(double)); 
     for(i=0;i<N;i++){
-        cell = A+i*nx*nx;
-        memcpy(&L[(i+1)*nx],&a[i*nx], nx*sizeof(double)); 
-        dgemv(nTrans,&nx,&nx,&one_d,cell,&nx,L+i*nx,&one_i,&one_d,L+(i+1)*nx,&one_i);
+        memcpy(L+(i+1)*nx, a+i*nx, nx*sizeof(double)); 
+        dgemv(nTrans,&nx,&nx,&one_d,A+i*nx*nx,&nx,L+i*nx,&one_i,&one_d,L+(i+1)*nx,&one_i);
     }
     
     /* compute gc */
-    cell = Qh + N*nx*nx;
-    memcpy(&w_vec[0],&gs[N*nx],nx*sizeof(double));
-    dgemv(nTrans,&nx,&nx,&one_d,cell,&nx,L+N*nx,&one_i,&one_d,w_vec,&one_i);
+    memcpy(w_vec,gs+N*nx,nx*sizeof(double));
+    dgemv(nTrans,&nx,&nx,&one_d,Qh+N*nx*nx,&nx,L+N*nx,&one_i,&one_d,w_vec,&one_i);
     for(i=N-1;i>0;i--){
-        cell = S + i*nx*nu;
-        memcpy(&gc[i*nu],&gu[i*nu],nu*sizeof(double));
-        dgemv(Trans,&nx,&nu,&one_d,cell,&nx,L+i*nx,&one_i,&one_d,gc+i*nu,&one_i);
-        cell = B+i*nx*nu;
-        dgemv(Trans,&nx,&nu,&one_d,cell,&nx,w_vec,&one_i,&one_d,gc+i*nu,&one_i);
+        memcpy(gc+i*nu,gu+i*nu,nu*sizeof(double));
+        dgemv(Trans,&nx,&nu,&one_d,S+i*nx*nu,&nx,L+i*nx,&one_i,&one_d,gc+i*nu,&one_i);
+        dgemv(Trans,&nx,&nu,&one_d,B+i*nx*nu,&nx,w_vec,&one_i,&one_d,gc+i*nu,&one_i);
          
-        cell = Qh + i*nx*nx;
-        memcpy(&w_vec_dup[0],&gs[i*nx],nx*sizeof(double));
-        dgemv(nTrans,&nx,&nx,&one_d,cell,&nx,L+i*nx,&one_i,&one_d,w_vec_dup,&one_i);
-        cell = A + i*nx*nx;
-        dgemv(Trans,&nx,&nx,&one_d,cell,&nx,w_vec,&one_i,&one_d,w_vec_dup,&one_i);
-        memcpy(&w_vec[0],&w_vec_dup[0],nx*sizeof(double));
+        memcpy(w_vec_dup,gs+i*nx,nx*sizeof(double));
+        dgemv(nTrans,&nx,&nx,&one_d,Qh+i*nx*nx,&nx,L+i*nx,&one_i,&one_d,w_vec_dup,&one_i);
+        dgemv(Trans,&nx,&nx,&one_d,A+i*nx*nx,&nx,w_vec,&one_i,&one_d,w_vec_dup,&one_i);
+        memcpy(w_vec,w_vec_dup,nx*sizeof(double));
     }   
-    cell = S;
-    memcpy(&gc[0],&gu[0],nu*sizeof(double));
-    dgemv(Trans,&nx,&nu,&one_d,cell,&nx,L,&one_i,&one_d,gc,&one_i);
-    cell = B;
-    dgemv(Trans,&nx,&nu,&one_d,cell,&nx,w_vec,&one_i,&one_d,gc,&one_i);
+    memcpy(gc,gu,nu*sizeof(double));
+    dgemv(Trans,&nx,&nu,&one_d,S,&nx,L,&one_i,&one_d,gc,&one_i);
+    dgemv(Trans,&nx,&nu,&one_d,B,&nx,w_vec,&one_i,&one_d,gc,&one_i);
      
     /* Compute Hc (only the lower triangular part) */
     for(i=0;i<N;i++){
-        cell = Qh + N*nx*nx;
-        dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, cell, &nx, G[i*N+N-1], &nx, &zero, W_mat, &nx);
-        for(j=N-1;j>i;j--){
-         
-            cell = S + j*nx*nu;
-            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, cell, &nx, G[i*N+j-1], &nx, &zero, Hi, &nu);         
-            cell = B + j*nx*nu;
-            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, cell, &nx, W_mat, &nx, &one_d, Hi, &nu);
+        dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, Qh+N*nx*nx, &nx, G+(i*N+N-1)*nx*nu, &nx, &zero, W_mat, &nx);
+        for(j=N-1;j>i;j--){        
+            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, S+j*nx*nu, &nx, G+(i*N+j-1)*nx*nu, &nx, &zero, Hi, &nu);                     
+            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+j*nx*nu, &nx, W_mat, &nx, &one_d, Hi, &nu);
             Block_Fill(nu, nu, Hi, Hc, j*nu, i*nu, N*nu);
+            
+            Block_Fill_Trans(nu, nu, Hi, Hc, i*nu, j*nu, N*nu);
              
-            cell = A + j*nx*nx;
-            dgemm(Trans, nTrans, &nx, &nu, &nx, &one_d, cell, &nx, W_mat, &nx, &zero, W_mat_dup, &nx); 
-            cell = Qh + j*nx*nx;
-            dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, cell, &nx, G[i*N+j-1], &nx, &one_d, W_mat_dup, &nx); 
-            memcpy(&W_mat[0],&W_mat_dup[0],nx*nu*sizeof(double));
+            dgemm(Trans, nTrans, &nx, &nu, &nx, &one_d, A+j*nx*nx, &nx, W_mat, &nx, &zero, W_mat_dup, &nx); 
+            dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, Qh+j*nx*nx, &nx, G+(i*N+j-1)*nx*nu, &nx, &one_d, W_mat_dup, &nx); 
+            memcpy(W_mat,W_mat_dup,nx*nu*sizeof(double));
         }
-        cell = R + i*nu*nu;
-        memcpy(Hi,cell,nu*nu*sizeof(double));
-        cell = B + i*nx*nu;
-        dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, cell, &nx, W_mat, &nx, &one_d, Hi, &nu);
-        Block_Fill(nu, nu, Hi, Hc, i*nu, i*nu, N*nu);
+        memcpy(Hi,R+i*nu*nu,nu*nu*sizeof(double));
+        dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+i*nx*nu, &nx, W_mat, &nx, &one_d, Hi, &nu);
+        Block_Fill(nu, nu, Hi, Hc, i*nu, i*nu, N*nu);      
     }    
     
     /* fill the upper triangular part of Hc (Hc is symmetric) */
-    for(i=0;i<N*nu;i++){
-        for(j=i+1;j<N*nu;j++)
-            Hc[j*N*nu+i]=Hc[i*N*nu+j];
-    }
+//     for(i=0;i<N*nu;i++){
+//         for(j=i+1;j<N*nu;j++)
+//             Hc[j*N*nu+i]=Hc[i*N*nu+j];
+//     }
     
     
     /* Compute Cc */
     if (nc>0){   
         for(i=0;i<N;i++){
-            cell = Cu + i*nc*nu;
-            Block_Fill(nc, nu, cell, Cc, i*nc, i*nu, N*nc+ncN);
-
+            Block_Fill(nc, nu, Cu+i*nc*nu, Cc, i*nc, i*nu, N*nc+ncN);
             for(j=i+1;j<N;j++){   
-                cell = Cx + j*nc*nx;
-                dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, cell, &nc, G[i*N+j-1], &nx, &zero, Cci, &nc);
+                dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, Cx+j*nc*nx, &nc, G+(i*N+j-1)*nx*nu, &nx, &zero, Cci, &nc);
                 Block_Fill(nc, nu, Cci, Cc, j*nc, i*nu, N*nc+ncN);
             }    
         }
          
         /* Compute cc */
         for(i=0;i<N;i++){
-            cell = Cx + i*nc*nx;
-            memcpy(&lcc[i*nc],&lc[i*nc],nc*sizeof(double));
-            dgemv(nTrans,&nc,&nx,&minus_one,cell,&nc,L+i*nx,&one_i,&one_d,lcc+i*nc,&one_i); 
+            memcpy(lcc+i*nc,lc+i*nc,nc*sizeof(double));
+            dgemv(nTrans,&nc,&nx,&minus_one,Cx+i*nc*nx,&nc,L+i*nx,&one_i,&one_d,lcc+i*nc,&one_i); 
 
-            memcpy(&ucc[i*nc],&uc[i*nc],nc*sizeof(double));
-            dgemv(nTrans,&nc,&nx,&minus_one,cell,&nc,L+i*nx,&one_i,&one_d,ucc+i*nc,&one_i);
+            memcpy(ucc+i*nc,uc+i*nc,nc*sizeof(double));
+            dgemv(nTrans,&nc,&nx,&minus_one,Cx+i*nc*nx,&nc,L+i*nx,&one_i,&one_d,ucc+i*nc,&one_i);
         }
         
     }   
     
     /* Compute CcN and ccN */
     if (ncN>0){   
-        cell = CxN;
         for(i=0;i<N;i++){                 
-            dgemm(nTrans, nTrans, &ncN, &nu, &nx, &one_d, cell, &ncN, G[i*N+N-1], &nx, &zero, CcN, &ncN);
+            dgemm(nTrans, nTrans, &ncN, &nu, &nx, &one_d, CxN, &ncN, G+(i*N+N-1)*nx*nu, &nx, &zero, CcN, &ncN);
             Block_Fill(ncN, nu, CcN, Cc, N*nc, i*nu, N*nc+ncN);
         }
 
-        memcpy(&lcc[N*nc],&lc[N*nc],ncN*sizeof(double));
-        dgemv(nTrans,&ncN,&nx,&minus_one,cell,&ncN,L+N*nx,&one_i,&one_d,lcc+N*nc,&one_i);
-        memcpy(&ucc[N*nc],&uc[N*nc],ncN*sizeof(double));
-        dgemv(nTrans,&ncN,&nx,&minus_one,cell,&ncN,L+N*nx,&one_i,&one_d,ucc+N*nc,&one_i);
+        memcpy(lcc+N*nc,lc+N*nc,ncN*sizeof(double));
+        dgemv(nTrans,&ncN,&nx,&minus_one,CxN,&ncN,L+N*nx,&one_i,&one_d,lcc+N*nc,&one_i);
+        memcpy(ucc+N*nc,uc+N*nc,ncN*sizeof(double));
+        dgemv(nTrans,&ncN,&nx,&minus_one,CxN,&ncN,L+N*nx,&one_i,&one_d,ucc+N*nc,&one_i);
     }
     
-        
-    /* Free memory */
-    for(i=0;i<N;i++){
-        for (j=i+1;j<N;j++)
-            mxFree(G[i*N+j]);
-    }
-
 }
