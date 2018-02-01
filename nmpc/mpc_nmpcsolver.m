@@ -1,4 +1,5 @@
-function [output, mem] = mpc_nmpcsolver(input,settings, mem)
+function [output, mem] = mpc_nmpcsolver(input, settings, mem, ext)
+
     tic;
 
 %     i=0;
@@ -12,21 +13,25 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         
         %% ----------- QP Preparation
 
-        tshoot = tic;
-%         qp_generation(input, settings, mem);
-        qp_generation_cmon(input, settings, mem);
-        tSHOOT = toc(tshoot)*1e3; 
-        
-               
+        if ext
+            tshoot = tic;
+            qp_generation(input, settings, mem);
+            tSHOOT = toc(tshoot)*1e3; 
+        else
+            tshoot = tic;
+            qp_generation_cmon(input, settings, mem);
+            tSHOOT = toc(tshoot)*1e3; 
+        end
+                      
         tcond=tic;
         Condensing(mem, settings);
         tCOND=toc(tcond)*1e3;
         
 %         %% ----------  Solving QP
         [du, mu_vec,tQP,mem] = mpc_qp_solve_dense(settings,mem);
-% 
+         
         Recover(mem, settings, du, mu_vec);
-
+        
         %% hpipm test
         
 %         [dz_hpipm, dxN_hpipm, lambda_hpipm, mu_hpipm, muN_hpipm, tQP_hpipm] = mpc_qp_solve_sparse(settings,mem);
@@ -43,13 +48,15 @@ function [output, mem] = mpc_nmpcsolver(input,settings, mem)
         %% ---------- Line search
 
         Line_search(mem, input, settings);
-
+                
         %% ---------- KKT calculation 
         
         [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
 %         eq_res = 0; ineq_res = 0; KKT = 0;
         
-        adaptive_eta(mem,settings);
+        if ~ext
+            adaptive_eta(mem,settings);
+        end
         %% ---------- Multiple call management and convergence check
                         
 %         CPT.SHOOT=CPT.SHOOT+tSHOOT;

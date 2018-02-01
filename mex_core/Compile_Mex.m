@@ -50,7 +50,7 @@ HEAD2_PATH = '';
 % HEAD5_PATH='-I/home/yutaochen/Documents/MATLAB/Packages/qpOASES_C/qpOASES/include';
 %% These functions should be all compiled
 
-% mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim.c','casadi_src.c','mpc_common.c',LIB1);
+% mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
 
 % mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
 

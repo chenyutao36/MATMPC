@@ -9,13 +9,6 @@
 #include "lapack.h"
 #include "blas.h"
 
-// for openblas
-// #include "f77blas.h"
-// #if !defined(_WIN32)
-// #define dgemm dgemm_
-// #define dgemv dgemv_
-// #endif
-
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
@@ -47,6 +40,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda") );
     double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu") );
     double *muN = mxGetPr( mxGetField(prhs[0], 0, "muN") );
+    double *mu_u = mxGetPr( mxGetField(prhs[0], 0, "mu_u") );
     double *y = mxGetPr( mxGetField(prhs[0], 0, "y") );
     double *yN = mxGetPr( mxGetField(prhs[0], 0, "yN") );
     double *od = mxGetPr( mxGetField(prhs[0], 0, "od") );
@@ -62,7 +56,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
     double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
     double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
-    double *mu_u = mxGetPr( mxGetField(prhs[2], 0, "mu_u") );
      
     mwSize nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -158,8 +151,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         if (nc>0)
             daxpy(&nz, &one_d, vec_out[2], &one_i, vec_out[0], &one_i);
         
-        vec_out[0] = eq_res_vec+(i+1)*nx;
-        
+        vec_out[0] = eq_res_vec+(i+1)*nx;        
         switch(sim_method){
             case 0:
                 F_Fun(vec_in, vec_out);

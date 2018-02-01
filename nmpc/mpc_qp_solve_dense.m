@@ -27,7 +27,7 @@ function [solution, mu_vec, cpt_qp, mem] = mpc_qp_solve_dense(sizes,mem)
            [solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('h',QP,g,lu,uu,lc,uc, options);
         end
     end
-    mem.mu_u     = - multiplier(1:N*nu);
+    mem.mu_u_new  = - multiplier(1:N*nu);
     mu_vec   = - multiplier(N*nu+1:end);
     cpt_qp   = auxOutput.cpuTime*1e3;
             
