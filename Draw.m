@@ -18,37 +18,37 @@ switch settings.model
         subplot(3,2,1);
         plot(y_sim(:,1),'r');
         hold on;
-        plot(REF(1:samples,1),'k');
+        plot(data.REF(1:samples,1),'k');
         title('Longitudinal: $\hat{a}_x$','Interpreter','latex');
 
         subplot(3,2,2);
         plot(y_sim(:,2),'r');
         hold on;
-        plot(REF(1:samples,2),'k');
+        plot(data.REF(1:samples,2),'k');
         title('Lateral: $\hat{a}_y$','Interpreter','latex');
 
         subplot(3,2,3);
         plot(y_sim(:,3),'r');
         hold on;
-        plot(REF(1:samples,3),'k');
+        plot(data.REF(1:samples,3),'k');
         title('Vertical: $\hat{a}_z$','Interpreter','latex');
 
         subplot(3,2,4);
         plot(y_sim(:,4),'r');
         hold on;
-        plot(REF(1:samples,4),'k');
+        plot(data.REF(1:samples,4),'k');
         title('Roll: $\hat{\omega}_{\psi}$','Interpreter','latex');
 
         subplot(3,2,5);
         plot(y_sim(:,5),'r');
         hold on;
-        plot(REF(1:samples,5),'k');
+        plot(data.REF(1:samples,5),'k');
         title('Pitch: $\hat{\omega}_{\theta}$','Interpreter','latex');
 
         subplot(3,2,6);
         plot(y_sim(:,6),'r');
         hold on;
-        plot(REF(1:samples,6),'k');
+        plot(data.REF(1:samples,6),'k');
         title('Yaw: $\hat{\omega}_{\phi}$','Interpreter','latex');
 
 
@@ -149,6 +149,7 @@ switch settings.model
         plot(time,controls_MPC(:,3));
         ylabel('$u_z$','Interpreter','latex');
 
+        n = data.n;
         figure(2);
         plot3([0,state_sim(1,1:n)], [0,state_sim(1,n+1:2*n)], [0,state_sim(1,2*n+1:3*n)],'Color',red,'LineStyle','--');
         hold on;
@@ -176,6 +177,7 @@ switch settings.model
         plot(time,controls_MPC(:,3));
         ylabel('$u_z$','Interpreter','latex');
 
+        n = data.n;
         figure(2);
         plot3([0,state_sim(1,1:n)], [0,state_sim(1,n+1:2*n)], [0,state_sim(1,2*n+1:3*n)],'Color',red,'LineStyle','--');
         hold on;
@@ -465,3 +467,16 @@ switch settings.model
         title('df6');
 end
 
+% figure;
+% grid on;
+% plot(time(1:end-1),PERC,'Color',red);
+% xlabel('Time[s]');
+% ylabel('%');
+% 
+% figure
+% semilogy(time(1:end-1),ERR,'Color',red);
+% hold on;
+% grid on;
+% semilogy(time(1:end-1),TOL,'Color','k');
+% xlabel('Time[s]');
+% legend('Error','Tolerance');

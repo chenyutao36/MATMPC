@@ -1,5 +1,5 @@
 %% Initialization
-function [input, data] = InitData(settings, input)
+function [input, data] = InitData(settings)
 
     Ts  = settings.Ts;       % Sampling time
     Ts_st = settings.Ts_st;  % Shooting interval
@@ -15,8 +15,8 @@ function [input, data] = InitData(settings, input)
 
     switch settings.model
         case 'DiM'
-            x0 = zeros(nx,1);    % initial state
-            u0 = zeros(nu,1);    % initial control
+            input.x0 = zeros(nx,1);    % initial state
+            input.u0 = zeros(nu,1);    % initial control
             para0 = 0;  % initial parameters (by default a np by 1 vector, if there is no parameter, set para0=0)
 
             %weighting matrices
@@ -53,8 +53,8 @@ function [input, data] = InitData(settings, input)
               input.ubu = repmat(ubu,1,N);
 
         case 'InvertedPendulum'
-            x0 = [0;pi;0;0];    
-            u0 = zeros(nu,1);    
+            input.x0 = [0;pi;0;0];    
+            input.u0 = zeros(nu,1);    
             para0 = 0;  
 
             Q=diag([10 10 0.1 0.1 0.01]);
@@ -64,6 +64,10 @@ function [input, data] = InitData(settings, input)
             ub=2;
             lbN=-2;
             ubN=2;
+%             lb=[];
+%             ub=[];
+%             lbN=[];
+%             ubN=[];
             lbu=-20;
             ubu=20;
 
@@ -78,11 +82,12 @@ function [input, data] = InitData(settings, input)
 
         case 'ChainofMasses_Lin'
             n=9;
-            x0=zeros(nx,1);
+            data.n=n;
+            input.x0=zeros(nx,1);
             for i=1:n
-                x0(i)=7.5*i/n;
+                input.x0(i)=7.5*i/n;
             end
-            u0=zeros(nu,1);
+            input.u0=zeros(nu,1);
             para0=0;
             wv=[];wx=[];wu=[];
             wu=blkdiag(wu,0.1, 0.1, 0.1);
@@ -109,10 +114,11 @@ function [input, data] = InitData(settings, input)
 
         case 'ChainofMasses_NLin'
             n=10;
+            data.n=n;
     %         x0=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
-            x0=[rand(1,n), 0.6*rand(1,n)-1, -0.6*rand(1,n) , zeros(1,3*(n-1))]';
+            input.x0=[rand(1,n), 0.6*rand(1,n)-1, -0.6*rand(1,n) , zeros(1,3*(n-1))]';
     %         xref=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
-            u0=zeros(nu,1);
+            input.u0=zeros(nu,1);
             para0=0;
             wv=[];wx=[];wu=[];
             wu=blkdiag(wu,0.01, 0.01, 0.01);
@@ -138,8 +144,8 @@ function [input, data] = InitData(settings, input)
             input.ubu = repmat(ubu,1,N);
 
         case 'Hexacopter'
-            x0=zeros(nx,1); %x0(12) =1; x0(13:18) = [4.0699, 4.3772, 5.1754, 4.0504, 4.3580, 5.1781];
-            u0=zeros(nu,1);
+            input.x0=zeros(nx,1); %x0(12) =1; x0(13:18) = [4.0699, 4.3772, 5.1754, 4.0504, 4.3580, 5.1781];
+            input.u0=zeros(nu,1);
             para0=0;
 
             lb = -inf*ones(nc,1);
@@ -162,8 +168,8 @@ function [input, data] = InitData(settings, input)
             QN = diag(qN);
 
         case 'TiltHex'
-            x0=zeros(nx,1);
-            u0=zeros(nu,1);
+            input.x0=zeros(nx,1);
+            input.u0=zeros(nu,1);
             para0=0;
 
             q =[5,5,5,0.1,1,0.1,1e-5*ones(1,nu)];
@@ -201,9 +207,9 @@ function [input, data] = InitData(settings, input)
 
     % prepare the data
 
-    x = repmat(x0,1,N+1);  % initialize all shooting points with the same initial state 
+    x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
     % x = repmat(xref,1,N+1); 
-    u = repmat(u0,1,N);    % initialize all controls with the same initial control
+    u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
     para = repmat(para0,1,N+1); % initialize all parameters with the same initial para
 
     input.z=[x(:,1:N);u];        % states and controls of the first N stages (N by (nx+nu) matrix)
@@ -226,7 +232,14 @@ function [input, data] = InitData(settings, input)
 
         case 'InvertedPendulum'
 
-            data.REF=zeros(1,nx+nu);
+%             data.REF=zeros(1,nx+nu);
+            
+            T = 5/Ts;
+            data.REF = [zeros(T,1), pi*ones(T,1), zeros(T,3);
+                        1.5*ones(T,1), zeros(T,4);
+                        -1.5*ones(T,1), pi*ones(T,1), zeros(T,3);
+                        1.5*ones(T,1),zeros(T,4);
+                        zeros(10*T,1), pi*ones(10*T,1), zeros(10*T,3)];
 
         case 'ChainofMasses_Lin'
 

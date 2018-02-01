@@ -1,20 +1,11 @@
 
-
 #include "mex.h"
 #include "string.h"
 
 #include "casadi_wrapper.h"
 #include "sim.h"
 
-// for builtin blas
 #include "blas.h"
-
-// for openblas
-// #include "f77blas.h"
-// #if !defined(_WIN32)
-// #define dgemm dgemm_
-// #define dgemv dgemv_
-// #endif
 
 static void *workspace = NULL;
 static double *Jac[2];

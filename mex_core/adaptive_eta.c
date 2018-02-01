@@ -3,8 +3,17 @@
 #include <stdio.h>
 #include <math.h>
 
-// for builtin blas
 #include "blas.h"
+
+static double *V_pri=NULL, *V_dual=NULL, *dy=NULL;
+static bool mem_alloc = false;
+void exitFcn(){
+    if (mem_alloc){
+        mxFree(V_pri);
+        mxFree(V_dual);
+        mxFree(dy);
+    }
+}
 
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
@@ -44,9 +53,17 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double one_d = 1.0, zero = 0.0, minus_one_d = -1.0;
     mwSignedIndex one_i = 1;
     
-    double *V_pri = (double *)mxMalloc( m*sizeof(double) );
-    double *V_dual = (double *)mxMalloc( n*sizeof(double) );
-    double *dy = (double *)mxMalloc( ns*sizeof(double) );
+    if (!mem_alloc){
+        V_pri = (double *)mxMalloc( m*sizeof(double) );
+        mexMakeMemoryPersistent(V_pri);
+        V_dual = (double *)mxMalloc( n*sizeof(double) );
+        mexMakeMemoryPersistent(V_dual);
+        dy = (double *)mxMalloc( ns*sizeof(double) );
+        mexMakeMemoryPersistent(dy);
+        
+        mem_alloc = true;     
+        mexAtExit(exitFcn);
+    }
     
     mwIndex i,j;
     
@@ -71,7 +88,5 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     *threshold_pri = (sqrt(c1)*(*tol))/(2*alpha*rho_cmon*norm_V_pri);
     *threshold_dual = (sqrt(1-c1)*(*tol))/(2*beta*rho_cmon*norm_V_dual);
     
-    mxFree(V_pri);
-    mxFree(V_dual);
-    mxFree(dy);
+    
 }

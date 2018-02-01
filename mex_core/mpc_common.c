@@ -14,6 +14,19 @@ void Block_Fill(size_t m, size_t n, double *Gi, double *G, size_t idm, size_t id
        
 }
 
+void Block_Fill_Trans(size_t m, size_t n, double *Gi, double *G, size_t idm, size_t idn, size_t ldG){
+       
+    size_t i,j;
+    size_t s;
+    for (j=0;j<m;j++){
+        s = idn*ldG + idm + j*ldG;
+        for (i=0;i<n;i++){
+            G[s+i] = Gi[i*m+j];
+        }
+    }
+       
+}
+
 void set_zeros(size_t dim, double *A){
     size_t i;
     for (i=0;i<dim;i++)
