@@ -49,6 +49,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda") );
     double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu") );
     double *muN = mxGetPr( mxGetField(prhs[0], 0, "muN") );
+    double *mu_u = mxGetPr( mxGetField(prhs[0], 0, "mu_u") );
     
     mwSize nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     mwSize nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -84,12 +85,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lb_du = mxGetPr( mxGetField(prhs[2], 0, "lb_du") );
     double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
     double *CxN = mxGetPr( mxGetField(prhs[2], 0, "CxN") );
-    double *mu_u = mxGetPr( mxGetField(prhs[2], 0, "mu_u") );
     
     double *F_old = mxGetPr( mxGetField(prhs[2], 0, "F_old") );
     double *CMON_pri = mxGetPr( mxGetField(prhs[2], 0, "CMON_pri") );
     double *CMON_dual = mxGetPr( mxGetField(prhs[2], 0, "CMON_dual") );
-//     double *q = mxGetPr( mxGetField(prhs[2], 0, "q") );
     double *q_pri = mxGetPr( mxGetField(prhs[2], 0, "dz") );
     double *q_dual = mxGetPr( mxGetField(prhs[2], 0, "q_dual") );
     double threshold_pri = mxGetScalar( mxGetField(prhs[2], 0, "threshold_pri") );
@@ -152,11 +151,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
         // integration      
         vec_out[0] = a+i*nx;
-        Sens[0] = A + i*nx*nx;
-        Sens[1] = B + i*nx*nu;
-     
         F_Fun(vec_in, vec_out);
         
+        // sensitivity
+        Sens[0] = A + i*nx*nx;
+        Sens[1] = B + i*nx*nu;        
         // primal CMON              
         dgemv(nTrans, &nx, &nx, &one_d, Sens[0], &nx, q_pri+i*nz, &one_i, &zero, den_pri, &one_i);            
         dgemv(nTrans, &nx, &nu, &one_d, Sens[1], &nx, q_pri+i*nz+nx, &one_i, &one_d, den_pri, &one_i);            
@@ -190,7 +189,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             CMON_dual[i] = 10000000;
         }
         
-        if (CMON_pri[i]>threshold_pri && CMON_dual[i]>threshold_dual){
+        if (CMON_pri[i]>threshold_pri || CMON_dual[i]>threshold_dual){
             num_updated++;
             D_Fun(vec_in, Sens);
 //             memcpy(&F_old[i*nx], &a[i*nx], nx*sizeof(double));
@@ -198,14 +197,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
         memcpy(&F_old[i*nx], &a[i*nx], nx*sizeof(double));
         
+        // integration residual
         if (i < N-1){
             for (j=0;j<nx;j++)
-                vec_out[0][j] -= z[(i+1)*nz+j];
+                a[i*nx+j] -= z[(i+1)*nz+j];
         }else{
             for (j=0;j<nx;j++)
-                vec_out[0][j] -= xN[j];
+                a[i*nx+j] -= xN[j];
         }
-       
+               
         // Hessian
         Ji_Fun(vec_in, Jac);
         dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Qh+i*nx*nx, &nx);

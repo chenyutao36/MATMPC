@@ -22,17 +22,10 @@ np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
-N     = 40;             % No. of shooting points
-nw    = (N+1)*nx+N*nu;  % No. of total optimization varialbes
-neq   = (N+1)*nx;       % No. of equality constraints
-nineq = N*nc+ncN;       % No. of inequality constraints (by default we assume there are lower and upper bounds)
+%% solver configurations
+N  = 40;             % No. of shooting points
+settings.N = N;
 
-settings.N  = N;
-settings.nw = nw; 
-settings.neq = neq;
-settings.nineq = nineq; 
-
-% solver configurations
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
 opt.hessian='gauss_newton';  % 'gauss_newton', 'exact'
 opt.qpsolver='qpoases'; %'qpoases'
@@ -40,148 +33,17 @@ opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
 
-%% Initialize all solvers (skip if you don't understand, we will take care of everything)
+%% Initialize Solvers (only for advanced users)
 
-% if strcmp(input.opt.qpsolver,'ipopt')
-%     ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
-%                         'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
-%                         'jac_d_constant','yes','mu_strategy','adaptive','adaptive_mu_globalization',...
-%                         'never-monotone-mode','accept_every_trial_step','yes');
-%     if strcmp(input.opt.condensing,'no')
-%         input.opt.ipopt.options.eq=[false(nineq,1);true(neq,1)];
-%         input.opt.ipopt.options.ineq=[true(nineq,1);false(neq,1)];
-%         input.opt.ipopt.x0=zeros(nw,1);
-%     else
-%         input.opt.ipopt.options.eq=false(settings.nineq,1);
-%         input.opt.ipopt.options.ineq=true(settings.nineq,1);
-%         input.opt.ipopt.x0=zeros(N*nu,1);
-%     end
-%     input.opt.ipopt.options.nleq=[];
-%     input.opt.ipopt.options.nlineq=[];
-%     input.opt.ipopt.options.ipopt=ipopt_opts;
-%     input.opt.ipopt.options.ipopt.print_level=0;
-% end
+[input, mem] = InitMemory(settings, opt, input);
 
-mem = struct;
-if strcmp(opt.qpsolver,'qpoases')
-    mem.qpoases.warm_start=0;
-    mem.qpoases.hot_start=0;
-    if strcmp(opt.hotstart, 'yes')
-        mem.qpoases.hot_start=1;
-    end
-end
+[input_exact, mem_exact] = InitMemory(settings, opt, input_exact);
 
+%% Initialize Data (all users have to do this)
 
-%% Off-line data structure initialization (skip if you don't understand)
+[input, data] = InitData(settings, input);
 
-% Multipliers
-
-input.lambda=ones(nx,N+1);
-input.mu=zeros(nc,N);
-input.muN=zeros(ncN,1);
-
-mem.mu_u = zeros(N*nu,1);
-
-% Integrator settings
-
-switch opt.integrator
-    case 'ERK4-CASADI'
-        mem.sim_method = 0;
-    case 'ERK4'
-        mem.sim_method = 1;
-        mem.A=[0, 0, 0, 0;
-                       0.5, 0, 0, 0;
-                       0, 0.5, 0, 0;
-                       0, 0, 1, 0];
-        mem.B=[1/6, 1/3, 1/3, 1/6];
-        mem.num_steps = s;
-        mem.num_stages = 4;
-        mem.h=Ts_st/mem.num_steps;
-        mem.nx = nx;
-        mem.nu = nu;
-        mem.Sx = eye(nx);
-        mem.Su = zeros(nx,nu);
-
-    case 'IRK3'
-        mem.sim_method = 2;
-        mem.A=[5/36,             2/9-sqrt(15)/15, 5/36-sqrt(15)/30;
-               5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;
-               5/36+sqrt(15)/30, 2/9+sqrt(15)/15, 5/36];
-        mem.B=[5/18;4/9;5/18];
-        mem.num_steps = s;
-        mem.num_stages = 3;
-        mem.h= Ts_st/mem.num_steps;
-        mem.nx = nx;
-        mem.nu = nu;
-        mem.Sx = eye(nx);
-        mem.Su = zeros(nx,nu);
-        mem.newton_iter = 10;
-        mem.JFK = mem.h*[mem.B(1)*eye(nx,nx), mem.B(2)*eye(nx,nx), mem.B(3)*eye(nx,nx)];
-        
-    otherwise 
-        error('Please choose a correct integrator');
-        
-end
-
-% Backtracking
-
-mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-mem.kkt_lim = 1;             % tolerance on optimality
-mem.mu_merit=0;              % initialize the parameter
-mem.eta=1e-4;                % merit function parameter
-mem.tau=0.8;                 % step length damping factor
-mem.mu_safty=1.1;            % constraint weight update factor (for merit function)
-mem.rho=0.5;                 % merit function parameter
-
-%%
-mem.A_sens = zeros(nx,nx*N);
-mem.B_sens = zeros(nx,nu*N);
-mem.Q_h = zeros(nx,nx*(N+1));
-mem.S = zeros(nx,nu*N);
-mem.R = zeros(nu,nu*N);
-mem.Cx = zeros(nc,nx*N);
-mem.Cu = zeros(nc,nu*N);
-mem.gx = zeros(nx,N+1);
-mem.gu = zeros(nu,N);
-mem.a = zeros(nx,N);
-mem.ds0 = zeros(nx,1);
-mem.lc = zeros(N*nc+ncN,1);
-mem.uc = zeros(N*nc+ncN,1);
-mem.lb_du = zeros(N*nu,1);
-mem.ub_du = zeros(N*nu,1);
-mem.CxN = zeros(ncN,nx);
-
-mem.Hc = zeros(N*nu,N*nu);
-mem.Cc = zeros(N*nc+ncN,N*nu);
-mem.gc = zeros(N*nu,1);
-mem.lcc = zeros(N*nc+ncN,1);
-mem.ucc = zeros(N*nc+ncN,1);
-
-mem.dz = zeros(nx+nu,N);
-mem.dxN= zeros(nx,1);
-mem.lambda_new = zeros(nx,N+1);
-mem.mu_new = zeros(nc,N);
-mem.muN_new = zeros(ncN,1);
-mem.mu_u = zeros(N*nu,1);
-
-% for CMON-RTI
-mem.F_old = zeros(nx,N);
-mem.CMON_pri = zeros(N,1);
-mem.CMON_dual = zeros(N,1);
-% mem.q_pri = zeros(nx+nu,N);
-mem.q_dual = zeros(nx,N);
-mem.threshold_pri = 0;
-mem.threshold_dual = 0;
-mem.tol=1e-1;
-mem.alpha = 1;
-mem.beta = 1;
-mem.c1 = 0.2;
-mem.rho_cmon = 1e0;
-mem.perc=100;
-
-%% Initialzation (initialize your simulation properly...)
-
-Initialization;
+[input_exact, data_exact] = InitData(settings, input_exact);
 
 %% Simulation (start your simulation...)
 
@@ -192,6 +54,7 @@ controls_MPC = u0';
 y_sim = [];
 constraints = [];
 CPT = [];
+ERR = [];
 
 ref_traj = [];
 
@@ -223,7 +86,26 @@ while time(end) < Tf
     input.x0 = state_sim(end,:)';
     
     % call the NMPC solver
-    [output, mem]=mpc_nmpcsolver(input,settings,mem);
+    input_exact.z(:) = input.z(:);
+    input_exact.xN(:) = input.xN(:);
+    input_exact.lambda(:) = input.lambda(:);
+    input_exact.y(:) = input.y(:);
+    input_exact.yN = input.yN(:);
+    input_exact.x0 = input.x0(:);
+    
+    [output, mem]=mpc_nmpcsolver(input, settings, mem, 0);
+    dw = [reshape(mem.dz, settings.N*(settings.nx+settings.nu), 1); mem.dxN];
+    dl = reshape(mem.q_dual, (settings.N+1)*settings.nx, 1);
+    dm = input.mu_u;
+    dy = [dw;dm;dl];
+    
+    [output_exact, mem_exact]=mpc_nmpcsolver(input_exact, settings, mem_exact, 1);
+    dw_exact = [reshape(mem_exact.dz, settings.N*(settings.nx+settings.nu), 1); mem_exact.dxN];
+    dl_exact = reshape(mem_exact.q_dual, (settings.N+1)*settings.nx, 1);
+    dm_exact = input_exact.mu_u;
+    dy_exact = [dw_exact;dm_exact;dl_exact];
+        
+    ERR = [ERR;norm(dy-dy_exact)];
     
     % obtain the solution and update the data
     switch opt.shifting
@@ -269,7 +151,7 @@ while time(end) < Tf
     iter = iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT)]);
     disp(['exactly updated sensitivities:' num2str(mem.perc) '%']);
-    disp(['threshold:' num2str(mem.threshold)]);
+    disp(['threshold_pri:' num2str(mem.threshold_pri) '   threshold_dual:' num2str(mem.threshold_dual) '   ERR:' num2str(ERR(end)) '   Tol:' num2str(mem.tol)]);
 %     disp(['No. of SQP Iteration: ' num2str(output.info.iteration_num)]);
     disp('   ');
     
