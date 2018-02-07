@@ -8,7 +8,7 @@
 
 %% Dimensions
 
-n=9;
+n=5; 
 nx=n*3+(n-1)*3;
 nu=3;
 np=0;
@@ -16,6 +16,8 @@ ny=3*(n-1)+3+3;
 nyN=3*(n-1)+3;
 nc=0;
 ncN=0;
+nbx=0;
+nbu=3;
 
 p0x=0;p0y=0;p0z=0;
 
@@ -82,9 +84,23 @@ hN = h(1:nyN);
 h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
 hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
 
-path_con = []; 
-path_con_N = []; 
+% general inequality path constraints
+general_con = []; 
+general_con_N = []; 
 
+% state and control bounds
+nbx_idx = 0;  % indexs of states which are bounded
+nbu_idx = 1:3;  % indexs of controls which are bounded
+path_con=general_con;
+path_con_N=general_con_N;
+for i=1:nbx
+    path_con=[path_con;states(nbx_idx(i))];
+    path_con_N=[path_con_N;states(nbx_idx(i))];
+end    
+nc=nc+nbx;
+ncN=ncN+nbx;
+
+% build the function for inequality constraints
 path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
 path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});
 

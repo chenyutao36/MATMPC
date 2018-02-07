@@ -124,7 +124,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     dgemv(Trans,&nx,&nu,&one_d,S,&nx,L,&one_i,&one_d,gc,&one_i);
     dgemv(Trans,&nx,&nu,&one_d,B,&nx,w_vec,&one_i,&one_d,gc,&one_i);
      
-    /* Compute Hc (only the lower triangular part) */
+    /* Compute Hc */
     for(i=0;i<N;i++){
         dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, Qh+N*nx*nx, &nx, G+(i*N+N-1)*nx*nu, &nx, &zero, W_mat, &nx);
         for(j=N-1;j>i;j--){        
@@ -141,14 +141,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         memcpy(Hi,R+i*nu*nu,nu*nu*sizeof(double));
         dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+i*nx*nu, &nx, W_mat, &nx, &one_d, Hi, &nu);
         Block_Fill(nu, nu, Hi, Hc, i*nu, i*nu, N*nu);      
-    }    
-    
-    /* fill the upper triangular part of Hc (Hc is symmetric) */
-//     for(i=0;i<N*nu;i++){
-//         for(j=i+1;j<N*nu;j++)
-//             Hc[j*N*nu+i]=Hc[i*N*nu+j];
-//     }
-    
+    }           
     
     /* Compute Cc */
     if (nc>0){   

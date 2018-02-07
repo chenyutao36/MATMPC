@@ -12,6 +12,9 @@ function [input, data] = InitData(settings)
     nc = settings.nc;    % No. of constraints
     ncN = settings.ncN;  % No. of constraints at terminal stage
     N     = settings.N;             % No. of shooting points
+    nbx = settings.nbx;
+    nbu = settings.nbu;
+    nbu_idx = settings.nbu_idx;
 
     switch settings.model
         case 'DiM'
@@ -34,21 +37,36 @@ function [input, data] = InitData(settings)
                     ]);
 
               QN=Q(1:nyN,1:nyN);
+              
+              % upper and lower bounds for states (=nbx)
+              lb_x = [];
+              ub_x = [];
+              lb_xN = [];
+              ub_xN = [];
+              
+              % upper and lower bounds for controls (=nbu)           
+              lb_u = [];
+              ub_u = [];
 
-              % constraint bounds
-              lb=[1.045;1.045;1.045;1.045;1.045;1.045];    % lower bounds for ineq constraints
-              ub=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints
-              lbN=[1.045;1.045;1.045;1.045;1.045;1.045];  % lower bounds for ineq constraints at terminal point
-              ubN=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints at terminal point
-              lbu=-inf(nu,1);
-              ubu=inf(nu,1);
+              % upper and lower bounds for general constraints (=nc)
+              lb_g=[1.045;1.045;1.045;1.045;1.045;1.045];    % lower bounds for ineq constraints
+              ub_g=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints
+              lb_gN=[1.045;1.045;1.045;1.045;1.045;1.045];  % lower bounds for ineq constraints at terminal point
+              ub_gN=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints at terminal point
+              
+              % store the constraint data into input
+              input.lb=repmat([lb_g;lb_x],1,N);
+              input.ub=repmat([ub_g;ub_x],1,N); 
+              input.lbN=[lb_gN;lb_xN];               
+              input.ubN=[ub_gN;ub_xN]; 
 
-              input.lb=repmat(lb,1,N);     % a matrix with N rows and nc columns
-              input.ub=repmat(ub,1,N);     
-              input.lb(:,1)=-inf*ones(nc,1);  % set different values for the constraints at the first stage
-              input.ub(:,1)=inf*ones(nc,1);
-              input.lbN=lbN;               % a column vector of length ncN              
-              input.ubN=ubN;   
+              lbu = -inf(nu,1);
+              ubu = inf(nu,1);
+              for i=1:nbu
+                  lbu(nbu_idx(i)) = lb_u(i);
+                  ubu(nbu_idx(i)) = ub_u(i);
+              end
+
               input.lbu = repmat(lbu,1,N);
               input.ubu = repmat(ubu,1,N);
 
@@ -60,28 +78,40 @@ function [input, data] = InitData(settings)
             Q=diag([10 10 0.1 0.1 0.01]);
             QN=Q(1:nyN,1:nyN);
 
-            lb=-2;
-            ub=2;
-            lbN=-2;
-            ubN=2;
-%             lb=[];
-%             ub=[];
-%             lbN=[];
-%             ubN=[];
-            lbu=-20;
-            ubu=20;
+            % upper and lower bounds for states (=nbx)
+            lb_x = -2;
+            ub_x = 2;
+            lb_xN = -2;
+            ub_xN = 2;
 
-            input.lb=repmat(lb,1,N);
-            input.ub=repmat(ub,1,N); 
-            input.lb(:,1)=-1e8;
-            input.ub(:,1)=1e8;
-            input.lbN=lbN;               
-            input.ubN=ubN; 
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = -20;
+            ub_u = 20;
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_xN];               
+            input.ubN=[ub_gN;ub_xN]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
             input.lbu = repmat(lbu,1,N);
             input.ubu = repmat(ubu,1,N);
 
         case 'ChainofMasses_Lin'
-            n=9;
+            n=5;
             data.n=n;
             input.x0=zeros(nx,1);
             for i=1:n
@@ -98,17 +128,35 @@ function [input, data] = InitData(settings)
             Q=blkdiag(wx,wv,wu);
             QN=blkdiag(wx,wv);
 
-            lb=-inf(nc,1);
-            ub=inf(nc,1);
-            lbN=-inf(ncN,1);
-            ubN=inf(ncN,1);
-            lbu = [-1;-1;-1];
-            ubu = [1;1;1];
+            % upper and lower bounds for states (=nbx)
+            lb_x = [];
+            ub_x = [];
+            lb_xN = [];
+            ub_xN = [];
 
-            input.lb=repmat(lb,1,N);
-            input.ub=repmat(ub,1,N); 
-            input.lbN=lbN;               
-            input.ubN=ubN;
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [-1;-1;-1];
+            ub_u = [1;1;1];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_xN];               
+            input.ubN=[ub_gN;ub_xN]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
             input.lbu = repmat(lbu,1,N);
             input.ubu = repmat(ubu,1,N);
 
@@ -129,43 +177,77 @@ function [input, data] = InitData(settings)
             Q=blkdiag(wx,wv,wu);
             QN=blkdiag(wx,wv);
 
-            lb=-inf(nc,1);
-            ub=inf(nc,1);
-            lbN=-inf(ncN,1);
-            ubN=inf(ncN,1);
-            lbu = [-1;-1;-1];
-            ubu = [1;1;1];
+            % upper and lower bounds for states (=nbx)
+            lb_x = [];
+            ub_x = [];
+            lb_xN = [];
+            ub_xN = [];
 
-            input.lb=repmat(lb,1,N);
-            input.ub=repmat(ub,1,N); 
-            input.lbN=lbN;               
-            input.ubN=ubN;
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [-1;-1;-1];
+            ub_u = [1;1;1];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_xN];               
+            input.ubN=[ub_gN;ub_xN]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
             input.lbu = repmat(lbu,1,N);
             input.ubu = repmat(ubu,1,N);
 
         case 'Hexacopter'
-            input.x0=zeros(nx,1); %x0(12) =1; x0(13:18) = [4.0699, 4.3772, 5.1754, 4.0504, 4.3580, 5.1781];
+            input.x0=zeros(nx,1);
             input.u0=zeros(nu,1);
             para0=0;
-
-            lb = -inf*ones(nc,1);
-            ub = inf*ones(nc,1);
-            lbN = -inf*ones(ncN,1);
-            ubN = inf*ones(ncN,1);
-            lbu = -2e2*ones(nu,1);
-            ubu = 2e2*ones(nu,1);
-
-            input.lb=repmat(lb,1,N);
-            input.ub=repmat(ub,1,N); 
-            input.lbN=lbN;               
-            input.ubN=ubN;  
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
-
+            
             q = [5e0, 5e0, 5e0, 0.1, 0.1, 0.1];
             qN = q(1:nyN);
             Q = diag(q);
             QN = diag(qN);
+
+            % upper and lower bounds for states (=nbx)
+            lb_x = [];
+            ub_x = [];
+
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = -inf*ones(nbu,1);
+            ub_u = inf*ones(nbu,1);
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_x];               
+            input.ubN=[ub_gN;ub_x]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
+            input.lbu = repmat(lbu,1,N);
+            input.ubu = repmat(ubu,1,N);
 
         case 'TiltHex'
             input.x0=zeros(nx,1);
@@ -176,18 +258,34 @@ function [input, data] = InitData(settings)
             qN = q(1:nyN);
             Q = diag(q);
             QN = diag(qN);
+            
+            % upper and lower bounds for states (=nbx)
+            lb_x = 0*ones(nbx,1);
+            ub_x = 12*ones(nbx,1);
 
-            lb = 0*ones(nc,1);
-            ub = 12*ones(nc,1);
-            lbN = 0*ones(ncN,1);
-            ubN = 12*ones(ncN,1);
-            lbu = -80*ones(nu,1);
-            ubu = 80*ones(nu,1);
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = -80*ones(nbu,1);
+            ub_u = 80*ones(nbu,1);
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
 
-            input.lb=repmat(lb,1,N);
-            input.ub=repmat(ub,1,N); 
-            input.lbN=lbN;               
-            input.ubN=ubN;  
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_x];               
+            input.ubN=[ub_gN;ub_x]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
             input.lbu = repmat(lbu,1,N);
             input.ubu = repmat(ubu,1,N);
 
@@ -232,14 +330,14 @@ function [input, data] = InitData(settings)
 
         case 'InvertedPendulum'
 
-%             data.REF=zeros(1,nx+nu);
+            data.REF=zeros(1,nx+nu);
             
-            T = 5/Ts;
-            data.REF = [zeros(T,1), pi*ones(T,1), zeros(T,3);
-                        1.5*ones(T,1), zeros(T,4);
-                        -1.5*ones(T,1), pi*ones(T,1), zeros(T,3);
-                        1.5*ones(T,1),zeros(T,4);
-                        zeros(10*T,1), pi*ones(10*T,1), zeros(10*T,3)];
+%             T = 5/Ts;
+%             data.REF = [zeros(T,1), pi*ones(T,1), zeros(T,3);
+%                         1.5*ones(T,1), zeros(T,4);
+%                         -1.5*ones(T,1), pi*ones(T,1), zeros(T,3);
+%                         1.5*ones(T,1),zeros(T,4);
+%                         zeros(10*T,1), pi*ones(10*T,1), zeros(10*T,3)];
 
         case 'ChainofMasses_Lin'
 
