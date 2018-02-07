@@ -4,7 +4,7 @@ disp('MATMPC is developed by Yutao Chen, DEI, UniPD');
 disp('---------------------------------------------');
 
 %% Insert Model here
-settings.model='ChainofMasses_NLin';
+settings.model='DiM';
 
 switch settings.model
     case 'InvertedPendulum'
@@ -29,7 +29,7 @@ mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality co
 muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 4; % No. of integration steps per sample interval
+s  = 2; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
@@ -45,7 +45,7 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-s  = 4; % No. of integration steps per shooting interval
+s  = 2; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
 jacX = SX.zeros(nx,nx)+jacobian(x_dot,states);
@@ -99,6 +99,15 @@ gxN = jacobian(objN,states)' + SX.zeros(nx,1);
 Cxi = jacobian(path_con, states) + SX.zeros(nc, nx);
 Cui = jacobian(path_con, controls) + SX.zeros(nc, nu);
 CxN = jacobian(path_con_N, states) + SX.zeros(ncN, nx);
+
+% if nbx>0
+%     Cxi=[Cxi;SX.zeros(nbx,nx)];
+%     CxN=[CxN;SX.zeros(nbx,nx)];
+%     for i=1:nbx
+%         Cxi(nc+i,nbx_idx(i))=1;
+%         CxN(ncN+i,nbx_idx(i))=1;
+%     end
+% end
 
 obji_fun = Function('obji_fun',{z,params,refs,Q},{obji+SX.zeros(1,1)},{'z','params','refs','Q'},{'obji'});
 objN_fun = Function('objN_fun',{states,params,refN,QN},{objN+SX.zeros(1,1)},{'states','params','refN','QN'},{'objN'});
@@ -242,6 +251,10 @@ settings.nyN= nyN;
 settings.np = np;   
 settings.nc = nc;
 settings.ncN = ncN;
+settings.nbx = nbx;
+settings.nbu = nbu;
+settings.nbx_idx = nbx_idx;
+settings.nbu_idx = nbu_idx;
 
 save('settings','settings');
 

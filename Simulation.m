@@ -23,7 +23,7 @@ nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
 %% solver configurations
-N  = 40;             % No. of shooting points
+N  = 30;             % No. of shooting points
 settings.N = N;
 
 opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'(for test)
@@ -32,7 +32,7 @@ opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
-opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
+opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 
 %% Initialize Data (all users have to do this)
 
@@ -73,15 +73,20 @@ while time(end) < Tf
             input.y = repmat(data.REF(iter,:)',1,N);
             input.yN = data.REF(iter,1:nyN)';
         case 2 %time-varying reference (reference preview)
-            %     REF = zeros(ny,N+1);
-            %     for i=1:N+1
-            %         x = amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*data.pi*f_x);
-            %         theta = data.amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*data.f_theta);
-            %         REF(:,i) = [x 0 0 0 theta 0 zeros(1,nu)]';
-            %     end
-         %     ref_traj=[ref_traj, REF(:,1)];
-            input.y = data.REF(iter:iter+N-1,:)';
-            input.yN = data.REF(iter+N,1:nyN)';
+            if strcmp(settings.model,'TiltHex')
+                REF = zeros(ny,N+1);
+                for i=1:N+1
+                    x = data.amplitude_x*sin(((time(end)+(i-1)*Ts_st))*2*pi*data.f_x);
+                    theta = data.amplitude_theta*sin(((time(end)+(i-1)*Ts_st))*2*pi*data.f_theta);
+                    REF(:,i) = [x 0 0 0 theta 0 zeros(1,nu)]';
+                end
+                ref_traj=[ref_traj, REF(:,1)];
+                input.y = REF(:,1:N);
+                input.yN = REF(1:nyN,N+1);
+            else
+                input.y = data.REF(iter:iter+N-1,:)';
+                input.yN = data.REF(iter+N,1:nyN)';
+            end
     end
               
     % obtain the state measurement
@@ -121,11 +126,11 @@ while time(end) < Tf
         input.mu=[output.mu(:,2:end),[output.muN;output.mu(ncN+1:nc,end)]];
         input.muN=output.muN;
         
-        mem.A_sens = [mem.A_sens(:,nx+1:end), mem.A_sens(:,(N-1)*nx+1:N*nx)];
-        mem.B_sens = [mem.B_sens(:,nu+1:end), mem.B_sens(:,(N-1)*nu+1:N*nu)];
-        mem.F_old = [mem.F_old(:,2:end), mem.F_old(:,end)];
-        mem.dz=[mem.dz(:,2:end),[mem.dxN; mem.dz(nx+1:nx+nu,end)]];  
-        mem.q_dual=[mem.q_dual(:,2:end),mem.q_dual(:,end)];
+%         mem.A_sens = [mem.A_sens(:,nx+1:end), mem.A_sens(:,(N-1)*nx+1:N*nx)];
+%         mem.B_sens = [mem.B_sens(:,nu+1:end), mem.B_sens(:,(N-1)*nu+1:N*nu)];
+%         mem.F_old = [mem.F_old(:,2:end), mem.F_old(:,end)];
+%         mem.dz=[mem.dz(:,2:end),[mem.dxN; mem.dz(nx+1:nx+nu,end)]];  
+%         mem.q_dual=[mem.q_dual(:,2:end),mem.q_dual(:,end)];
         case 'no'
         input.z=output.z;
         input.xN=output.xN;
