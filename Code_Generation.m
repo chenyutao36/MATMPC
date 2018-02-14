@@ -4,7 +4,7 @@ disp('MATMPC is developed by Yutao Chen, DEI, UniPD');
 disp('---------------------------------------------');
 
 %% Insert Model here
-settings.model='DiM'; %% see the folder "examples" for details
+settings.model='DiM'; % see the folder "examples" for details
 
 cd examples
 
@@ -138,6 +138,8 @@ if strcmp(generate,'y')
     h_fun.generate('h_fun.c',opts);
     path_con_fun.generate('path_con_fun.c',opts);
     path_con_N_fun.generate('path_con_N_fun.c',opts);
+    Ji_fun.generate('Ji_fun.c',opts);
+    JN_fun.generate('JN_fun.c',opts);
    
     opts = struct('main',false,'mex',false,'with_header',true);
     cd ../mex_core
@@ -205,6 +207,8 @@ if strcmp(compile,'y')
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_N_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'h_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Simulate_system.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Ji_fun.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'JN_fun.c');
        
     cd ../mex_core
     Compile_Mex;

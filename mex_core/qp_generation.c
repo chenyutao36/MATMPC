@@ -8,8 +8,8 @@
 #include "blas.h"
 
 static void *workspace = NULL;
-static double *Jac[2];
-static double *Jac_N;
+static double *Jac[2]; 
+static double *Jac_N = NULL;
 
 static bool mem_alloc = false;
 
@@ -74,6 +74,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lb_du = mxGetPr( mxGetField(prhs[2], 0, "lb_du") );
     double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
     double *CxN = mxGetPr( mxGetField(prhs[2], 0, "CxN") );
+    int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );
     
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - z[i];
@@ -113,6 +114,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             mexMakeMemoryPersistent(workspace); 
         }
         
+
         Jac[0] = (double *) mxMalloc(ny*nx * sizeof(double));
         mexMakeMemoryPersistent(Jac[0]); 
         Jac[1] = (double *) mxMalloc(ny*nu * sizeof(double));
@@ -173,10 +175,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 
         
         // Hessian
-        Ji_Fun(vec_in, Jac);
-        dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Qh+i*nx*nx, &nx);
-        dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
-        dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
+        if (!lin_obj){
+            Ji_Fun(vec_in, Jac);
+            dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Qh+i*nx*nx, &nx);
+            dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
+            dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);          
+        }
         
         // gradient
         vec_out[0] = gx+i*nx;
@@ -208,8 +212,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     vec_in[2] = yN;
     vec_in[3] = QN;
     
-    JN_Fun(vec_in, Jac_N);
-    dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, Jac_N, &nyN, Jac_N, &nyN, &zero, Qh+N*nx*nx, &nx);
+    if (!lin_obj){
+        JN_Fun(vec_in, Jac_N);
+        dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, Jac_N, &nyN, Jac_N, &nyN, &zero, Qh+N*nx*nx, &nx);
+    }
     
     vec_out[0] = gx+N*nx;
     gN_Fun(vec_in, vec_out);

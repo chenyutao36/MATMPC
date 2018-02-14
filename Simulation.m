@@ -36,6 +36,7 @@ opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
+opt.lin_obj='no'; % 'yes','no' % if objective function is linear least square
 opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 
 %% Initialize Data (all users have to do this)
