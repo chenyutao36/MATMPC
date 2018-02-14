@@ -266,12 +266,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *uc = mxGetPr( mxGetField(prhs[0], 0, "uc") );
     double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
     double *a = mxGetPr( mxGetField(prhs[0], 0, "a") );
-    double *q_dual = mxGetPr( mxGetField(prhs[0], 0, "q_dual") );
-    double *dmu = mxGetPr( mxGetField(prhs[0], 0, "dmu") );
-       
-//     double *q = mxGetPr( mxGetField(prhs[0], 0, "q") );
-//     daxpy(&nw, &one_d, dz, &one_i, q, &one_i);
-    
+          
     double rho = mxGetScalar( mxGetField(prhs[0], 0, "rho") );
     double eta = mxGetScalar( mxGetField(prhs[0], 0, "eta") );
     double tau = mxGetScalar( mxGetField(prhs[0], 0, "tau") );
@@ -348,7 +343,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 
         dir_grad = grad - mu_merit[0] * cons_res;
                         
-        while (!newpoint && alpha > 0.001){
+        while (!newpoint && alpha > 1E-4){
             memcpy(z_new, z, nw*sizeof(double));
             memcpy(xN_new, xN, nx*sizeof(double));
             
@@ -376,30 +371,20 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     daxpy(&nx, &alpha, dxN, &one_i, xN, &one_i);
     
     for (i=0;i<neq;i++)
-        q_dual[i] = lambda_new[i] - lambda[i];
-    for (i=0;i<neq;i++)
         lambda[i] *= inc;
     daxpy(&neq, &alpha, lambda_new, &one_i, lambda, &one_i);
     
     for (i=0;i<nbu;i++)
-        dmu[i] = mu_u_new[i] - mu_u[i];
-    for (i=0;i<nbu;i++)
         mu_u[i] *= inc;
     daxpy(&nbu, &alpha, mu_u_new, &one_i, mu_u, &one_i);
     
-    if (nc>0){
-        for (i=0;i<nineq;i++)
-            dmu[N*nu+i] = mu_new[i] - mu[i];
-        
+    if (nc>0){        
         for (i=0;i<nineq;i++)
             mu[i] *= inc;
         daxpy(&nineq, &alpha, mu_new, &one_i, mu, &one_i);                    
     }
     
-    if (ncN>0){
-        for (i=0;i<ncN;i++)
-            dmu[N*nu+nineq+i] = muN_new[i] - muN[i];
-        
+    if (ncN>0){                   
         for (i=0;i<ncN;i++)
             muN[i] *= inc;
         daxpy(&ncN, &alpha, muN_new, &one_i, muN, &one_i);

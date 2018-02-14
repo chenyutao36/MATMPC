@@ -1,4 +1,4 @@
-function [output, mem] = mpc_nmpcsolver(input, settings, mem, ext)
+function [output, mem] = mpc_nmpcsolver(input, settings, mem)
 
     tic;
 
@@ -13,38 +13,18 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, ext)
         
         %% ----------- QP Preparation
 
-        if ext
-            tshoot = tic;
-            qp_generation(input, settings, mem);
-            tSHOOT = toc(tshoot)*1e3; 
-        else
-            tshoot = tic;
-            qp_generation_cmon(input, settings, mem);
-            tSHOOT = toc(tshoot)*1e3; 
-        end
+        
+        tshoot = tic;
+        qp_generation(input, settings, mem);
+        tSHOOT = toc(tshoot)*1e3; 
                       
         tcond=tic;
         Condensing(mem, settings);
         tCOND=toc(tcond)*1e3;
         
 %         %% ----------  Solving QP
-        [du, mu_vec,tQP,mem] = mpc_qp_solve_dense(settings,mem);
-         
-        Recover(mem, settings, du, mu_vec);
-        
-        %% hpipm test
-        
-%         [dz_hpipm, dxN_hpipm, lambda_hpipm, mu_hpipm, muN_hpipm, tQP_hpipm] = mpc_qp_solve_sparse(settings,mem);
-%         tCOND = 0;        
-%         err = [norm(mem.dz-dz_hpipm), norm(mem.dxN-dxN_hpipm), norm(mem.lambda_new(:,2:end)-lambda_hpipm), norm(mem.mu_new-mu_hpipm) norm(mem.muN_new-muN_hpipm)]
-        
-%         dz = dz_hpipm;
-%         dxN = dxN_hpipm;
-%         lambda = lambda_hpipm;
-%         mu = mu_hpipm;
-%         muN = muN_hpipm;
-%         tQP = tQP_hpipm;
-
+        [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
+               
         %% ---------- Line search
 
         Line_search(mem, input, settings);
@@ -52,11 +32,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, ext)
         %% ---------- KKT calculation 
         
         [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
-%         eq_res = 0; ineq_res = 0; KKT = 0;
         
-        if ~ext
-            adaptive_eta(mem,settings);
-        end
         %% ---------- Multiple call management and convergence check
                         
 %         CPT.SHOOT=CPT.SHOOT+tSHOOT;
@@ -69,9 +45,6 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, ext)
                
 %         i=i+1;
         
-%         if norm(mem.dz,1)+norm(mem.dxN,1)<1e-4
-%             break;
-%         end
 %     end
 
     output.info.cpuTime=toc*1e3;   % Total CPU time for the current sampling instant

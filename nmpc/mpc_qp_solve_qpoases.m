@@ -1,4 +1,4 @@
-function [solution, mu_vec, cpt_qp, mem] = mpc_qp_solve_dense(sizes,mem)
+function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
 
     nu=sizes.nu;
     N=sizes.N;   
@@ -31,5 +31,5 @@ function [solution, mu_vec, cpt_qp, mem] = mpc_qp_solve_dense(sizes,mem)
     mu_vec   = - multiplier(N*nu+1:end);
     cpt_qp   = auxOutput.cpuTime*1e3;
             
-
+    Recover(mem, sizes, solution, mu_vec);
 end
