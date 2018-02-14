@@ -96,25 +96,6 @@ function [input, mem] = InitMemory(settings, opt, input)
     mem.mu_new = zeros(nc,N);
     mem.muN_new = zeros(ncN,1);
     mem.mu_u_new = zeros(N*nu,1);
-    mem.dmu = zeros(N*nu+N*nc+ncN,1);
-
-    %% for CMON-RTI
-    mem.F_old = zeros(nx,N);
-    mem.CMON_pri = zeros(N,1);
-    mem.CMON_dual = zeros(N,1);
-    mem.q_dual = zeros(nx,N+1);
-    mem.threshold_pri = 0;
-    mem.threshold_dual = 0;
-    mem.tol=0;
-    mem.perc=100;
-    
-    % user setting
-    mem.tol_abs=1e-1;
-    mem.tol_ref=1e-1;  
-    mem.alpha = 1;
-    mem.beta = 1;
-    mem.c1 = 0.1;
-    mem.rho_cmon = 1e1;
       
     %% input
     input.lambda=zeros(nx,N+1);
@@ -122,25 +103,5 @@ function [input, mem] = InitMemory(settings, opt, input)
     input.muN=zeros(ncN,1);
     input.mu_u = zeros(N*nu,1);
     
-    %% ipopt
-    % if strcmp(opt.qpsolver,'ipopt')
-    %     ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
-    %                         'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
-    %                         'jac_d_constant','yes','mu_strategy','adaptive','adaptive_mu_globalization',...
-    %                         'never-monotone-mode','accept_every_trial_step','yes');
-    %     if strcmp(opt.condensing,'no')
-    %         opt.ipopt.options.eq=[false(nineq,1);true(neq,1)];
-    %         opt.ipopt.options.ineq=[true(nineq,1);false(neq,1)];
-    %         opt.ipopt.x0=zeros(nw,1);
-    %     else
-    %         opt.ipopt.options.eq=false(settings.nineq,1);
-    %         opt.ipopt.options.ineq=true(settings.nineq,1);
-    %         opt.ipopt.x0=zeros(N*nu,1);
-    %     end
-    %     opt.ipopt.options.nleq=[];
-    %     opt.ipopt.options.nlineq=[];
-    %     opt.ipopt.options.ipopt=ipopt_opts;
-    %     opt.ipopt.options.ipopt.print_level=0;
-    % end
 end
 

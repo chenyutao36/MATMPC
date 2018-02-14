@@ -4,22 +4,13 @@ disp('MATMPC is developed by Yutao Chen, DEI, UniPD');
 disp('---------------------------------------------');
 
 %% Insert Model here
-settings.model='DiM';
+settings.model='DiM'; %% see the folder "examples" for details
 
-switch settings.model
-    case 'InvertedPendulum'
-        InvertedPendulum;
-    case 'DiM'
-        DiM;
-    case 'ChainofMasses_Lin'
-        ChainofMasses_Lin;
-    case 'ChainofMasses_NLin'
-        ChainofMasses_NLin;
-    case 'Hexacopter'
-        Hexacopter;
-    case 'TiltHex'
-        TiltHex;
-end
+cd examples
+
+run(settings.model);
+
+cd ..
 
 %%
 import casadi.*
@@ -29,7 +20,7 @@ mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality co
 muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 2; % No. of integration steps per sample interval
+s  = 1; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
@@ -45,7 +36,7 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-s  = 2; % No. of integration steps per shooting interval
+s  = 1; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
 jacX = SX.zeros(nx,nx)+jacobian(x_dot,states);
@@ -100,15 +91,6 @@ Cxi = jacobian(path_con, states) + SX.zeros(nc, nx);
 Cui = jacobian(path_con, controls) + SX.zeros(nc, nu);
 CxN = jacobian(path_con_N, states) + SX.zeros(ncN, nx);
 
-% if nbx>0
-%     Cxi=[Cxi;SX.zeros(nbx,nx)];
-%     CxN=[CxN;SX.zeros(nbx,nx)];
-%     for i=1:nbx
-%         Cxi(nc+i,nbx_idx(i))=1;
-%         CxN(ncN+i,nbx_idx(i))=1;
-%     end
-% end
-
 obji_fun = Function('obji_fun',{z,params,refs,Q},{obji+SX.zeros(1,1)},{'z','params','refs','Q'},{'obji'});
 objN_fun = Function('objN_fun',{states,params,refN,QN},{objN+SX.zeros(1,1)},{'states','params','refN','QN'},{'objN'});
 
@@ -148,12 +130,8 @@ if strcmp(generate,'y')
 
     display('                           ');
     display('    Generating source code...');
-
-    if exist([pwd,'/Source_Codes'],'dir')~=7
-        mkdir([pwd,'/Source_Codes']);
-    end
     
-    cd Source_Codes
+    cd model_src
       
     opts = struct( 'main', false, 'mex' , true ) ; 
     Simulate_system.generate('Simulate_system.c',opts);
@@ -185,7 +163,7 @@ if strcmp(generate,'y')
         P.add(adjN_fun);
         
         P.generate();
-    cd ../Source_Codes
+    cd ../model_src
 
 display('    Code generation completed!');
 
@@ -230,7 +208,7 @@ if strcmp(compile,'y')
        
     cd ../mex_core
     Compile_Mex;
-    cd ../Source_Codes
+    cd ../model_src
 
 cd ..
 display('    Compilation completed!');
@@ -256,7 +234,9 @@ settings.nbu = nbu;
 settings.nbx_idx = nbx_idx;
 settings.nbu_idx = nbu_idx;
 
+cd data
 save('settings','settings');
+cd ..
 
 clear all;
 

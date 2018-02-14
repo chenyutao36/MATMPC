@@ -163,9 +163,8 @@ function [input, data] = InitData(settings)
         case 'ChainofMasses_NLin'
             n=10;
             data.n=n;
-    %         x0=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
-            input.x0=[rand(1,n), 0.6*rand(1,n)-1, -0.6*rand(1,n) , zeros(1,3*(n-1))]';
-    %         xref=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
+            x0=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
+%             input.x0=[rand(1,n), 0.6*rand(1,n)-1, -0.6*rand(1,n) , zeros(1,3*(n-1))]';
             input.u0=zeros(nu,1);
             para0=0;
             wv=[];wx=[];wu=[];
@@ -306,7 +305,6 @@ function [input, data] = InitData(settings)
     % prepare the data
 
     x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
-    % x = repmat(xref,1,N+1); 
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
     para = repmat(para0,1,N+1); % initialize all parameters with the same initial para
 
@@ -331,13 +329,6 @@ function [input, data] = InitData(settings)
         case 'InvertedPendulum'
 
             data.REF=zeros(1,nx+nu);
-            
-%             T = 5/Ts;
-%             data.REF = [zeros(T,1), pi*ones(T,1), zeros(T,3);
-%                         1.5*ones(T,1), zeros(T,4);
-%                         -1.5*ones(T,1), pi*ones(T,1), zeros(T,3);
-%                         1.5*ones(T,1),zeros(T,4);
-%                         zeros(10*T,1), pi*ones(10*T,1), zeros(10*T,3)];
 
         case 'ChainofMasses_Lin'
 
