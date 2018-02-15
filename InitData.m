@@ -300,6 +300,97 @@ function [input, data] = InitData(settings)
             data.f_theta=data.f_rif_theta*0.5/pi;
             %Amplitude of theta(t)
             data.amplitude_theta=pi/18;
+            
+        case 'ActiveSeat'
+            
+            input.x0 = [zeros(1,nx-4), 0.0001, 0, 0, 0]';
+            input.u0 = zeros(nu,1);
+            para0 = 0;
+            
+            rw_uscita_xy = [20000 300 15000 600 650 0];
+            rw_deltau_xy = [10 0.01];
+            rw_u_xy = [0.0001 0.1];
+            rw_uscita_yx = [40000 500 15000 600 600 0];
+            rw_deltau_yx = [10 10];
+            rw_u_yx = [0.0001 0.01];
+            rw_uscita_za = [3800 1100 0];
+            rw_deltau_za = 0.0001;
+            rw_u_za = 0.0001;
+            rw_uscita_zv = [2000 600 2000];
+            rw_deltau_zv = 0.0001;
+            rw_u_zv = 0.0001;
+
+            Wq_t(1) = rw_uscita_xy(1);   % vpP       vel pitch perc
+            Wq_t(2) = rw_uscita_xy(2);   % accXP     acc long perc
+            Wq_t(3) = rw_uscita_xy(3);   % p         pitch
+            Wq_t(4) = rw_uscita_xy(4);   % X         pos long
+            Wq_t(5) = rw_uscita_xy(5);    % vX        vel long
+            Wq_t(6) = rw_uscita_xy(6);      % vp        vel pitch
+
+            Wq_t(7) = rw_uscita_yx(1);    % vrP       vel roll perc
+            Wq_t(8) = rw_uscita_yx(2);   % accYP     acc lat perc
+            Wq_t(9) = rw_uscita_yx(3);   % r         roll
+            Wq_t(10) = rw_uscita_yx(4);   % Y         pos lat
+            Wq_t(11) = rw_uscita_yx(5);   % vY        vel lat
+            Wq_t(12) = rw_uscita_yx(6);     % vr        vel roll
+
+            Wq_t(13) = rw_uscita_zv(1);  % accZP     acc vert perc
+            Wq_t(14) = rw_uscita_zv(2);  % Z         pos vert
+            Wq_t(15) = rw_uscita_zv(3);  % vZ        vel vert
+
+            Wq_t(16) = rw_uscita_za(1);  % vyP       vel yaw perc
+            Wq_t(17) = rw_uscita_za(2);   % y         yaw
+            Wq_t(18) = rw_uscita_za(3);     % vy        vel yaw
+
+            Wq_t(19) = 1; % uscita pressione y
+
+            Wq = diag(Wq_t); % diag matrix coi pesi
+            Wr = diag([rw_deltau_xy(1) rw_deltau_xy(2) rw_deltau_yx(1) rw_deltau_yx(2) ...
+                        rw_deltau_zv(1) rw_deltau_za(1) 0]); % pesi su ingressi effettivi
+
+            Wr3_t(1) = rw_u_xy(1);    % acc x tripod 
+            Wr3_t(2) = rw_u_xy(2);    % acc y tripod
+            Wr3_t(3) = rw_u_yx(1);     % acc z
+            Wr3_t(4) = rw_u_yx(2);    % vel yaw tripod
+            Wr3_t(5) = rw_u_zv(1);     % vel pitch
+            Wr3_t(6) = rw_u_za(1);     % vel roll
+
+            Wr3 = diag(Wr3_t); % diag matrix coi pesi
+            Q = blkdiag(Wq,Wr*Ts^2,Wr3);
+            QN = Wq(1:nyN,1:nyN)*0;
+            
+            
+            load([pwd, '/data/ActiveSeat/data_AS']);
+            % upper and lower bounds for states (=nbx)
+            lb_x = -[data_AS.y_lim_xy_pa;data_AS.y_lim_xy_pl;data_AS.y_lim_yx_pa;...
+                    data_AS.y_lim_yx_pl;data_AS.y_lim_zv_pv;data_AS.y_lim_za_pa];
+            ub_x = -lb_x;
+
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [];
+            ub_u = [];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_x];               
+            input.ubN=[ub_gN;ub_x]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
+            input.lbu = repmat(lbu,1,N);
+            input.ubu = repmat(ubu,1,N);
     end
 
     % prepare the data
@@ -344,6 +435,9 @@ function [input, data] = InitData(settings)
 
         case 'TiltHex'
             data.REF = [];
+            
+        case 'ActiveSeat'
+            data.REF = AS_REF(25,Ts);
         
     end
     

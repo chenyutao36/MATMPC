@@ -4,13 +4,11 @@ disp('MATMPC is developed by Yutao Chen, DEI, UniPD');
 disp('---------------------------------------------');
 
 %% Insert Model here
-settings.model='DiM'; % see the folder "examples" for details
+addpath([pwd,'/examples']);
 
-cd examples
+settings.model='ActiveSeat'; % see the folder "examples" for details
 
 run(settings.model);
-
-cd ..
 
 %%
 import casadi.*

@@ -4,7 +4,7 @@ clear mex; close all;clc;
 addpath([pwd,'/nmpc']);
 addpath([pwd,'/model_src']);
 addpath([pwd,'/mex_core']);
-addpath([pwd,'/data']);
+addpath(genpath([pwd,'/data']));
 
 cd data;
 if exist('settings','file')==2
@@ -27,16 +27,16 @@ nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
 %% solver configurations
-N  = 30;             % No. of shooting points
+N  = 60;             % No. of shooting points
 settings.N = N;
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton', 
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
-opt.hotstart='no'; %'yes','no' (only for qpoases)
+opt.hotstart='yes'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
-opt.lin_obj='no'; % 'yes','no' % if objective function is linear least square
+opt.lin_obj='yes'; % 'yes','no' % if objective function is linear least square
 opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 
 %% Initialize Data (all users have to do this)
@@ -49,14 +49,15 @@ opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 
 %% Simulation (start your simulation...)
 
-iter = 1; time = 0.0;
-Tf = 50;  % simulation time
+mem.iter = 1; time = 0.0;
+Tf = 25;  % simulation time
 state_sim= [input.x0]';
 controls_MPC = [input.u0]';
 y_sim = [];
 constraints = [];
 CPT = [];
 ref_traj = [];
+input_u = input.u0';
 
 while time(end) < Tf
     
@@ -68,8 +69,8 @@ while time(end) < Tf
             input.y = repmat(data.REF',1,N);
             input.yN = data.REF(1:nyN)';
         case 1 % time-varying reference (no reference preview)
-            input.y = repmat(data.REF(iter,:)',1,N);
-            input.yN = data.REF(iter,1:nyN)';
+            input.y = repmat(data.REF(mem.iter,:)',1,N);
+            input.yN = data.REF(mem.iter,1:nyN)';
         case 2 %time-varying reference (reference preview)
             if strcmp(settings.model,'TiltHex')
                 REF = zeros(ny,N+1);
@@ -82,8 +83,8 @@ while time(end) < Tf
                 input.y = REF(:,1:N);
                 input.yN = REF(1:nyN,N+1);
             else
-                input.y = data.REF(iter:iter+N-1,:)';
-                input.yN = data.REF(iter+N,1:nyN)';
+                input.y = data.REF(mem.iter:mem.iter+N-1,:)';
+                input.yN = data.REF(mem.iter+N,1:nyN)';
             end
     end
               
@@ -128,13 +129,18 @@ while time(end) < Tf
     % Collect constraints
     constraints=[constraints; full( path_con_fun('path_con_fun', xf, sim_input.u, sim_input.p) )'];
     
+    % Collect other data
+    if strcmp(settings.model,'ActiveSeat')
+        input_u = [input_u; output.z(nx+1:nx+6,1)',xf(32)];
+    end
+    
     % store the optimal solution and states
     controls_MPC = [controls_MPC; output.z(nx+1:nx+nu,1)'];
     state_sim = [state_sim; xf'];
     
     % go to the next sampling instant
-    nextTime = iter*Ts; 
-    iter = iter+1;
+    nextTime = mem.iter*Ts; 
+    mem.iter = mem.iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT)]);
         
     time = [time nextTime];
@@ -142,7 +148,7 @@ while time(end) < Tf
     CPT = [CPT; cpt, tshooting, tcond, tqp];
 end
 
-qpOASES_sequence( 'c', mem.qpoases.warm_start);
+qpOASES_sequence( 'c', mem.warm_start);
 clear mex;
 
 %% draw pictures (optional)
