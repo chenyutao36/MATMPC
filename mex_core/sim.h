@@ -36,7 +36,11 @@ typedef struct{
     double *JKx;
     double *JKu;
     double **impl_ode_in;
-    double **impl_ode_out;
+//     double **impl_ode_out;
+    double **res_out;
+    double **jac_x_out;
+    double **jac_u_out;
+    double **jac_xdot_out;
     mwIndex *IPIV;
 }sim_irk_workspace;
 

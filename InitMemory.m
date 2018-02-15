@@ -52,7 +52,7 @@ function [input, mem] = InitMemory(settings, opt, input)
             mem.nu = nu;
             mem.Sx = eye(nx);
             mem.Su = zeros(nx,nu);
-            mem.newton_iter = 10;
+            mem.newton_iter = 8;
             mem.JFK = mem.h*[mem.B(1)*eye(nx,nx), mem.B(2)*eye(nx,nx), mem.B(3)*eye(nx,nx)];
         otherwise 
             error('Please choose a correct integrator');       

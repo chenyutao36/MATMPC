@@ -86,16 +86,16 @@ void impl_f_Fun(double **in, double **out){
     const double *xdot = in[3];
     
     double *res = out[0];
-    double *jac_x = out[1];
-    double *jac_u = out[2];
-    double *jac_xdot = out[3];
+//     double *jac_x = out[1];
+//     double *jac_u = out[2];
+//     double *jac_xdot = out[3];
     
     void *casadi_mem = NULL;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
     const double *casadi_arg[4];
-    double *casadi_res[4];
+    double *casadi_res[1];
 
     casadi_arg[0] = x;
     casadi_arg[1] = u;
@@ -104,11 +104,87 @@ void impl_f_Fun(double **in, double **out){
 
 
     casadi_res[0] = res;
-    casadi_res[1] = jac_x;
-    casadi_res[2] = jac_u;
-    casadi_res[3] = jac_xdot;
+//     casadi_res[1] = jac_x;
+//     casadi_res[2] = jac_u;
+//     casadi_res[3] = jac_xdot;
 
     impl_f_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
+
+void impl_jac_x_Fun(double **in, double **out){
+    const double *x = in[0];
+    const double *u = in[1];
+    const double *p = in[2];
+    const double *xdot = in[3];
+    
+    double *jac_x = out[0];
+    
+    void *casadi_mem = NULL;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[4];
+    double *casadi_res[1];
+
+    casadi_arg[0] = x;
+    casadi_arg[1] = u;
+    casadi_arg[2] = p;
+    casadi_arg[3] = xdot;
+    
+    casadi_res[0] = jac_x;
+   
+
+    impl_jac_x_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
+
+void impl_jac_u_Fun(double **in, double **out){
+    const double *x = in[0];
+    const double *u = in[1];
+    const double *p = in[2];
+    const double *xdot = in[3];
+    
+    double *jac_u = out[0];
+        
+    void *casadi_mem = NULL;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[4];
+    double *casadi_res[1];
+
+    casadi_arg[0] = x;
+    casadi_arg[1] = u;
+    casadi_arg[2] = p;
+    casadi_arg[3] = xdot;
+
+    casadi_res[0] = jac_u;
+
+    impl_jac_u_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
+
+void impl_jac_xdot_Fun(double **in, double **out){
+    const double *x = in[0];
+    const double *u = in[1];
+    const double *p = in[2];
+    const double *xdot = in[3];
+    
+    double *jac_xdot = out[0];
+    
+    void *casadi_mem = NULL;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[4];
+    double *casadi_res[1];
+
+    casadi_arg[0] = x;
+    casadi_arg[1] = u;
+    casadi_arg[2] = p;
+    casadi_arg[3] = xdot;
+
+    casadi_res[0] = jac_xdot;
+
+    impl_jac_xdot_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
 void F_Fun(double **in, double **out) {
