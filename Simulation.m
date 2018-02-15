@@ -30,7 +30,7 @@ ncN = settings.ncN;  % No. of constraints at terminal stage
 N  = 30;             % No. of shooting points
 settings.N = N;
 
-opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
+opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton', 
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'

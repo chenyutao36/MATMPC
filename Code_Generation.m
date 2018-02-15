@@ -47,7 +47,10 @@ impl_jac_x = SX.zeros(nx,nx)+jacobian(impl_f,states);
 impl_jac_u = SX.zeros(nx,nu)+jacobian(impl_f,controls);
 impl_jac_xdot = SX.zeros(nx,nx)+jacobian(impl_f,xdot);
 impl_f = SX.zeros(nx,1) + impl_f;
-impl_f_fun = Function('impl_f_fun',{states,controls,params,xdot},{impl_f, impl_jac_x, impl_jac_u, impl_jac_xdot});
+impl_f_fun = Function('impl_f_fun',{states,controls,params,xdot},{impl_f});
+impl_jac_x_fun = Function('impl_jac_x_fun',{states,controls,params,xdot},{impl_jac_x});
+impl_jac_u_fun = Function('impl_jac_u_fun',{states,controls,params,xdot},{impl_jac_u});
+impl_jac_xdot_fun = Function('impl_jac_xdot_fun',{states,controls,params,xdot},{impl_jac_xdot});
 
 Sx = SX.sym('Sx',nx,nx);
 Su = SX.sym('Su',nx,nu);
@@ -148,6 +151,9 @@ if strcmp(generate,'y')
         P.add(jac_f_fun);
         P.add(vdeFun);
         P.add(impl_f_fun);
+        P.add(impl_jac_x_fun);
+        P.add(impl_jac_u_fun);
+        P.add(impl_jac_xdot_fun);
         P.add(F);
         P.add(D);
         P.add(h_fun);

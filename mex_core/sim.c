@@ -146,13 +146,10 @@ int sim_erk(double **in, double **out, double **Jac, const mxArray *mem, sim_opt
                 a = A[j * num_stages + s];
                 if (a!=0){
                     a *= h;                   
-//                     daxpy(&nx, &a, K+j*nx, &one_i, xt, &one_i);
                     for(ii=0;ii<nx;ii++)
-                            xt[ii]+=a*K[j*nx+ii];
+                        xt[ii]+=a*K[j*nx+ii];
                     
                     if (forw_sens){
-//                         daxpy(&jx, &a, dKx+j*jx, &one_i, jacX_t, &one_i);
-//                         daxpy(&ju, &a, dKu+j*ju, &one_i, jacU_t, &one_i);
                         for(ii=0;ii<jx;ii++)
                             jacX_t[ii]+=a*dKx[j*jx+ii];
                         for(ii=0;ii<ju;ii++)
@@ -179,13 +176,10 @@ int sim_erk(double **in, double **out, double **Jac, const mxArray *mem, sim_opt
         
         for (s = 0; s < num_stages; s++){
             b = h * B[s];
-//             daxpy(&nx, &b, K+s*nx, &one_i, xn, &one_i);
             for(ii=0;ii<nx;ii++)
                 xn[ii]+=b*K[s*nx+ii];
             
             if(forw_sens){
-//                 daxpy(&jx, &b, dKx+s*jx, &one_i, Jac_x, &one_i);
-//                 daxpy(&ju, &b, dKu+s*ju, &one_i, Jac_u, &one_i);
                 for(ii=0;ii<jx;ii++)
                     Jac_x[ii]+=b*dKx[s*jx+ii];
                 for(ii=0;ii<ju;ii++)
@@ -208,7 +202,7 @@ int sim_irk_calculate_workspace_size(const mxArray *mem, sim_opts *opts)
     int size = sizeof(sim_irk_workspace);
     
     size += 4 * sizeof(double *); // impl_ode_in
-    size += 4 * sizeof(double *); // impl_ode_out
+    size += 4 * sizeof(double *); // res_out, jac_x_out, jac_u_out, jac_xdot_out
      
     size += nx * sizeof(double); // xt
     size += 2 *ldG * sizeof(double); // K, rG
@@ -221,9 +215,9 @@ int sim_irk_calculate_workspace_size(const mxArray *mem, sim_opts *opts)
         size += ldG*nu * sizeof(double); // JKu
     }
       
-    size += nx*nx*sizeof(double); //impl_ode_out[1]
-    size += nx*nu*sizeof(double); //impl_ode_out[2]
-    size += nx*nx*sizeof(double); //impl_ode_out[3]
+    size += nx*nx*sizeof(double); // jac_x_out
+    size += nx*nu*sizeof(double); // jac_u_out
+    size += nx*nx*sizeof(double); // jac_xdot_out
     
     size += ldG * sizeof(mwIndex); // IPIV
  
@@ -244,8 +238,17 @@ void *sim_irk_cast_workspace(const mxArray *mem, sim_opts *opts, void *raw_memor
     workspace->impl_ode_in = (double **)c_ptr;
     c_ptr += 4 * sizeof(double *);
     
-    workspace->impl_ode_out = (double **)c_ptr;
-    c_ptr += 4 * sizeof(double *);
+    workspace->res_out = (double **)c_ptr;
+    c_ptr += sizeof(double *);
+    
+    workspace->jac_x_out = (double **)c_ptr;
+    c_ptr += sizeof(double *);
+    
+    workspace->jac_u_out = (double **)c_ptr;
+    c_ptr += sizeof(double *);
+    
+    workspace->jac_xdot_out = (double **)c_ptr;
+    c_ptr += sizeof(double *);
     
     workspace->xt = (double *)c_ptr;
     c_ptr += nx * sizeof(double);
@@ -273,13 +276,13 @@ void *sim_irk_cast_workspace(const mxArray *mem, sim_opts *opts, void *raw_memor
         c_ptr += ldG*nu * sizeof(double);
     }
     
-    workspace->impl_ode_out[1] = (double *)c_ptr;
+    workspace->jac_x_out[0] = (double *)c_ptr;
     c_ptr += nx*nx * sizeof(double);
     
-    workspace->impl_ode_out[2] = (double *)c_ptr;
+    workspace->jac_u_out[0] = (double *)c_ptr;
     c_ptr += nx*nu * sizeof(double);
     
-    workspace->impl_ode_out[3] = (double *)c_ptr;
+    workspace->jac_xdot_out[0] = (double *)c_ptr;
     c_ptr += nx*nx * sizeof(double);
     
     workspace->IPIV = (mwIndex *)c_ptr;
@@ -330,8 +333,13 @@ int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, sim_opt
     double *JKx = workspace->JKx;
     double *JKu = workspace->JKu;
     double **impl_ode_in = workspace->impl_ode_in;
-    double **impl_ode_out = workspace->impl_ode_out;
+    double **res_out = workspace->res_out;
+    double **jac_x_out = workspace->jac_x_out;
+    double **jac_u_out = workspace->jac_u_out;
+    double **jac_xdot_out = workspace->jac_xdot_out;
     mwIndex *IPIV = workspace->IPIV;
+    
+    double measure;
        
     mwSize jx = nx*nx;
     mwSize ju = nx*nu;
@@ -342,8 +350,8 @@ int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, sim_opt
     memcpy(&xn[0], &x[0], nx*sizeof(double));
     
     if (forw_sens){
-        memcpy(&Jac_x[0], &Sx[0], nx*nx*sizeof(double));
-        memcpy(&Jac_u[0], &Su[0], nx*nu*sizeof(double));
+        memcpy(Jac_x, Sx, nx*nx*sizeof(double));
+        memcpy(Jac_u, Su, nx*nu*sizeof(double));
     }
     
     impl_ode_in[1] = in[1]; // u
@@ -357,7 +365,7 @@ int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, sim_opt
         
             for (i = 0; i < num_stages; i++) {
                 
-                memcpy(&xt[0], &xn[0], nx*sizeof(double));
+                memcpy(xt, xn, nx*sizeof(double));
                 
                 for (j = 0; j < num_stages; j++){
                     a = A[j * num_stages + i];
@@ -369,21 +377,23 @@ int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, sim_opt
 
                 impl_ode_in[0] = xt;
                 impl_ode_in[3] = K + i*nx; // xdot
-                impl_ode_out[0] = rG + i*nx;             
+                res_out[0] = rG+i*nx;
 
-                impl_f_Fun(impl_ode_in, impl_ode_out);
+                impl_f_Fun(impl_ode_in, res_out);
+                impl_jac_x_Fun(impl_ode_in, jac_x_out);
+                impl_jac_xdot_Fun(impl_ode_in, jac_xdot_out);
                               
                 for (j=0; j<num_stages; j++){ //compute the block (ii,jj)th block = Jt
                     a = A[i + num_stages*j];
                     if (a!=0){
                         a *= h;
-                        dscal(&jx, &a, impl_ode_out[1], &one_i);
+                        dscal(&jx, &a, jac_x_out[0], &one_i);
                     }
                     if(j==i){
-                        daxpy(&jx, &one_d, impl_ode_out[3], &one_i, impl_ode_out[1], &one_i);
+                        daxpy(&jx, &one_d, jac_xdot_out[0], &one_i, jac_x_out[0], &one_i);
                     }
                     // fill in the i-th, j-th block of JGK
-                    Block_Fill(nx, nx, impl_ode_out[1], JGK, i*nx, j*nx, ldG);
+                    Block_Fill(nx, nx, jac_x_out[0], JGK, i*nx, j*nx, ldG);
                 } // end j
             }// end i             
             
@@ -393,12 +403,18 @@ int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, sim_opt
                                     
             daxpy(&ldG, &minus_one_d, rG, &one_i, K, &one_i);
         }//end iter
+        
+        measure = dnrm2(&ldG, rG, &one_i);
+        if (measure>1E-2){
+            mexPrintf("Implicit ODE residual is %5.3e\n",measure);
+            mexErrMsgTxt("Implicit IRK has not converged");
+        }
                
         // evaluate forward sens
         if (forw_sens){
             for(i=0; i<num_stages; i++){  
 
-                memcpy(&xt[0], &xn[0], nx*sizeof(double));
+                memcpy(xt, xn, nx*sizeof(double));
 
                 for(j=0; j<num_stages; j++){ 
                     a = A[i+num_stages*j];
@@ -409,24 +425,25 @@ int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, sim_opt
                 } 
                impl_ode_in[0] = xt;
                impl_ode_in[3] = K + i*nx;
-               impl_ode_out[0] = rG + i*nx;
 
-               impl_f_Fun(impl_ode_in, impl_ode_out);
+               impl_jac_x_Fun(impl_ode_in, jac_x_out);
+               impl_jac_u_Fun(impl_ode_in, jac_u_out);
+               impl_jac_xdot_Fun(impl_ode_in, jac_xdot_out);
 
-               Block_Fill(nx, nx, impl_ode_out[1], JGx, i*nx, 0, ldG);
-               Block_Fill(nx, nu, impl_ode_out[2], JKu, i*nx, 0, ldG);
+               Block_Fill(nx, nx, jac_x_out[0], JGx, i*nx, 0, ldG);
+               Block_Fill(nx, nu, jac_u_out[0], JKu, i*nx, 0, ldG);
 
                for (j=0; j<num_stages; j++){ //compute the block (ii,jj)th block = Jt
                    a = A[i + num_stages*j];
                    if (a!=0){
                        a *= h;
-                       dscal(&jx, &a, impl_ode_out[1], &one_i);                       
+                       dscal(&jx, &a, jac_x_out[0], &one_i);   
                    }
                    if(j==i){
-                       daxpy(&jx, &one_d, impl_ode_out[3], &one_i, impl_ode_out[1], &one_i);
+                       daxpy(&jx, &one_d, jac_xdot_out[0], &one_i, jac_x_out[0], &one_i);
                    }
                    // fill in the i-th, j-th block of JGK
-                   Block_Fill(nx, nx, impl_ode_out[1], JGK, i*nx, j*nx, ldG);
+                   Block_Fill(nx, nx, jac_x_out[0], JGK, i*nx, j*nx, ldG);
                } // end j
            }// end i
 
