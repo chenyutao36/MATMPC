@@ -15,10 +15,10 @@ function [input, mem] = InitMemory(settings, opt, input)
     %% memory
     mem = struct;
     if strcmp(opt.qpsolver,'qpoases')
-        mem.qpoases.warm_start=0;
-        mem.qpoases.hot_start=0;
+        mem.warm_start=0;
+        mem.hot_start=0;
         if strcmp(opt.hotstart, 'yes')
-            mem.qpoases.hot_start=1;
+            mem.hot_start=1;
         end
     end
       
@@ -113,7 +113,7 @@ function [input, mem] = InitMemory(settings, opt, input)
         mem.S = zeros(nx,nu*N);
         mem.R = zeros(nu,nu*N);
     end
-      
+          
     %% input
     input.lambda=zeros(nx,N+1);
     input.mu=zeros(nc,N);

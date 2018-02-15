@@ -12,14 +12,13 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem)
 %     while(i < mem.sqp_maxit  &&  KKT > mem.kkt_lim ) % RTI or multiple call
         
         %% ----------- QP Preparation
-
-        
+       
         tshoot = tic;
         qp_generation(input, settings, mem);
         tSHOOT = toc(tshoot)*1e3; 
                       
         tcond=tic;
-        Condensing(mem, settings);
+        Condensing(mem, settings);        
         tCOND=toc(tcond)*1e3;
         
 %         %% ----------  Solving QP
