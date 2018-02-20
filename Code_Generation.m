@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='ActiveSeat'; % see the folder "examples" for details
+settings.model='TethUAV'; % see the folder "examples" for details
 
 run(settings.model);
 

@@ -391,6 +391,51 @@ function [input, data] = InitData(settings)
             
             input.lbu = repmat(lbu,1,N);
             input.ubu = repmat(ubu,1,N);
+            
+        case 'TethUAV'
+            input.x0=[0; 0; 0; 0; 0; 0];%zeros(nx,1);
+            input.u0=[0; 0];%zeros(nu,1);%
+            para0=0;
+            
+            q = [10, 1, 10, 1, 0.01, 0.01];
+            qN = q(1:nyN);
+            Q = diag(q);
+            QN = diag(qN);
+            
+            b = 1;
+            omegaMax = 10*b;
+            fL_min = 0;
+            fL_max = 10;
+
+            % upper and lower bounds for states (=nbx)
+            lb_x = 0*ones(nbx,1);
+            ub_x = omegaMax*ones(nbx,1);
+
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [];
+            ub_u = [];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = fL_min;
+            ub_g = fL_max;            
+            lb_gN = fL_min;
+            ub_gN = fL_max;
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_x];               
+            input.ubN=[ub_gN;ub_x]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
+            input.lbu = repmat(lbu,1,N);
+            input.ubu = repmat(ubu,1,N);
     end
 
     % prepare the data
@@ -438,7 +483,9 @@ function [input, data] = InitData(settings)
             
         case 'ActiveSeat'
             data.REF = AS_REF(25,Ts);
-        
+            
+        case 'TethUAV'
+            data.REF = [0 0 pi/6 0 0 0];
     end
     
 end

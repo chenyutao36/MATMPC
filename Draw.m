@@ -558,4 +558,101 @@ switch settings.model
         plot(time(1:end-1),y_sim(:,19)/0.016);
         legend('Actual lateral trunk pressure','Active seat trunk pressure','Pressure induced by platform motion')
         xlabel('time [s]'); ylabel('[Pa]');
+        
+    case 'TethUAV'
+        axes_ref = [];
+        axes_lim = [];
+        
+        figure();      
+        subplot(221)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,1),'Color',red);
+        if isempty(ref_traj) ~=1
+            plot(time(1:end-1),ref_traj(1,:), 'k--');
+        end
+        title('\phi');
+        legend('\phi','ref');
+        ax = gca; % current axes
+        axes_ref = [axes_ref; ax];
+        axes_lim = [axes_lim; ax.YLim];
+        
+        subplot(222)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,2),'Color',red);
+        if isempty(ref_traj) ~=1
+            plot(time(1:end-1),ref_traj(2,:), 'k--');
+        end
+        title('\phi_{dot}');
+        legend('\phi_{dot}','ref');
+        ax = gca; % current axes
+        axes_ref = [axes_ref; ax];
+        axes_lim = [axes_lim; ax.YLim];
+         
+        subplot(223)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,3),'Color',red);
+        if isempty(ref_traj) ~=1
+            plot(time(1:end-1),ref_traj(3,:), 'k--');
+        end
+        title('\theta');
+        legend('\theta','ref');
+        ax = gca; % current axes
+        axes_ref = [axes_ref; ax];
+        axes_lim = [axes_lim; ax.YLim];
+        
+        subplot(224)
+        hold on;
+        grid on;
+        plot(time(1:end-1),y_sim(:,4),'Color',red);
+        if isempty(ref_traj) ~=1
+            plot(time(1:end-1),ref_traj(4,:), 'k--');
+        end
+        title('\theta_{dot}');
+        legend('\theta_{dot}','ref');
+        ax = gca; % current axes
+        axes_ref = [axes_ref; ax];
+        axes_lim = [axes_lim; ax.YLim];
+        
+        % set axes limits, the same for all the plots:
+        maxY = max(axes_lim(:,2));
+        minY = min(axes_lim(:,1));
+        for i = 1 : length(axes_lim)
+            cur_ax = axes_ref(i);
+            cur_ax.YLim = [minY maxY];
+        end
+        
+        figure()
+        subplot(211)
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,5),'Color',red);
+        title('f1');
+        
+        subplot(212)
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,6),'Color',red);
+        title('f2');
+        
+        figure();
+        subplot(211)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,1),'Color',red);
+        title('df1');
+        
+        subplot(212)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,2),'Color',red);
+        title('df2');
+        
+        figure();
+        grid on;
+        plot(time(1:end-1),constraints(:,1),'Color',red);
+        title('fL');
+
 end
