@@ -17,9 +17,9 @@ To use MATMPC, follow the steps below.
 
 4. Run Code_generation.m
 
-5. In Initialization.m, set your own initialization data, e.g. initial states, referecnes and etc.
+5. In InitData.m, set your own initialization data, e.g. data path, initial states, referecnes and etc.
 
-6. In Simulation.m, choose your integrator, set the prediction horizon and the solver options. You may also need to modify the reference for constant or time-varying reference tracking problems.
+6. In Simulation.m, choose your integrator, set the prediction horizon and the solver options. You may also need to modify the reference type for constant or time-varying reference tracking problems.
 
 7. In Draw.m, write your own plot fuctions to display your results.
 
