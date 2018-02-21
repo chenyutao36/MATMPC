@@ -54,7 +54,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     mwIndex i=0,j=0;
     mwSize nz = nx+nu;
-    char *nTrans = "N", *Trans="T";
+    char *nTrans = "N", *Trans="T", *UPLO="L";
     double one_d = 1.0, zero = 0.0, minus_one_d = -1.0;
     mwSignedIndex one_i = 1;
       
@@ -177,9 +177,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         // Hessian
         if (!lin_obj){
             Ji_Fun(vec_in, Jac);
-            dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Qh+i*nx*nx, &nx);
+            dsyrk(UPLO, Trans, &nx, &ny, &one_d, Jac[0], &ny, &zero, Qh+i*nx*nx, &nx);
             dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
-            dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);          
+            dsyrk(UPLO, Trans, &nu, &ny, &one_d, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
         }
         
         // gradient
@@ -214,7 +214,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     if (!lin_obj){
         JN_Fun(vec_in, Jac_N);
-        dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, Jac_N, &nyN, Jac_N, &nyN, &zero, Qh+N*nx*nx, &nx);
+        dsyrk(UPLO, Trans, &nx, &nyN, &one_d, Jac_N, &nyN, &zero, Qh+N*nx*nx, &nx);
     }
     
     vec_out[0] = gx+N*nx;
