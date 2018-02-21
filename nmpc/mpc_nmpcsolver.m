@@ -20,10 +20,10 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem)
         tcond=tic;
         Condensing(mem, settings);        
         tCOND=toc(tcond)*1e3;
-        
+                
 %         %% ----------  Solving QP
         [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
-               
+        
         %% ---------- Line search
 
         Line_search(mem, input, settings);

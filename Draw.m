@@ -108,7 +108,7 @@ switch settings.model
         hold on;
         plot(1.045*ones(samples,1),':');
         plot(1.375*ones(samples,1),':');
-        axis([0 iter 1.0 1.4]);
+        axis([0 mem.iter 1.0 1.4]);
         title('Hexpod actuator constraints');
 
         % figure;

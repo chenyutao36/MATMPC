@@ -10,9 +10,8 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
     uu=mem.ub_du;
     lc=mem.lcc;
     uc=mem.ucc;
+    options = mem.qpoases_opt;
     
-    options = qpOASES_options('MPC');
-%     options = qpOASES_options('default');
     if mem.warm_start==0
         
                
