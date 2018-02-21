@@ -84,6 +84,8 @@ function [input, mem] = InitMemory(settings, opt, input)
     mem.CxN = zeros(ncN,nx);
 
     mem.G = zeros(nx,N^2*nu);
+    mem.W_mat = zeros(nx, N^2*nu);
+    mem.w_vec = zeros(nx, N);
     mem.Hc = zeros(N*nu,N*nu);
     mem.Cc = zeros(N*nc+ncN,N*nu);
     mem.gc = zeros(N*nu,1);

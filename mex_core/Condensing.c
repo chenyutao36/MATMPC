@@ -14,10 +14,6 @@ static bool mem_alloc_cond = false;
 void exitFcn(){
     if (mem_alloc_cond){
         mxFree(L);
-        mxFree(w_vec);
-        mxFree(W_mat);
-        mxFree(w_vec_dup);
-        mxFree(W_mat_dup);
         mxFree(Hi);
         mxFree(Cci);   
         mxFree(CcN);
@@ -52,9 +48,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize nz = nx+nu;
     
     /*Outputs*/
-    double  *Hc, *gc, *Cc, *lcc, *ucc, *G; 
+    double  *Hc, *gc, *Cc, *lcc, *ucc, *G, *W_mat, *w_vec; 
     
     G = mxGetPr( mxGetField(prhs[0], 0, "G")  );
+    W_mat = mxGetPr( mxGetField(prhs[0], 0, "W_mat")  );
+    w_vec = mxGetPr( mxGetField(prhs[0], 0, "w_vec")  );
+    
     Hc = mxGetPr( mxGetField(prhs[0], 0, "Hc")  );
     gc = mxGetPr( mxGetField(prhs[0], 0, "gc")  );
     Cc = mxGetPr( mxGetField(prhs[0], 0, "Cc")  );
@@ -72,14 +71,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     if (!mem_alloc_cond){              
         L = (double *)mxMalloc((N+1)*nx * sizeof(double));
         mexMakeMemoryPersistent(L);        
-        w_vec = (double *)mxMalloc(nx * sizeof(double));
-        mexMakeMemoryPersistent(w_vec);        
-        W_mat = (double *)mxMalloc(nx*nu * sizeof(double));
-        mexMakeMemoryPersistent(W_mat);        
-        w_vec_dup = (double *)mxMalloc(nx * sizeof(double));
-        mexMakeMemoryPersistent(w_vec_dup);       
-        W_mat_dup = (double *)mxMalloc(nx*nu * sizeof(double));
-        mexMakeMemoryPersistent(W_mat_dup);        
         Hi = (double *)mxMalloc(nu*nu * sizeof(double));
         mexMakeMemoryPersistent(Hi);       
         Cci = (double *)mxMalloc(nc*nu * sizeof(double));
@@ -91,7 +82,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexAtExit(exitFcn);
     }
    
-    char *nTrans = "N", *Trans="T";
+    char *nTrans = "N", *Trans="T", *SIDE = "L", *UPLO = "L";
     double one_d = 1.0, zero = 0.0, minus_one = -1.0;
     mwSignedIndex one_i = 1; /* never use int for lapack and blas routines */
               
@@ -108,20 +99,18 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
         /* Compute Hc */
         for(i=0;i<N;i++){
-            dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, Qh+N*nx*nx, &nx, G+(i*N+N-1)*nx*nu, &nx, &zero, W_mat, &nx);
+            dsymm(SIDE, UPLO, &nx, &nu, &one_d, Qh+N*nx*nx, &nx, G+(i*N+N-1)*nx*nu, &nx, &zero, W_mat+(i*N+N-1)*nx*nu, &nx);
             for(j=N-1;j>i;j--){        
                 dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, S+j*nx*nu, &nx, G+(i*N+j-1)*nx*nu, &nx, &zero, Hi, &nu);                     
-                dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+j*nx*nu, &nx, W_mat, &nx, &one_d, Hi, &nu);
+                dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+j*nx*nu, &nx, W_mat+(i*N+j )*nx*nu, &nx, &one_d, Hi, &nu);
                 Block_Fill(nu, nu, Hi, Hc, j*nu, i*nu, N*nu);
-
                 Block_Fill_Trans(nu, nu, Hi, Hc, i*nu, j*nu, N*nu);
 
-                dgemm(Trans, nTrans, &nx, &nu, &nx, &one_d, A+j*nx*nx, &nx, W_mat, &nx, &zero, W_mat_dup, &nx); 
-                dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, Qh+j*nx*nx, &nx, G+(i*N+j-1)*nx*nu, &nx, &one_d, W_mat_dup, &nx); 
-                memcpy(W_mat,W_mat_dup,nx*nu*sizeof(double));
+                dgemm(Trans, nTrans, &nx, &nu, &nx, &one_d, A+j*nx*nx, &nx, W_mat+(i*N+j)*nx*nu, &nx, &zero, W_mat+(i*N+j-1)*nx*nu, &nx); 
+                dsymm(SIDE, UPLO, &nx, &nu, &one_d, Qh+j*nx*nx, &nx, G+(i*N+j-1)*nx*nu, &nx, &one_d, W_mat+(i*N+j-1)*nx*nu, &nx);
             }
             memcpy(Hi,R+i*nu*nu,nu*nu*sizeof(double));
-            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+i*nx*nu, &nx, W_mat, &nx, &one_d, Hi, &nu);
+            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+i*nx*nu, &nx, W_mat+(i*N+i)*nx*nu, &nx, &one_d, Hi, &nu);
             Block_Fill(nu, nu, Hi, Hc, i*nu, i*nu, N*nu);      
         }
         
@@ -153,17 +142,16 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
     
     /* compute gc */
-    memcpy(w_vec,gs+N*nx,nx*sizeof(double));
-    dgemv(nTrans,&nx,&nx,&one_d,Qh+N*nx*nx,&nx,L+N*nx,&one_i,&one_d,w_vec,&one_i);
+    memcpy(w_vec+(N-1)*nx,gs+N*nx,nx*sizeof(double));
+    dsymv(UPLO, &nx, &one_d, Qh+N*nx*nx, &nx, L+N*nx, &one_i, &one_d, w_vec+(N-1)*nx, &one_i);
     for(i=N-1;i>0;i--){
         memcpy(gc+i*nu,gu+i*nu,nu*sizeof(double));
         dgemv(Trans,&nx,&nu,&one_d,S+i*nx*nu,&nx,L+i*nx,&one_i,&one_d,gc+i*nu,&one_i);
-        dgemv(Trans,&nx,&nu,&one_d,B+i*nx*nu,&nx,w_vec,&one_i,&one_d,gc+i*nu,&one_i);
+        dgemv(Trans,&nx,&nu,&one_d,B+i*nx*nu,&nx,w_vec+i*nx,&one_i,&one_d,gc+i*nu,&one_i);
          
-        memcpy(w_vec_dup,gs+i*nx,nx*sizeof(double));
-        dgemv(nTrans,&nx,&nx,&one_d,Qh+i*nx*nx,&nx,L+i*nx,&one_i,&one_d,w_vec_dup,&one_i);
-        dgemv(Trans,&nx,&nx,&one_d,A+i*nx*nx,&nx,w_vec,&one_i,&one_d,w_vec_dup,&one_i);
-        memcpy(w_vec,w_vec_dup,nx*sizeof(double));
+        memcpy(w_vec+(i-1)*nx, gs+i*nx, nx*sizeof(double));
+        dsymv(UPLO, &nx, &one_d, Qh+i*nx*nx, &nx, L+i*nx, &one_i, &one_d, w_vec+(i-1)*nx, &one_i);
+        dgemv(Trans,&nx,&nx,&one_d,A+i*nx*nx,&nx,w_vec+i*nx,&one_i,&one_d,w_vec+(i-1)*nx,&one_i);
     }   
     memcpy(gc,gu,nu*sizeof(double));
     dgemv(Trans,&nx,&nu,&one_d,S,&nx,L,&one_i,&one_d,gc,&one_i);
