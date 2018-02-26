@@ -2,28 +2,18 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
 
     nu=sizes.nu;
     N=sizes.N;   
-        
-    H=mem.Hc;
-    g=mem.gc;
-    C=mem.Cc;
-    lu=mem.lb_du;
-    uu=mem.ub_du;
-    lc=mem.lcc;
-    uc=mem.ucc;
-    options = mem.qpoases_opt;
-    
-    if mem.warm_start==0
-        
-               
-        [QP,solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('i',H,g,C,lu,uu,lc,uc, options); 
-        mem.warm_start=QP;
+           
+    if mem.warm_start==0               
+        [mem.warm_start,solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('i',mem.Hc,mem.gc,mem.Cc,...
+            mem.lb_du,mem.ub_du,mem.lcc,mem.ucc,mem.qpoases_opt); 
     else
-        QP=mem.warm_start;
         if mem.hot_start==0
-            [solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('m',QP,H,g,C,lu,uu,lc,uc, options);
+            [solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('m',mem.warm_start,mem.Hc,mem.gc,mem.Cc,...
+            mem.lb_du,mem.ub_du,mem.lcc,mem.ucc,mem.qpoases_opt);
         end
         if mem.hot_start==1
-           [solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('h',QP,g,lu,uu,lc,uc, options);
+           [solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('h',mem.warm_startQP,mem.gc,mem.lb_du,...
+               mem.ub_du,mem.lcc,mem.ucc,mem.qpoases_opt);
         end
     end
     mem.mu_u_new  = - multiplier(1:N*nu);

@@ -62,7 +62,7 @@ function [input, mem] = InitMemory(settings, opt, input)
     end
     
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1;             % tolerance on optimality
+    mem.kkt_lim = 1e-1;             % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor
