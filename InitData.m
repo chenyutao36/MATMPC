@@ -436,6 +436,52 @@ function [input, data] = InitData(settings)
             
             input.lbu = repmat(lbu,1,N);
             input.ubu = repmat(ubu,1,N);
+            
+        case 'TethUAV_param'
+            input.x0=[0; 0; 0; 0; 0; 0];%zeros(nx,1);
+            input.u0=[0; 0];%zeros(nu,1);%
+            alpha = 20*pi/180;
+            para0=[-alpha; alpha];
+            
+            q = [10, 30, 10, 30, 0.1, 0.1, 80, 40, 10, 0];
+            qN = q(1:nyN);
+            Q = diag(q);
+            QN = diag(qN);
+            
+            b = 1;
+            omegaMax = 10*b;
+            fL_min = 0;
+            fL_max = 10;
+
+            % upper and lower bounds for states (=nbx)
+            lb_x = 0*ones(nbx,1);
+            ub_x = omegaMax*ones(nbx,1);
+
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [];
+            ub_u = [];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = fL_min;
+            ub_g = fL_max;            
+            lb_gN = fL_min;
+            ub_gN = fL_max;
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_x];               
+            input.ubN=[ub_gN;ub_x]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
+            input.lbu = repmat(lbu,1,N);
+            input.ubu = repmat(ubu,1,N);
     end
 
     % prepare the data
@@ -444,9 +490,14 @@ function [input, data] = InitData(settings)
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
     para = repmat(para0,1,N+1); % initialize all parameters with the same initial para
 
-    input.z=[x(:,1:N);u];        % states and controls of the first N stages (N by (nx+nu) matrix)
+    input.z=[x(:,1:N);u];        % states and controls of the first N stages ((nx+nu) by N matrix)
     input.xN=x(:,N+1);          % states of the terminal stage (nx by 1 vector)
-    input.od=para;               % on-line parameters (N+1 by np matrix)
+    
+%     load init_data;
+%     input.z = z;
+%     input.xN = xN;
+
+    input.od=para;               % on-line parameters (np by N+1 matrix)
     input.W=Q;                   % weights of the first N stages (ny by ny matrix)
     input.WN=QN;                 % weights of the terminal stage (nyN by nyN matrix)
 
@@ -486,6 +537,9 @@ function [input, data] = InitData(settings)
             
         case 'TethUAV'
             data.REF = [0 0 pi/6 0 0 0];
+            
+        case 'TethUAV_param'
+            data.REF = zeros(1,ny);
     end
     
 end
