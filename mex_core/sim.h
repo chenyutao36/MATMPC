@@ -4,50 +4,32 @@
 #include "mex.h"
 
 typedef struct{
+    double h;
+    size_t nx;
+    size_t nu;
+    size_t num_stages;
+    size_t num_steps;
     bool forw_sens;
-    bool adj_sens;
 }sim_opts;
 
 typedef struct{
-    double *xt;
-    double *K;
-    double *dKx;
-    double *dKu;
-    double *jacX_t;
-    double *jacU_t;
-    
-    double **x_traj;
-    double **K_traj;
-}sim_erk_workspace;
-
-int sim_erk_calculate_workspace_size(const mxArray *mem, sim_opts *opts);
-
-void *sim_erk_cast_workspace(const mxArray *mem, sim_opts *opts, void *raw_memory);
-
-int sim_erk(double **in, double **out, double **Jac, const mxArray *mem, sim_opts *opts, void *work_);
+    double *x;
+    double *u;
+    double *p;
+}sim_in;
 
 typedef struct{
-    double *xt;
-    double *K;
-    double *rG;
-    double *JGK;
-    double *JGx;
-    double *JGu;
-    double *JKx;
-    double *JKu;
-    double **impl_ode_in;
-//     double **impl_ode_out;
-    double **res_out;
-    double **jac_x_out;
-    double **jac_u_out;
-    double **jac_xdot_out;
-    mwIndex *IPIV;
-}sim_irk_workspace;
+    double *xn;
+    double *Sx;
+    double *Su;
+}sim_out;
 
-int sim_irk_calculate_workspace_size(const mxArray *mem, sim_opts *opts);
+sim_opts* sim_opts_create(const mxArray *mem);
+sim_in* sim_in_create(sim_opts *opts);
+sim_out* sim_out_create(sim_opts *opts);
 
-void *sim_irk_cast_workspace(const mxArray *mem, sim_opts *opts, void *raw_memory);
-
-int sim_irk(double **in, double **out, double **Jac, const mxArray *mem, sim_opts *opts, void *work_);
+void sim_opts_free(sim_opts *opts);
+void sim_in_free(sim_in *in);
+void sim_out_free(sim_out *out);
 
 #endif

@@ -7,7 +7,7 @@ void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
 
-    double *Qh = mxGetPr( mxGetField(prhs[0], 0, "Q_h") );
+    double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q") );
     double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
     double *R = mxGetPr( mxGetField(prhs[0], 0, "R") );
     double *A = mxGetPr( mxGetField(prhs[0], 0, "A_sens") );
@@ -62,14 +62,14 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
     
     memcpy(lambda+N*nx, gx+N*nx, nx*sizeof(double));
-    dgemv(nTrans,&nx,&nx,&one_d,Qh+N*nx*nx,&nx,xN,&one_i,&one_d,lambda+N*nx,&one_i);
+    dgemv(nTrans,&nx,&nx,&one_d,Q+N*nx*nx,&nx,xN,&one_i,&one_d,lambda+N*nx,&one_i);
     
     if (ncN>0){
         dgemv(Trans,&ncN,&nx,&one_d,CxN,&ncN,mu_vec+N*nc,&one_i,&one_d,lambda+N*nx,&one_i);
     }
     for (i=N-1;i>-1;i--){
         memcpy(lambda+i*nx,gx+i*nx, nx*sizeof(double));
-        dgemv(nTrans,&nx,&nx,&one_d,Qh+i*nx*nx,&nx,z+i*nz,&one_i,&one_d,lambda+i*nx,&one_i);
+        dgemv(nTrans,&nx,&nx,&one_d,Q+i*nx*nx,&nx,z+i*nz,&one_i,&one_d,lambda+i*nx,&one_i);
         dgemv(nTrans,&nx,&nu,&one_d,S+i*nx*nu,&nx,du+i*nu,&one_i,&one_d,lambda+i*nx,&one_i);
         dgemv(Trans,&nx,&nx,&one_d,A+i*nx*nx,&nx,lambda+(i+1)*nx,&one_i,&one_d,lambda+i*nx,&one_i);
         
