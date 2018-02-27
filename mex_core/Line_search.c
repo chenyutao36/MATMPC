@@ -2,6 +2,8 @@
 #include "string.h"
 
 #include "sim.h"
+#include "erk.h"
+#include "irk.h"
 #include "casadi_wrapper.h"
 
 #include "blas.h"
@@ -12,7 +14,12 @@
 
 static double *eq_res_vec = NULL;
 static double *z_new = NULL, *xN_new = NULL;
-static void *workspace = NULL;
+
+static sim_opts *opts = NULL;
+static sim_in *in = NULL;
+static sim_out *out = NULL;
+static sim_erk_workspace *erk_workspace = NULL;
+static sim_irk_workspace *irk_workspace = NULL;
 static bool mem_alloc = false;
 
 void exitFcn(){
@@ -20,15 +27,23 @@ void exitFcn(){
         mxFree(eq_res_vec);
         mxFree(z_new);
         mxFree(xN_new);
-        if (workspace!=NULL)
-            mxFree(workspace);
     }
+    if (erk_workspace!=NULL)
+        sim_erk_workspace_free(opts, erk_workspace);
+    if (irk_workspace!=NULL)
+        sim_irk_workspace_free(opts, irk_workspace);
+    if (opts!=NULL)
+        sim_opts_free(opts);
+    if (in!=NULL)
+        sim_in_free(in);
+    if (out!=NULL)
+        sim_out_free(out);    
 }
 
 double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb, double *ub, double *lc, double *uc,
                    double *lbN, double *ubN, double *lbu, double *ubu, size_t nx, size_t nu, size_t nc, size_t ncN,
-                   size_t N, size_t np, int sim_method, void *sim_workspace, sim_opts *opts, double *eq_res_vec,
-                   const mxArray *sim_memory)
+                   size_t N, size_t np, double *eq_res_vec, int sim_method, sim_opts *opts, sim_in *in, sim_out *out,
+                   sim_erk_workspace *erk_workspace, sim_irk_workspace *irk_workspace)
 {
     mwIndex i=0,j=0;
     
@@ -37,9 +52,8 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
     mwSize neq = (N+1)*nx;
     mwSize nineq = N*nc+ncN;
     
-    double *vec_out[1]; 
-    double *ode_in[3];
-    double *Sens[2];
+    double *casadi_in[3];
+    double *casadi_out[1];
     double *work;
     double eq_res=0, ineq_res=0, cons_res;
     
@@ -52,25 +66,26 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
     
     memcpy(eq_res_vec, ds0, nx*sizeof(double));
            
-    for (i=0;i<N;i++){
-        vec_out[0] = eq_res_vec+(i+1)*nx;
-        
+    for (i=0;i<N;i++){      
         switch(sim_method){
             case 0:
-                ode_in[0]=z+i*nz;
-                F_Fun(ode_in, vec_out);
+                casadi_in[0]=z+i*nz;
+                casadi_out[0] = eq_res_vec+(i+1)*nx;
+                F_Fun(casadi_in, casadi_out);
                 break;
             case 1:               
-                ode_in[0]=z+i*nz;
-                ode_in[1]=z+i*nz+nx;
-                ode_in[2]=od+i*np;
-                sim_erk(ode_in, vec_out, Sens, sim_memory, opts, workspace);
+                in->x = z+i*nz;
+                in->u = z+i*nz+nx;
+                in->p = od+i*np;
+                out->xn = eq_res_vec+(i+1)*nx;
+                sim_erk(in, out, opts, erk_workspace);
                 break;
-            case 2:                         
-                ode_in[0]=z+i*nz;
-                ode_in[1]=z+i*nz+nx;
-                ode_in[2]=od+i*np;
-                sim_irk(ode_in, vec_out, Sens, sim_memory, opts, workspace);
+            case 2:  
+                in->x = z+i*nz;
+                in->u = z+i*nz+nx;
+                in->p = od+i*np;
+                out->xn = eq_res_vec+(i+1)*nx;
+                sim_irk(in, out, opts, irk_workspace);
                 break;
             default :
                 mexErrMsgTxt("Please choose a supported integrator");
@@ -79,10 +94,10 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
         
         if (i < N-1){
             for (j=0;j<nx;j++)
-                vec_out[0][j] -= z[(i+1)*nz+j];
+                eq_res_vec[(i+1)*nx+j] -= z[(i+1)*nz+j];
         }else{
             for (j=0;j<nx;j++)
-                vec_out[0][j] -= xN[j];
+                eq_res_vec[(i+1)*nx+j] -= xN[j];
         }
         
         for (j=0;j<nu;j++){
@@ -91,26 +106,26 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
         }
             
         if (nc>0){
-            ode_in[0]=z+i*nz;
-            ode_in[1]=z+i*nz+nx;
-            ode_in[2]=od+i*np;
-            vec_out[0] = lc + i*nc;
-            path_con_Fun(ode_in, vec_out);
+            casadi_in[0]=z+i*nz;
+            casadi_in[1]=z+i*nz+nx;
+            casadi_in[2]=od+i*np;
+            casadi_out[0] = lc + i*nc;
+            path_con_Fun(casadi_in, casadi_out);
             for (j=0;j<nc;j++){
-                uc[i*nc+j] = ub[i*nc+j] - vec_out[0][j];
-                vec_out[0][j] = lb[i*nc+j] - vec_out[0][j];            
+                uc[i*nc+j] = ub[i*nc+j] - casadi_out[0][j];
+                casadi_out[0][j] = lb[i*nc+j] - casadi_out[0][j];            
             }
         }          
     }
         
     if (ncN>0){
-        ode_in[0] = xN;
-        ode_in[1] = od+N*np;
-        vec_out[0] = lc + N*nc;
-        path_con_N_Fun(ode_in, vec_out);
+        casadi_in[0] = xN;
+        casadi_in[1] = od+N*np;
+        casadi_out[0] = lc + N*nc;
+        path_con_N_Fun(casadi_in, casadi_out);
         for (j=0;j<ncN;j++){
-            uc[i*nc+j] = ubN[j] - vec_out[0][j];
-            vec_out[0][j] = lbN[j] - vec_out[0][j];            
+            uc[i*nc+j] = ubN[j] - casadi_out[0][j];
+            casadi_out[0][j] = lbN[j] - casadi_out[0][j];            
         }
     }
         
@@ -251,7 +266,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double one_d = 1.0;
     mwSignedIndex one_i = 1;
     
-    double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q_h") );
+    double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q") );
     double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
     double *R = mxGetPr( mxGetField(prhs[0], 0, "R") );
     double *gx = mxGetPr( mxGetField(prhs[0], 0, "gx") );
@@ -278,8 +293,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     int sim_method = mxGetScalar( mxGetField(prhs[0], 0, "sim_method") );
     mwSize sqp_maxit = mxGetScalar( mxGetField(prhs[0], 0, "sqp_maxit") );   
        
-    sim_opts opts;
-    opts.forw_sens = false;
     if (!mem_alloc){       
         eq_res_vec = (double *)mxMalloc( neq * sizeof(double));
         mexMakeMemoryPersistent(eq_res_vec);
@@ -288,29 +301,32 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexMakeMemoryPersistent(z_new);
         xN_new = (double *)mxMalloc( nx * sizeof(double));
         mexMakeMemoryPersistent(xN_new);
-        
-        int size;
+              
         switch(sim_method){
             case 0:
-                size = 0;
                 break;
             case 1:
-                size = sim_erk_calculate_workspace_size(prhs[0],&opts);
+                opts = sim_opts_create(prhs[0]);
+                opts->forw_sens = false;
+                in = sim_in_create(opts);              
+                out = sim_out_create(opts);                
+                erk_workspace = sim_erk_workspace_create(opts);               
+                sim_erk_workspace_init(opts, prhs[0], erk_workspace);  
                 break;
             case 2:
-                size = sim_irk_calculate_workspace_size(prhs[0],&opts);
+                opts = sim_opts_create(prhs[0]);
+                opts->forw_sens = false;
+                in = sim_in_create(opts);              
+                out = sim_out_create(opts);                
+                irk_workspace = sim_irk_workspace_create(opts);               
+                sim_irk_workspace_init(opts, prhs[0], irk_workspace);
                 break;
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
                 break;
          
         } 
-        
-        if (size > 0){
-            workspace = mxMalloc(size);
-            mexMakeMemoryPersistent(workspace);  
-        }
-        
+                
         mem_alloc = true;     
         mexAtExit(exitFcn);
     }
@@ -324,7 +340,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     if (sqp_maxit > 1 ){
         cons_res = eval_cons_res(z, xN, od, ds0, lb, ub, lc, uc,
                                  lbN, ubN, lbu, ubu, nx, nu, nc, ncN,
-                                 N, np, sim_method, workspace, &opts, eq_res_vec, prhs[0]);
+                                 N, np, eq_res_vec, sim_method, opts, in, out,
+                                 erk_workspace, irk_workspace);
               
         pd = eval_curv(Q, S, R, dz, dxN, nx, nu, N);
         grad = eval_grad(gx, gu, dz, dxN, nx, nu, N);
@@ -351,7 +368,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             daxpy(&nx, &alpha, dxN, &one_i, xN_new, &one_i);
             cons_res = eval_cons_res(z_new, xN_new, od, ds0, lb, ub, lc, uc,
                                      lbN, ubN, lbu, ubu, nx, nu, nc, ncN,
-                                     N, np, sim_method, workspace, &opts, eq_res_vec, prhs[0]);
+                                     N, np, eq_res_vec, sim_method, opts, in, out,
+                                     erk_workspace, irk_workspace);
                         
             obj_new = eval_obj(z_new, xN_new, od, y, yN, W, WN,
                                nx, nu, np, ny, N) + mu_merit[0]*cons_res;

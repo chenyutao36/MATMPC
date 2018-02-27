@@ -106,15 +106,15 @@ function [input, mem] = InitMemory(settings, opt, input)
         Qi = full(Jx'*Jx);
         Si = full(Jx'*Ju);
         Ri = full(Ju'*Ju);
-        mem.Q_h = repmat(Qi,1,N+1);
+        mem.Q = repmat(Qi,1,N+1);
         mem.S = repmat(Si,1,N);
         mem.R = repmat(Ri,1,N);
         
         JN = JN_fun('JN_fun',zeros(nx,1),zeros(np,1),zeros(nyN,1), input.WN);
-        mem.Q_h(:,N*nx+1:end) = full(JN'*JN);
+        mem.Q(:,N*nx+1:end) = full(JN'*JN);
     else
         mem.lin_obj = 0;
-        mem.Q_h = zeros(nx,nx*(N+1));
+        mem.Q = zeros(nx,nx*(N+1));
         mem.S = zeros(nx,nu*N);
         mem.R = zeros(nu,nu*N);
     end
