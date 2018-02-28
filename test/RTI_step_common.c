@@ -1,29 +1,16 @@
 #include "stdlib.h"
 #include "RTI_step_common.h"
 
-// void rti_step_init_dim(rti_step_dims *dim, size_t nx, size_t nu, size_t np,
-//         size_t ny, size_t nyN, size_t nc, size_t ncN, size_t N)
-// {
-//     dim->nx = nx;
-//     dim->nu = nu;
-//     dim->np = np;
-//     dim->ny = ny;
-//     dim->nyN = nyN;
-//     dim->nc = nc;
-//     dim->ncN = ncN;
-//     dim->N = N;
-// }
-
 int rti_step_calculate_workspace_size(rti_step_dims *dim)
 {
-    size_t nx = dim->nx;
-    size_t nu = dim->nu;
-    size_t np = dim->np;
-    size_t ny = dim->ny;
-    size_t nyN = dim->nyN;
-    size_t nc = dim->nc;
-    size_t ncN = dim->ncN;   
-    size_t N = dim->N;
+    int nx = dim->nx;
+    int nu = dim->nu;
+    int np = dim->np;
+    int ny = dim->ny;
+    int nyN = dim->nyN;
+    int nc = dim->nc;
+    int ncN = dim->ncN;   
+    int N = dim->N;
     
     int size = sizeof(rti_step_workspace);
     
@@ -33,28 +20,25 @@ int rti_step_calculate_workspace_size(rti_step_dims *dim)
     size += nyN*nx*sizeof(double); // Jac_N
     
     size += (N+1)*nx * sizeof(double); // L
-    size += 2*nx * sizeof(double); // w_vec, w_vec_dup
-    size += 2*nx*nu * sizeof(double); // W_mat, W_mat_dup
+    size += nx*nu*N*N * sizeof(double); // W_mat
+    size += nx*N * sizeof(double); // w_vec
     size += nu*nu * sizeof(double); // Hi
     size += nc*nu * sizeof(double); // Cci
     size += ncN*nu * sizeof(double); // CcN
-    
-//     size += 7*sizeof(mxArray *); // qpoases_in
-//     size += 9*sizeof(mxArray *); // qpoases_out
     
     return size;   
 }
 
 void *rti_step_cast_workspace(rti_step_dims *dim, void *raw_memory)
 {
-    size_t nx = dim->nx;
-    size_t nu = dim->nu;
-    size_t np = dim->np;
-    size_t ny = dim->ny;
-    size_t nyN = dim->nyN;
-    size_t nc = dim->nc;
-    size_t ncN = dim->ncN;   
-    size_t N = dim->N;
+    int nx = dim->nx;
+    int nu = dim->nu;
+    int np = dim->np;
+    int ny = dim->ny;
+    int nyN = dim->nyN;
+    int nc = dim->nc;
+    int ncN = dim->ncN;   
+    int N = dim->N;
     
     char *c_ptr = (char *)raw_memory;
     
@@ -77,17 +61,11 @@ void *rti_step_cast_workspace(rti_step_dims *dim, void *raw_memory)
     c_ptr += (N+1)*nx*sizeof(double);
     
     workspace->w_vec = (double *)c_ptr;
-    c_ptr += nx*sizeof(double);
-    
-    workspace->w_vec_dup = (double *)c_ptr;
-    c_ptr += nx*sizeof(double);
-    
+    c_ptr += N*nx*sizeof(double);
+       
     workspace->W_mat = (double *)c_ptr;
-    c_ptr += nx*nu*sizeof(double);
-    
-    workspace->W_mat_dup = (double *)c_ptr;
-    c_ptr += nx*nu*sizeof(double);
-    
+    c_ptr += nx*nu*N*N*sizeof(double);
+        
     workspace->Hi = (double *)c_ptr;
     c_ptr += nu*nu*sizeof(double);
     

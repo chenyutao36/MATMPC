@@ -14,12 +14,10 @@ void condensing(double *Q, double *S, double *R, double *A, double *B, double *C
         rti_step_dims *dim, rti_step_workspace *work);
 
 void recover(double *Q, double *S, double *R, double *A, double *B, double *Cx, double *CxN,
-        double *gx, double *a, double *ds0, double *du, double *multipliers,
-        double *dz, double *dxN, double *lambda_new, double *mu_new, double *muN_new, double *mu_u_new,
-        rti_step_dims *dim);
+        double *gx, double *a, double *ds0, double *du, 
+        double *dz, double *dxN, rti_step_dims *dim);
 
-void line_search(double *dz, double *dxN, double *lambda_new, double *mu_new, double *muN_new, 
-        double *z, double *xN, double *lambda, double *mu, double *muN,
-        rti_step_dims *dim);
+void line_search(double *dz, double *dxN, 
+        double *z, double *xN, rti_step_dims *dim);
 
 #endif
