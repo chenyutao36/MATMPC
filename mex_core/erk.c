@@ -48,8 +48,8 @@ void sim_erk_workspace_init(sim_opts *opts, const mxArray *mem, sim_erk_workspac
     size_t nu = opts->nu;
     size_t num_stages = opts->num_stages;
     
-    double *A = mxGetPr( mxGetField(mem, 0, "A"));
-    double *B = mxGetPr( mxGetField(mem, 0, "B"));
+    double *A = mxGetPr( mxGetField(mem, 0, "A_tab"));
+    double *B = mxGetPr( mxGetField(mem, 0, "B_tab"));
     double *Sx = mxGetPr( mxGetField(mem, 0, "Sx"));
     double *Su = mxGetPr( mxGetField(mem, 0, "Su"));
     

@@ -29,7 +29,7 @@ mexfiles = ['RTI_step.c ', ...
        
 mexcmd = 'mex';
 
-mexcmd = [mexcmd, ' -DINT64 CFLAGS="\$CFLAGS -std=c99"'];
+mexcmd = [mexcmd, ' -DINT64 CFLAGS="\$CFLAGS -std=c99" GCC="/usr/bin/gcc-4.9"'];
 
 mexcmd = [mexcmd, ' -I.. -I/home/chen/Documents/Packages/OpenBLAS-0.2.20/build/include -I/home/chen/Documents/Packages/QORE/ -I/home/chen/Documents/Packages/QORE/QPSOLVER_DENSE/include'];
 

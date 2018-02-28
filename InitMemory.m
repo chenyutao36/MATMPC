@@ -30,11 +30,11 @@ function [input, mem] = InitMemory(settings, opt, input)
             mem.sim_method = 0;
         case 'ERK4'
             mem.sim_method = 1;
-            mem.A=[0, 0, 0, 0;
-                           0.5, 0, 0, 0;
-                           0, 0.5, 0, 0;
-                           0, 0, 1, 0];
-            mem.B=[1/6, 1/3, 1/3, 1/6];
+            mem.A_tab=[0, 0, 0, 0;
+                       0.5, 0, 0, 0;
+                       0, 0.5, 0, 0;
+                       0, 0, 1, 0];
+            mem.B_tab=[1/6, 1/3, 1/3, 1/6];
             mem.num_steps = s;
             mem.num_stages = 4;
             mem.h=Ts_st/mem.num_steps;
@@ -44,10 +44,10 @@ function [input, mem] = InitMemory(settings, opt, input)
             mem.Su = zeros(nx,nu);
         case 'IRK3'
             mem.sim_method = 2;
-            mem.A=[5/36,             2/9-sqrt(15)/15, 5/36-sqrt(15)/30;
-                   5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;
-                   5/36+sqrt(15)/30, 2/9+sqrt(15)/15, 5/36];
-            mem.B=[5/18;4/9;5/18];
+            mem.A_tab=[5/36,             2/9-sqrt(15)/15, 5/36-sqrt(15)/30;
+                       5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;
+                       5/36+sqrt(15)/30, 2/9+sqrt(15)/15, 5/36];
+            mem.B_tab=[5/18;4/9;5/18];
             mem.num_steps = s;
             mem.num_stages = 3;
             mem.h= Ts_st/mem.num_steps;
@@ -69,10 +69,11 @@ function [input, mem] = InitMemory(settings, opt, input)
     mem.mu_safty=1.1;            % constraint weight update factor (for merit function)
     mem.rho=0.5;                 % merit function parameter
     
-    mem.A_sens = zeros(nx,nx*N);
-    mem.B_sens = zeros(nx,nu*N);
+    mem.A = zeros(nx,nx*N);
+    mem.B = zeros(nx,nu*N);
     mem.Cx = zeros(nc,nx*N);
     mem.Cu = zeros(nc,nu*N);
+    mem.CN = zeros(ncN,nx);
     mem.gx = zeros(nx,N+1);
     mem.gu = zeros(nu,N);
     mem.a = zeros(nx,N);
@@ -81,8 +82,7 @@ function [input, mem] = InitMemory(settings, opt, input)
     mem.uc = zeros(N*nc+ncN,1);
     mem.lb_du = zeros(N*nu,1);
     mem.ub_du = zeros(N*nu,1);
-    mem.CxN = zeros(ncN,nx);
-
+    
     mem.G = zeros(nx,N^2*nu);
     mem.W_mat = zeros(nx, N^2*nu);
     mem.w_vec = zeros(nx, N);
@@ -94,8 +94,8 @@ function [input, mem] = InitMemory(settings, opt, input)
     
     mem.Cc_qore = zeros(N*nu,N*nc+ncN);
 
-    mem.dz = zeros(nx+nu,N);
-    mem.dxN= zeros(nx,1);
+    mem.dx = zeros(nx,N+1);
+    mem.du = zeros(nu,N);
     mem.lambda_new = zeros(nx,N+1);
     mem.mu_new = zeros(nc,N);
     mem.muN_new = zeros(ncN,1);
@@ -104,7 +104,7 @@ function [input, mem] = InitMemory(settings, opt, input)
     if strcmp(opt.lin_obj,'yes')
         mem.lin_obj = 1;
         
-        [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx+nu,1),zeros(np,1),zeros(ny,1), input.W);
+        [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W);
         Qi = full(Jx'*Jx);
         Si = full(Jx'*Ju);
         Ri = full(Ju'*Ju);

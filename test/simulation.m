@@ -50,7 +50,7 @@ opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
-Tf = 30;  % simulation time
+Tf = 20;  % simulation time
 state_sim= [input.x0]';
 controls_MPC = [input.u0]';
 y_sim = [];
@@ -98,7 +98,7 @@ while time(end) < Tf
             
     % Simulate system dynamics
     sim_input.x = state_sim(end,:).';
-    sim_input.u = input.z(nx+1:nx+nu,1);
+    sim_input.u = input.u(:,1);
     sim_input.p = input.od(:,1)';
     xf=full( Simulate_system('Simulate_system', sim_input.x, sim_input.u, sim_input.p) ); 
     
@@ -109,13 +109,14 @@ while time(end) < Tf
     constraints=[constraints; full( path_con_fun('path_con_fun', xf, sim_input.u, sim_input.p) )'];
         
     % store the optimal solution and states
-    controls_MPC = [controls_MPC; input.z(nx+1:nx+nu,1)'];
+    controls_MPC = [controls_MPC; input.u(:,1)'];
     state_sim = [state_sim; xf'];
     
     % shift the initialization
     switch opt.shifting
         case 'yes'
-        input.z=[input.z(:,2:end),[input.xN; input.z(nx+1:nx+nu,end)]];  
+        input.x=[input.x(:,2:end),input.x(:,end)];  
+        input.u=[input.u(:,2:end),input.u(:,end)];
         case 'no'
     end
     
@@ -129,7 +130,7 @@ while time(end) < Tf
     CPT = [CPT; cpt];
 end
 
-qpOASES_sequence( 'c', mem.warm_start);
+% qpOASES_sequence( 'c', mem.warm_start);
 clear mex;
 
 %% draw pictures (optional)

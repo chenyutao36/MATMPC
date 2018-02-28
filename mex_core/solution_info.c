@@ -49,8 +49,8 @@ void exitFcn(){
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {    
-    double *z = mxGetPr( mxGetField(prhs[0], 0, "z") );
-    double *xN = mxGetPr( mxGetField(prhs[0], 0, "xN") );
+    double *x = mxGetPr( mxGetField(prhs[0], 0, "x") );
+    double *u = mxGetPr( mxGetField(prhs[0], 0, "u") );
     double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda") );
     double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu") );
     double *muN = mxGetPr( mxGetField(prhs[0], 0, "muN") );
@@ -138,18 +138,19 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexAtExit(exitFcn);
     }
     
-    casadi_in[3] = W;
+    casadi_in[4] = W;
     memcpy(eq_res_vec, ds0, nx*sizeof(double));
     
     double *work;
     double KKT=0, eq_res=0, ineq_res=0;
     
     for (i=0;i<N;i++){
-        casadi_in[0] = z+i*nz;
-        casadi_in[1] = od+i*np;
-        casadi_in[2] = y+i*ny;
-        casadi_in[4] = lambda+(i+1)*nx;
-        casadi_in[5] = mu+i*nc;
+        casadi_in[0] = x+i*nx;
+        casadi_in[1] = u+i*nu;
+        casadi_in[2] = od+i*np;
+        casadi_in[3] = y+i*ny;
+        casadi_in[5] = lambda+(i+1)*nx;
+        casadi_in[6] = mu+i*nc;
            
         casadi_out[0] = L+i*nz;
         adj_Fun(casadi_in, casadi_out);
@@ -170,15 +171,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 F_Fun(casadi_in, casadi_out);
                 break;
             case 1:      
-                in->x = z+i*nz;
-                in->u = z+i*nz+nx;
+                in->x = x+i*nx;
+                in->u = u+i*nu;
                 in->p = od+i*np;
                 out->xn = eq_res_vec+(i+1)*nx;
                 sim_erk(in, out, opts, erk_workspace);
                 break;
             case 2:                         
-                in->x = z+i*nz;
-                in->u = z+i*nz+nx;
+                in->x = x+i*nx;
+                in->u = u+i*nu;
                 in->p = od+i*np;
                 out->xn = eq_res_vec+(i+1)*nx;
                 sim_irk(in, out, opts, irk_workspace);
@@ -188,22 +189,19 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
         }
         
-        if (i < N-1){
-            for (j=0;j<nx;j++)
-                eq_res_vec[(i+1)*nx+j] -= z[(i+1)*nz+j];
-        }else{
-            for (j=0;j<nx;j++)
-                eq_res_vec[(i+1)*nx+j] -= xN[j];
-        }
+        
+        for (j=0;j<nx;j++)
+            eq_res_vec[(i+1)*nx+j] -= x[(i+1)*nx+j];
+        
         
         for (j=0;j<nu;j++){
-            lu[i*nu+j] = lbu[i*nu+j] - z[i*nz+nx+j];
-            uu[i*nu+j] = ubu[i*nu+j] - z[i*nz+nx+j];
+            lu[i*nu+j] = lbu[i*nu+j] - u[i*nu+j];
+            uu[i*nu+j] = ubu[i*nu+j] - u[i*nu+j];
         }
         
         if (nc>0){
-            casadi_in[0]=z+i*nz;
-            casadi_in[1]=z+i*nz+nx;
+            casadi_in[0]=x+i*nx;
+            casadi_in[1]=u+i*nu;
             casadi_in[2]=od+i*np;
             casadi_out[0] = lc + i*nc;
             path_con_Fun(casadi_in, casadi_out);
@@ -213,7 +211,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             }
         }
     }
-    casadi_in[0] = xN;
+    casadi_in[0] = x+N*nx;
     casadi_in[1] = od+N*np;
     casadi_in[2] = yN;
     casadi_in[3] = WN;

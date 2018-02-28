@@ -7,7 +7,7 @@
 
 #include "blas.h"
 
-static double *L = NULL, *w_vec = NULL, *W_mat = NULL, *w_vec_dup = NULL, *W_mat_dup = NULL;
+static double *L = NULL;
 static double *Hi = NULL, *Cci = NULL, *CcN = NULL;
 static bool mem_alloc = false;
 
@@ -27,26 +27,24 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q") );
     double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
     double *R = mxGetPr( mxGetField(prhs[0], 0, "R") );
-    double *A = mxGetPr( mxGetField(prhs[0], 0, "A_sens") );
-    double *B = mxGetPr( mxGetField(prhs[0], 0, "B_sens") );
+    double *A = mxGetPr( mxGetField(prhs[0], 0, "A") );
+    double *B = mxGetPr( mxGetField(prhs[0], 0, "B") );
     double *Cx = mxGetPr( mxGetField(prhs[0], 0, "Cx") );
     double *Cu = mxGetPr( mxGetField(prhs[0], 0, "Cu") );
-    double *gs = mxGetPr( mxGetField(prhs[0], 0, "gx") );
+    double *CN = mxGetPr( mxGetField(prhs[0], 0, "CN") );
+    double *gx = mxGetPr( mxGetField(prhs[0], 0, "gx") );
     double *gu = mxGetPr( mxGetField(prhs[0], 0, "gu") );   
     double *a = mxGetPr( mxGetField(prhs[0], 0, "a") );
     double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
     double *lc = mxGetPr( mxGetField(prhs[0], 0, "lc") );
     double *uc = mxGetPr( mxGetField(prhs[0], 0, "uc") );
-    double *CxN = mxGetPr( mxGetField(prhs[0], 0, "CxN") );
-    
-    mwSize nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
-    mwSize nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
-    mwSize nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") );
-    mwSize ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
-    mwSize N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
         
-    mwSize nz = nx+nu;
-    
+    size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
+    size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
+    size_t nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") );
+    size_t ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
+    size_t N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
+            
     /*Outputs*/
     double  *Hc, *gc, *Cc, *lcc, *ucc, *G, *W_mat, *w_vec; 
     
@@ -60,13 +58,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     lcc = mxGetPr( mxGetField(prhs[0], 0, "lcc")  );
     ucc = mxGetPr( mxGetField(prhs[0], 0, "ucc")  );
     
-    mwIndex iter = mxGetScalar( mxGetField(prhs[0], 0, "iter") );
-    mwIndex hot_start = mxGetScalar( mxGetField(prhs[0], 0, "hot_start") );
-    mwIndex lin_obj = mxGetScalar( mxGetField(prhs[0], 0, "lin_obj") );  
+    int iter = mxGetScalar( mxGetField(prhs[0], 0, "iter") );
+    int hot_start = mxGetScalar( mxGetField(prhs[0], 0, "hot_start") );
+    int lin_obj = mxGetScalar( mxGetField(prhs[0], 0, "lin_obj") );  
     bool cond_save = (hot_start==1) && (lin_obj==1) ;
     
     /*Allocate memory*/
-    mwIndex i=0,j=0;
+    int i=0,j=0;
      
     if (!mem_alloc){              
         L = (double *)mxMalloc((N+1)*nx * sizeof(double));
@@ -84,7 +82,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
    
     char *nTrans = "N", *Trans="T", *SIDE = "L", *UPLO = "L";
     double one_d = 1.0, zero = 0.0, minus_one = -1.0;
-    mwSignedIndex one_i = 1; /* never use int for lapack and blas routines */
+    size_t one_i = 1; 
               
     /*Start the loop*/
         
@@ -102,7 +100,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             dsymm(SIDE, UPLO, &nx, &nu, &one_d, Q+N*nx*nx, &nx, G+(i*N+N-1)*nx*nu, &nx, &zero, W_mat+(i*N+N-1)*nx*nu, &nx);
             for(j=N-1;j>i;j--){        
                 dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, S+j*nx*nu, &nx, G+(i*N+j-1)*nx*nu, &nx, &zero, Hi, &nu);                     
-                dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+j*nx*nu, &nx, W_mat+(i*N+j )*nx*nu, &nx, &one_d, Hi, &nu);
+                dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+j*nx*nu, &nx, W_mat+(i*N+j)*nx*nu, &nx, &one_d, Hi, &nu);
                 Block_Fill(nu, nu, Hi, Hc, j*nu, i*nu, N*nu);
                 Block_Fill_Trans(nu, nu, Hi, Hc, i*nu, j*nu, N*nu);
 
@@ -128,7 +126,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         /* Compute CcN */
         if (ncN>0){          
             for(i=0;i<N;i++){                 
-                dgemm(nTrans, nTrans, &ncN, &nu, &nx, &one_d, CxN, &ncN, G+(i*N+N-1)*nx*nu, &nx, &zero, CcN, &ncN);
+                dgemm(nTrans, nTrans, &ncN, &nu, &nx, &one_d, CN, &ncN, G+(i*N+N-1)*nx*nu, &nx, &zero, CcN, &ncN);
                 Block_Fill(ncN, nu, CcN, Cc, N*nc, i*nu, N*nc+ncN);
             }
         }
@@ -142,14 +140,14 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
     
     /* compute gc */
-    memcpy(w_vec+(N-1)*nx,gs+N*nx,nx*sizeof(double));
+    memcpy(w_vec+(N-1)*nx,gx+N*nx,nx*sizeof(double));
     dsymv(UPLO, &nx, &one_d, Q+N*nx*nx, &nx, L+N*nx, &one_i, &one_d, w_vec+(N-1)*nx, &one_i);
     for(i=N-1;i>0;i--){
         memcpy(gc+i*nu,gu+i*nu,nu*sizeof(double));
         dgemv(Trans,&nx,&nu,&one_d,S+i*nx*nu,&nx,L+i*nx,&one_i,&one_d,gc+i*nu,&one_i);
         dgemv(Trans,&nx,&nu,&one_d,B+i*nx*nu,&nx,w_vec+i*nx,&one_i,&one_d,gc+i*nu,&one_i);
          
-        memcpy(w_vec+(i-1)*nx, gs+i*nx, nx*sizeof(double));
+        memcpy(w_vec+(i-1)*nx, gx+i*nx, nx*sizeof(double));
         dsymv(UPLO, &nx, &one_d, Q+i*nx*nx, &nx, L+i*nx, &one_i, &one_d, w_vec+(i-1)*nx, &one_i);
         dgemv(Trans,&nx,&nx,&one_d,A+i*nx*nx,&nx,w_vec+i*nx,&one_i,&one_d,w_vec+(i-1)*nx,&one_i);
     }   
@@ -171,9 +169,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     /* Compute ccN */
     if (ncN>0){          
         memcpy(lcc+N*nc,lc+N*nc,ncN*sizeof(double));
-        dgemv(nTrans,&ncN,&nx,&minus_one,CxN,&ncN,L+N*nx,&one_i,&one_d,lcc+N*nc,&one_i);
+        dgemv(nTrans,&ncN,&nx,&minus_one,CN,&ncN,L+N*nx,&one_i,&one_d,lcc+N*nc,&one_i);
         memcpy(ucc+N*nc,uc+N*nc,ncN*sizeof(double));
-        dgemv(nTrans,&ncN,&nx,&minus_one,CxN,&ncN,L+N*nx,&one_i,&one_d,ucc+N*nc,&one_i);
+        dgemv(nTrans,&ncN,&nx,&minus_one,CN,&ncN,L+N*nx,&one_i,&one_d,ucc+N*nc,&one_i);
     }
     
 }
