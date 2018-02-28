@@ -27,17 +27,17 @@ nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
 %% solver configurations
-N  = 60;             % No. of shooting points
+N  = 15;             % No. of shooting points
 settings.N = N;
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton', 
 opt.qpsolver='qpoases'; %'qpoases'
 opt.condensing='full';  %'full'
-opt.hotstart='yes'; %'yes','no' (only for qpoases)
+opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
-opt.lin_obj='yes'; % 'yes','no' % if objective function is linear least square
-opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
+opt.lin_obj='no'; % 'yes','no' % if objective function is linear least square
+opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 
 %% Initialize Data (all users have to do this)
 
@@ -50,7 +50,7 @@ opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
-Tf = 25;  % simulation time
+Tf = 30;  % simulation time
 state_sim= [input.x0]';
 controls_MPC = [input.u0]';
 y_sim = [];
@@ -95,23 +95,7 @@ while time(end) < Tf
     tic;
     RTI_step(input, settings, mem);
     cpt = toc*1e3;
-    
-    % obtain the solution and update the data
-%     switch opt.shifting
-%         case 'yes'
-%         input.z=[output.z(:,2:end),[output.xN; output.z(nx+1:nx+nu,end)]];  
-%         input.xN=output.xN;
-%         input.lambda=[output.lambda(:,2:end),output.lambda(:,end)];
-%         input.mu=[output.mu(:,2:end),[output.muN;output.mu(ncN+1:nc,end)]];
-%         input.muN=output.muN;
-%         case 'no'
-%         input.z=output.z;
-%         input.xN=output.xN;
-%         input.lambda=output.lambda;
-%         input.mu=output.mu;
-%         input.muN=output.muN;
-%     end
-        
+            
     % Simulate system dynamics
     sim_input.x = state_sim(end,:).';
     sim_input.u = input.z(nx+1:nx+nu,1);
@@ -123,15 +107,17 @@ while time(end) < Tf
     
     % Collect constraints
     constraints=[constraints; full( path_con_fun('path_con_fun', xf, sim_input.u, sim_input.p) )'];
-    
-    % Collect other data
-    if strcmp(settings.model,'ActiveSeat')
-        input_u = [input_u; input.z(nx+1:nx+6,1)',xf(32)];
-    end
-    
+        
     % store the optimal solution and states
     controls_MPC = [controls_MPC; input.z(nx+1:nx+nu,1)'];
     state_sim = [state_sim; xf'];
+    
+    % shift the initialization
+    switch opt.shifting
+        case 'yes'
+        input.z=[input.z(:,2:end),[input.xN; input.z(nx+1:nx+nu,end)]];  
+        case 'no'
+    end
     
     % go to the next sampling instant
     nextTime = mem.iter*Ts; 
@@ -147,10 +133,8 @@ qpOASES_sequence( 'c', mem.warm_start);
 clear mex;
 
 %% draw pictures (optional)
-disp('Average CPT:');
-mean(CPT(2:end-1,:),1)
+disp(['Average CPT: ',num2str(mean(CPT(2:end,:),1))]);
 
-disp('Maximum CPT: ')
-max(CPT(2:end-1,:))
+disp(['Maximum CPT: ',num2str(max(CPT(2:end,:)))]);
 
 Draw;

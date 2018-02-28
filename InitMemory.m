@@ -91,6 +91,8 @@ function [input, mem] = InitMemory(settings, opt, input)
     mem.gc = zeros(N*nu,1);
     mem.lcc = zeros(N*nc+ncN,1);
     mem.ucc = zeros(N*nc+ncN,1);
+    
+    mem.Cc_qore = zeros(N*nu,N*nc+ncN);
 
     mem.dz = zeros(nx+nu,N);
     mem.dxN= zeros(nx,1);
