@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='TethUAV'; % see the folder "examples" for details
+settings.model='TethUAV_param'; % see the folder "examples" for details
 
 run(settings.model);
 
@@ -18,7 +18,7 @@ mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality co
 muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 1; % No. of integration steps per sample interval
+s  = 2; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
@@ -34,12 +34,9 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-s  = 1; % No. of integration steps per shooting interval
+s  = 2; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
-jacX = SX.zeros(nx,nx)+jacobian(x_dot,states);
-jacU = SX.zeros(nx,nu)+jacobian(x_dot,controls);
-jac_f_fun  = Function('jac_f_fun', {states,controls,params}, {jacX,jacU});
 
 impl_jac_x = SX.zeros(nx,nx)+jacobian(impl_f,states);
 impl_jac_u = SX.zeros(nx,nu)+jacobian(impl_f,controls);
@@ -68,11 +65,11 @@ for j=1:s
        [k4] = f(X + DT * k3, U, P);
        X=X+DT/6*(k1 +2*k2 +2*k3 +k4);
 end
-z = [states;controls];
-F = Function('F', {z,params}, {X + SX.zeros(nx,1)}, {'z','params'}, {'xf'});
+% z = [states;controls];
+F = Function('F', {states,controls,params}, {X + SX.zeros(nx,1)});
 A = jacobian(X,states) + SX.zeros(nx,nx);
 B = jacobian(X,controls) + SX.zeros(nx,nu);
-D = Function('D', {z,params}, {A, B}, {'z','params'}, {'A','B'});
+D = Function('D', {states,controls,params}, {A, B});
 
 %% objective and constraints
 
@@ -92,24 +89,24 @@ Cxi = jacobian(path_con, states) + SX.zeros(nc, nx);
 Cui = jacobian(path_con, controls) + SX.zeros(nc, nu);
 CxN = jacobian(path_con_N, states) + SX.zeros(ncN, nx);
 
-obji_fun = Function('obji_fun',{z,params,refs,Q},{obji+SX.zeros(1,1)},{'z','params','refs','Q'},{'obji'});
-objN_fun = Function('objN_fun',{states,params,refN,QN},{objN+SX.zeros(1,1)},{'states','params','refN','QN'},{'objN'});
+obji_fun = Function('obji_fun',{states,controls,params,refs,Q},{obji+SX.zeros(1,1)});
+objN_fun = Function('objN_fun',{states,params,refN,QN},{objN+SX.zeros(1,1)});
 
-Ji_fun=Function('Ji_fun',{z,params,refs,Q},{Jxi,Jui},{'z','params','refs','Q'},{'Jxi','Jui'});
-JN_fun=Function('JN_fun',{states,params,refN,QN},{JxN},{'states','params','refN','QN'},{'JxN'});
+Ji_fun=Function('Ji_fun',{states,controls,params,refs,Q},{Jxi,Jui});
+JN_fun=Function('JN_fun',{states,params,refN,QN},{JxN});
 
-gi_fun=Function('gi_fun',{z,params,refs,Q},{gxi, gui},{'z','params','refs','Q'},{'gxi','gui'});
-gN_fun=Function('gN_fun',{states,params,refN,QN},{gxN},{'states','params','refN','QN'},{'gN'});
+gi_fun=Function('gi_fun',{states,controls,params,refs,Q},{gxi, gui});
+gN_fun=Function('gN_fun',{states,params,refN,QN},{gxN});
 
-Ci_fun=Function('Ci_fun',{z},{Cxi, Cui},{'z'},{'Cxi','Cui'});
-CN_fun=Function('CN_fun',{states},{CxN},{'states'},{'CxN'});
+Ci_fun=Function('Ci_fun',{states,controls,params},{Cxi, Cui});
+CN_fun=Function('CN_fun',{states,params},{CxN});
 
-dobj = SX.zeros(nx+nu,1) + jacobian(obji,z)';
+dobj = SX.zeros(nx+nu,1) + jacobian(obji,[states;controls])';
 dobjN = SX.zeros(nx,1) + jacobian(objN,states)';
-adj_dG = SX.zeros(nx+nu,1) + jtimes(X, z, lambdai, true);
+adj_dG = SX.zeros(nx+nu,1) + jtimes(X, [states;controls], lambdai, true);
 
 if nc>0
-    adj_dB = SX.zeros(nx+nu,1) + jtimes(path_con, z, mui, true);
+    adj_dB = SX.zeros(nx+nu,1) + jtimes(path_con, [states;controls], mui, true);
 else
     adj_dB = SX.zeros(nx+nu,1);
 end
@@ -120,7 +117,7 @@ else
     adj_dBN = SX.zeros(nx,1);
 end
 
-adj_fun = Function('adj_fun',{z,params,refs,Q, lambdai, mui},{dobj, adj_dG, adj_dB});
+adj_fun = Function('adj_fun',{states,controls,params,refs,Q, lambdai, mui},{dobj, adj_dG, adj_dB});
 adjN_fun = Function('adjN_fun',{states,params,refN, QN, muN},{dobjN, adj_dBN});
 
 %% Code generation and Compile
@@ -146,7 +143,6 @@ if strcmp(generate,'y')
     cd ../mex_core
         P = CodeGenerator ('casadi_src.c', opts) ;
         P.add(f_fun);
-        P.add(jac_f_fun);
         P.add(vdeFun);
         P.add(impl_f_fun);
         P.add(impl_jac_x_fun);

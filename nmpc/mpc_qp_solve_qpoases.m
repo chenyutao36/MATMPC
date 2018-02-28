@@ -4,15 +4,15 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
     N=sizes.N;   
            
     if mem.warm_start==0               
-        [mem.warm_start,solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('i',mem.Hc,mem.gc,mem.Cc,...
+        [mem.warm_start,mem.du,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('i',mem.Hc,mem.gc,mem.Cc,...
             mem.lb_du,mem.ub_du,mem.lcc,mem.ucc,mem.qpoases_opt); 
     else
         if mem.hot_start==0
-            [solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('m',mem.warm_start,mem.Hc,mem.gc,mem.Cc,...
+            [mem.du,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('m',mem.warm_start,mem.Hc,mem.gc,mem.Cc,...
             mem.lb_du,mem.ub_du,mem.lcc,mem.ucc,mem.qpoases_opt);
         end
         if mem.hot_start==1
-           [solution,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('h',mem.warm_startQP,mem.gc,mem.lb_du,...
+           [mem.du,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('h',mem.warm_startQP,mem.gc,mem.lb_du,...
                mem.ub_du,mem.lcc,mem.ucc,mem.qpoases_opt);
         end
     end
@@ -20,5 +20,5 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
     mu_vec   = - multiplier(N*nu+1:end);
     cpt_qp   = auxOutput.cpuTime*1e3;
             
-    Recover(mem, sizes, solution, mu_vec);
+    Recover(mem, sizes, mu_vec);
 end

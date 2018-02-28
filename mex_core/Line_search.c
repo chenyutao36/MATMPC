@@ -13,7 +13,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 static double *eq_res_vec = NULL;
-static double *z_new = NULL, *xN_new = NULL;
+static double *x_new = NULL, *u_new = NULL;
 
 static sim_opts *opts = NULL;
 static sim_in *in = NULL;
@@ -25,8 +25,8 @@ static bool mem_alloc = false;
 void exitFcn(){
     if (mem_alloc){
         mxFree(eq_res_vec);
-        mxFree(z_new);
-        mxFree(xN_new);
+        mxFree(x_new);
+        mxFree(u_new);
     }
     if (erk_workspace!=NULL)
         sim_erk_workspace_free(opts, erk_workspace);
@@ -40,19 +40,17 @@ void exitFcn(){
         sim_out_free(out);    
 }
 
-double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb, double *ub, double *lc, double *uc,
+double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, double *ub, double *lc, double *uc,
                    double *lbN, double *ubN, double *lbu, double *ubu, size_t nx, size_t nu, size_t nc, size_t ncN,
                    size_t N, size_t np, double *eq_res_vec, int sim_method, sim_opts *opts, sim_in *in, sim_out *out,
                    sim_erk_workspace *erk_workspace, sim_irk_workspace *irk_workspace)
 {
     mwIndex i=0,j=0;
     
-    mwSize nz = nx+nu;
-    mwSize nw = N*nz;
     mwSize neq = (N+1)*nx;
     mwSize nineq = N*nc+ncN;
     
-    double *casadi_in[3];
+    double *casadi_in[4];
     double *casadi_out[1];
     double *work;
     double eq_res=0, ineq_res=0, cons_res;
@@ -69,20 +67,22 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
     for (i=0;i<N;i++){      
         switch(sim_method){
             case 0:
-                casadi_in[0]=z+i*nz;
+                casadi_in[0]=x+i*nx;
+                casadi_in[1]=u+i*nu;
+                casadi_in[2]=od+i*np;
                 casadi_out[0] = eq_res_vec+(i+1)*nx;
                 F_Fun(casadi_in, casadi_out);
                 break;
             case 1:               
-                in->x = z+i*nz;
-                in->u = z+i*nz+nx;
+                in->x = x+i*nx;
+                in->u = u+i*nu;
                 in->p = od+i*np;
                 out->xn = eq_res_vec+(i+1)*nx;
                 sim_erk(in, out, opts, erk_workspace);
                 break;
             case 2:  
-                in->x = z+i*nz;
-                in->u = z+i*nz+nx;
+                in->x = x+i*nx;
+                in->u = u+i*nu;
                 in->p = od+i*np;
                 out->xn = eq_res_vec+(i+1)*nx;
                 sim_irk(in, out, opts, irk_workspace);
@@ -91,23 +91,19 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
                 mexErrMsgTxt("Please choose a supported integrator");
                 break;
         }
+                
+        for (j=0;j<nx;j++)
+            eq_res_vec[(i+1)*nx+j] -= x[(i+1)*nx+j];
         
-        if (i < N-1){
-            for (j=0;j<nx;j++)
-                eq_res_vec[(i+1)*nx+j] -= z[(i+1)*nz+j];
-        }else{
-            for (j=0;j<nx;j++)
-                eq_res_vec[(i+1)*nx+j] -= xN[j];
-        }
         
         for (j=0;j<nu;j++){
-            lu[i*nu+j] = lbu[i*nu+j] - z[i*nz+nx+j];
-            uu[i*nu+j] = ubu[i*nu+j] - z[i*nz+nx+j];
+            lu[i*nu+j] = lbu[i*nu+j] - u[i*nu+j];
+            uu[i*nu+j] = ubu[i*nu+j] - u[i*nu+j];
         }
             
         if (nc>0){
-            casadi_in[0]=z+i*nz;
-            casadi_in[1]=z+i*nz+nx;
+            casadi_in[0]=x+i*nx;
+            casadi_in[1]=u+i*nu;
             casadi_in[2]=od+i*np;
             casadi_out[0] = lc + i*nc;
             path_con_Fun(casadi_in, casadi_out);
@@ -119,7 +115,7 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
     }
         
     if (ncN>0){
-        casadi_in[0] = xN;
+        casadi_in[0] = x+N*nx;
         casadi_in[1] = od+N*np;
         casadi_out[0] = lc + N*nc;
         path_con_N_Fun(casadi_in, casadi_out);
@@ -144,86 +140,86 @@ double eval_cons_res(double *z, double *xN, double *od, double *ds0, double *lb,
     return cons_res;
 }
 
-double eval_curv(double *Q, double *S, double *R, double *dz, double *dxN,
+double eval_curv(double *Q, double *S, double *R, double *dx, double *du,
                  size_t nx, size_t nu, size_t N)
 {
-    mwIndex i;
-    mwSize nz = nx+nu;
+    int i;
     double curv = 0.0;
     
     char *nTrans = "N", *Trans="T";
     double one_d = 1.0, zero = 0.0, minus_one = -1.0;
-    mwSignedIndex one_i = 1; 
+    size_t one_i = 1; 
     
-    double *tmp = (double *)mxMalloc(nz*sizeof(double));
+    double *tmp = (double *)mxMalloc((nx+nu)*sizeof(double));
     
     for(i=0; i<N; i++)
     {
-        dgemv(nTrans,&nx,&nx,&one_d,Q+i*nx*nx,&nx,dz+i*nz,&one_i,&zero,tmp,&one_i);
-        dgemv(nTrans,&nx,&nu,&one_d,S+i*nx*nu,&nx,dz+i*nz+nx,&one_i,&one_d,tmp,&one_i);
-        curv += ddot(&nx, dz+i*nz, &one_i, tmp, &one_i);
+        dgemv(nTrans,&nx,&nx,&one_d,Q+i*nx*nx,&nx,dx+i*nx,&one_i,&zero,tmp,&one_i);
+        dgemv(nTrans,&nx,&nu,&one_d,S+i*nx*nu,&nx,du+i*nu,&one_i,&one_d,tmp,&one_i);
+        curv += ddot(&nx, dx+i*nx, &one_i, tmp, &one_i);
         
-        dgemv(Trans,&nx,&nu,&one_d,S+i*nx*nu,&nx,dz+i*nz,&one_i,&zero,tmp+nx,&one_i);
-        dgemv(nTrans,&nu,&nu,&one_d,R+i*nu*nu,&nu,dz+i*nz+nx,&one_i,&one_d,tmp+nx,&one_i);
-        curv += ddot(&nu, dz+i*nz+nx, &one_i, tmp+nx, &one_i);
+        dgemv(Trans,&nx,&nu,&one_d,S+i*nx*nu,&nx,dx+i*nx,&one_i,&zero,tmp+nx,&one_i);
+        dgemv(nTrans,&nu,&nu,&one_d,R+i*nu*nu,&nu,du+i*nu,&one_i,&one_d,tmp+nx,&one_i);
+        curv += ddot(&nu, du+i*nu, &one_i, tmp+nx, &one_i);
     }
     
-    dgemv(nTrans,&nx,&nx,&one_d,Q+N*nx*nx,&nx,dxN,&one_i,&zero,tmp,&one_i);
-    curv += ddot(&nx, dxN, &one_i, tmp, &one_i);
+    dgemv(nTrans,&nx,&nx,&one_d,Q+N*nx*nx,&nx,dx+N*nx,&one_i,&zero,tmp,&one_i);
+    curv += ddot(&nx, dx+N*nx, &one_i, tmp, &one_i);
     
     mxFree(tmp);
     
     return curv;
 }
 
-double eval_grad(double *gx, double *gu, double *dz, double *dxN,
+double eval_grad(double *gx, double *gu, double *dx, double *du,
                  size_t nx, size_t nu, size_t N)
 {
-    mwIndex i;
-    mwSize nz = nx+nu;
+    int i;
+    
     double grad = 0.0;   
     
-    mwSignedIndex one_i = 1; 
+    size_t one_i = 1; 
     
     for(i=0; i<N; i++)
     {
-        grad += ddot(&nx, dz+i*nz, &one_i, gx+i*nx, &one_i);
-        grad += ddot(&nu, dz+i*nz+nx, &one_i, gu+i*nu, &one_i);
+        grad += ddot(&nx, dx+i*nx, &one_i, gx+i*nx, &one_i);
+        grad += ddot(&nu, du+i*nu, &one_i, gu+i*nu, &one_i);
     }
     
-    grad += ddot(&nx, dxN, &one_i, gx+N*nx, &one_i);
+    grad += ddot(&nx, dx+N*nx, &one_i, gx+N*nx, &one_i);
  
     return grad;
 }
 
-double eval_obj(double *z, double *xN, double *od, double *y, double *yN, double *W, double *WN,
+double eval_obj(double *x, double *u, double *od, double *y, double *yN, double *W, double *WN,
                 size_t nx, size_t nu, size_t np, size_t ny, size_t N)
 {
-    mwIndex i;
-    mwSize nz = nx+nu;
-    double *in[4];
-    double *out[1];
+    int i;
+    
+    double *casadi_in[5];
+    double *casadi_out[1];
     double obj=0.0;
     
-    in[3] = W;
-    out[0] = (double *) mxMalloc(sizeof(double));
+    casadi_in[4] = W;
+    casadi_out[0] = (double *) mxMalloc(sizeof(double));
     for (i=0; i<N; i++){
-        in[0] = z+i*nz;
-        in[1] = od+i*np;
-        in[2] = y+i*ny;
+        casadi_in[0] = x+i*nx;
+        casadi_in[1] = u+i*nu;
+        casadi_in[2] = od+i*np;
+        casadi_in[3] = y+i*ny;
         
-        obji_Fun(in, out);
-        obj += *out[0];
+        obji_Fun(casadi_in, casadi_out);
+        obj += *casadi_out[0];
     }
-    in[0] = xN;
-    in[1] = od+N*np;
-    in[2] = yN;
-    in[3] = WN;
+    casadi_in[0] = x+N*nx;
+    casadi_in[1] = od+N*np;
+    casadi_in[2] = yN;
+    casadi_in[3] = WN;
     
-    objN_Fun(in, out);
-    obj += *out[0];
+    objN_Fun(casadi_in, casadi_out);
+    obj += *casadi_out[0];
     
-    mxFree(out[0]);
+    mxFree(casadi_out[0]);
     
     return obj;
 }
@@ -231,8 +227,8 @@ double eval_obj(double *z, double *xN, double *od, double *y, double *yN, double
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
-    double *z = mxGetPr( mxGetField(prhs[1], 0, "z") );
-    double *xN = mxGetPr( mxGetField(prhs[1], 0, "xN") );
+    double *x = mxGetPr( mxGetField(prhs[1], 0, "x") );
+    double *u = mxGetPr( mxGetField(prhs[1], 0, "u") );
     double *lambda = mxGetPr( mxGetField(prhs[1], 0, "lambda") );
     double *mu = mxGetPr( mxGetField(prhs[1], 0, "mu") );
     double *muN = mxGetPr( mxGetField(prhs[1], 0, "muN") );
@@ -257,22 +253,22 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     mwSize np = mxGetScalar( mxGetField(prhs[2], 0, "np") ); if(np==0) np++;
     mwSize ny = mxGetScalar( mxGetField(prhs[2], 0, "ny") );
             
-    mwSize nz = nx+nu;
-    mwSize nw = N*nz;
     mwSize neq = (N+1)*nx;
     mwSize nineq = N*nc;
+    mwSize nx_t = nx*(N+1);
+    mwSize nu_t = nu*N;
     mwSize nbu = N*nu;
     
     double one_d = 1.0;
-    mwSignedIndex one_i = 1;
+    size_t one_i = 1;
     
     double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q") );
     double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
     double *R = mxGetPr( mxGetField(prhs[0], 0, "R") );
     double *gx = mxGetPr( mxGetField(prhs[0], 0, "gx") );
     double *gu = mxGetPr( mxGetField(prhs[0], 0, "gu") );    
-    double *dz = mxGetPr( mxGetField(prhs[0], 0, "dz") );
-    double *dxN = mxGetPr( mxGetField(prhs[0], 0, "dxN") );
+    double *dx = mxGetPr( mxGetField(prhs[0], 0, "dx") );
+    double *du = mxGetPr( mxGetField(prhs[0], 0, "du") );
     double *lambda_new = mxGetPr( mxGetField(prhs[0], 0, "lambda_new") );
     double *mu_new = mxGetPr( mxGetField(prhs[0], 0, "mu_new") );
     double *muN_new = mxGetPr( mxGetField(prhs[0], 0, "muN_new") );
@@ -288,19 +284,19 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double mu_safty = mxGetScalar( mxGetField(prhs[0], 0, "mu_safty") );
     double *mu_merit = mxGetPr( mxGetField(prhs[0], 0, "mu_merit") );
     
-    mwIndex i=0,j=0;
+    int i=0,j=0;
     
     int sim_method = mxGetScalar( mxGetField(prhs[0], 0, "sim_method") );
-    mwSize sqp_maxit = mxGetScalar( mxGetField(prhs[0], 0, "sqp_maxit") );   
+    int sqp_maxit = mxGetScalar( mxGetField(prhs[0], 0, "sqp_maxit") );   
        
     if (!mem_alloc){       
         eq_res_vec = (double *)mxMalloc( neq * sizeof(double));
         mexMakeMemoryPersistent(eq_res_vec);
         
-        z_new = (double *)mxMalloc( nw * sizeof(double));
-        mexMakeMemoryPersistent(z_new);
-        xN_new = (double *)mxMalloc( nx * sizeof(double));
-        mexMakeMemoryPersistent(xN_new);
+        x_new = (double *)mxMalloc( nx_t * sizeof(double));
+        mexMakeMemoryPersistent(x_new);
+        u_new = (double *)mxMalloc( nu_t * sizeof(double));
+        mexMakeMemoryPersistent(u_new);
               
         switch(sim_method){
             case 0:
@@ -338,13 +334,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double alpha = 1.0;
     bool newpoint = false;
     if (sqp_maxit > 1 ){
-        cons_res = eval_cons_res(z, xN, od, ds0, lb, ub, lc, uc,
+        cons_res = eval_cons_res(x, u, od, ds0, lb, ub, lc, uc,
                                  lbN, ubN, lbu, ubu, nx, nu, nc, ncN,
                                  N, np, eq_res_vec, sim_method, opts, in, out,
                                  erk_workspace, irk_workspace);
               
-        pd = eval_curv(Q, S, R, dz, dxN, nx, nu, N);
-        grad = eval_grad(gx, gu, dz, dxN, nx, nu, N);
+        pd = eval_curv(Q, S, R, dx, du, nx, nu, N);
+        grad = eval_grad(gx, gu, dx, du, nx, nu, N);
                 
         if (pd>0)
             sigma = 0.5;
@@ -355,23 +351,23 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         if (mu_merit[0]<mu_lb)
             mu_merit[0]=mu_lb*mu_safty;
         
-        obj = eval_obj(z, xN, od, y, yN, W, WN,
+        obj = eval_obj(x, u, od, y, yN, W, WN,
                        nx, nu, np, ny, N) + mu_merit[0]*cons_res;
                 
         dir_grad = grad - mu_merit[0] * cons_res;
                         
         while (!newpoint && alpha > 1E-4){
-            memcpy(z_new, z, nw*sizeof(double));
-            memcpy(xN_new, xN, nx*sizeof(double));
+            memcpy(x_new, x, nx_t*sizeof(double));
+            memcpy(u_new, u, nu_t*sizeof(double));
             
-            daxpy(&nw, &alpha, dz, &one_i, z_new, &one_i); 
-            daxpy(&nx, &alpha, dxN, &one_i, xN_new, &one_i);
-            cons_res = eval_cons_res(z_new, xN_new, od, ds0, lb, ub, lc, uc,
+            daxpy(&nx_t, &alpha, dx, &one_i, x_new, &one_i); 
+            daxpy(&nu_t, &alpha, du, &one_i, u_new, &one_i);
+            cons_res = eval_cons_res(x_new, u_new, od, ds0, lb, ub, lc, uc,
                                      lbN, ubN, lbu, ubu, nx, nu, nc, ncN,
                                      N, np, eq_res_vec, sim_method, opts, in, out,
                                      erk_workspace, irk_workspace);
                         
-            obj_new = eval_obj(z_new, xN_new, od, y, yN, W, WN,
+            obj_new = eval_obj(x_new, u_new, od, y, yN, W, WN,
                                nx, nu, np, ny, N) + mu_merit[0]*cons_res;
                         
             if (obj_new <= obj + eta*alpha*dir_grad)
@@ -385,8 +381,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     // update
     double inc = 1.0 - alpha;
      
-    daxpy(&nw, &alpha, dz, &one_i, z, &one_i); 
-    daxpy(&nx, &alpha, dxN, &one_i, xN, &one_i);
+    daxpy(&nx_t, &alpha, dx, &one_i, x, &one_i); 
+    daxpy(&nu_t, &alpha, du, &one_i, u, &one_i);
     
     for (i=0;i<neq;i++)
         lambda[i] *= inc;

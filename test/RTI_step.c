@@ -34,8 +34,8 @@ void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
     /* from input */
-    double *z = mxGetPr( mxGetField(prhs[0], 0, "z") );
-    double *xN = mxGetPr( mxGetField(prhs[0], 0, "xN") );
+    double *x = mxGetPr( mxGetField(prhs[0], 0, "x") );
+    double *u = mxGetPr( mxGetField(prhs[0], 0, "u") );
     double *y = mxGetPr( mxGetField(prhs[0], 0, "y") );
     double *yN = mxGetPr( mxGetField(prhs[0], 0, "yN") );
     double *od = mxGetPr( mxGetField(prhs[0], 0, "od") );
@@ -67,8 +67,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *Q = mxGetPr( mxGetField(prhs[2], 0, "Q") );
     double *S = mxGetPr( mxGetField(prhs[2], 0, "S") );
     double *R = mxGetPr( mxGetField(prhs[2], 0, "R") );
-    double *A = mxGetPr( mxGetField(prhs[2], 0, "A_sens") );
-    double *B = mxGetPr( mxGetField(prhs[2], 0, "B_sens") );
+    double *A = mxGetPr( mxGetField(prhs[2], 0, "A") );
+    double *B = mxGetPr( mxGetField(prhs[2], 0, "B") );
     double *Cx = mxGetPr( mxGetField(prhs[2], 0, "Cx") );
     double *Cu = mxGetPr( mxGetField(prhs[2], 0, "Cu") );
     double *gx = mxGetPr( mxGetField(prhs[2], 0, "gx") );
@@ -79,7 +79,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
     double *lb_du = mxGetPr( mxGetField(prhs[2], 0, "lb_du") );
     double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
-    double *CxN = mxGetPr( mxGetField(prhs[2], 0, "CxN") );
+    double *CN = mxGetPr( mxGetField(prhs[2], 0, "CN") );
     int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );    
     
     double *G = mxGetPr( mxGetField(prhs[2], 0, "G")  );
@@ -92,12 +92,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     int iter = mxGetScalar( mxGetField(prhs[2], 0, "iter") );
     int hot_start = mxGetScalar( mxGetField(prhs[2], 0, "hot_start") );
     
-    double *dz = mxGetPr( mxGetField(prhs[2], 0, "dz") );
-    double *dxN = mxGetPr( mxGetField(prhs[2], 0, "dxN") );
-    double *lambda_new = mxGetPr( mxGetField(prhs[2], 0, "lambda_new") );
-    double *mu_new = mxGetPr( mxGetField(prhs[2], 0, "mu_new") );
-    double *muN_new = mxGetPr( mxGetField(prhs[2], 0, "muN_new") );
-    double *mu_u_new = mxGetPr( mxGetField(prhs[2], 0, "mu_u_new") );
+    double *dx = mxGetPr( mxGetField(prhs[2], 0, "dx") );
+    double *du = mxGetPr( mxGetField(prhs[2], 0, "du") );
 
     bool cond_save = (hot_start==1) && (lin_obj==1) ;
     
@@ -133,13 +129,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     rti_step_workspace *workspace = (rti_step_workspace *) rti_step_cast_workspace(&dim, work);
     
-    qp_generation(Q, S, R, A, B, Cx, Cu, CxN, 
+    qp_generation(Q, S, R, A, B, Cx, Cu, CN, 
         gx, gu, a, ds0, lc, uc, lb_du, ub_du, 
-        x0, z, xN, y, yN, od, W, WN, lb, ub,
+        x0, x, u, y, yN, od, W, WN, lb, ub,
         lbN, ubN, lbu, ubu, lin_obj,
         &dim, workspace);
     
-    condensing(Q, S, R, A, B, Cx, Cu, CxN, 
+    condensing(Q, S, R, A, B, Cx, Cu, CN, 
         gx, gu, a, ds0, lc, uc, 
         G, Hc, gc, Cc, lcc, ucc,
         iter, cond_save,
@@ -198,14 +194,16 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         err = QPDenseSetData(problem[0], N*nu, N*nc+ncN, Cc, Hc);
         err = QPDenseOptimize(problem[0], lb_qore, ub_qore, gc, NULL, NULL);
     }else{
-//         err = QPDenseSetInt(problem[0], "warmstrategy", 1);
-        err = QPDenseUpdateMatrices(problem[0], N*nu, N*nc+ncN, Cc, Hc);
+        if (!hot_start){
+            //         err = QPDenseSetInt(problem[0], "warmstrategy", 1);
+            err = QPDenseUpdateMatrices(problem[0], N*nu, N*nc+ncN, Cc, Hc);
+        }
         err = QPDenseOptimize(problem[0], lb_qore, ub_qore, gc, NULL, NULL);
     }   
     err = QPDenseGetDblVector(problem[0], "primalsol", x_qore);
+    memcpy(du, x_qore, N*nu*sizeof(double));
     
-    recover(Q, S, R, A, B, Cx, CxN, gx, a, ds0, x_qore,
-        dz, dxN, &dim);
+    recover(A, B, a, ds0, dx, du, &dim);
     
-    line_search(dz, dxN, z, xN, &dim);
+    line_search(dx, du, x, u, &dim);
 }

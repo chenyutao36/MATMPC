@@ -111,7 +111,7 @@ function [input, data] = InitData(settings)
             input.ubu = repmat(ubu,1,N);
 
         case 'ChainofMasses_Lin'
-            n=5;
+            n=15;
             data.n=n;
             input.x0=zeros(nx,1);
             for i=1:n
@@ -443,7 +443,7 @@ function [input, data] = InitData(settings)
             alpha = 20*pi/180;
             para0=[-alpha; alpha];
             
-            q = [10, 30, 10, 30, 0.1, 0.1, 80, 40, 10, 0];
+            q = [10, 30, 10, 30, 0.5, 0.5, 80, 40, 10, 0];
             qN = q(1:nyN);
             Q = diag(q);
             QN = diag(qN);
@@ -490,13 +490,8 @@ function [input, data] = InitData(settings)
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
     para = repmat(para0,1,N+1); % initialize all parameters with the same initial para
 
-    input.z=[x(:,1:N);u];        % states and controls of the first N stages ((nx+nu) by N matrix)
-    input.xN=x(:,N+1);          % states of the terminal stage (nx by 1 vector)
-    
-%     load init_data;
-%     input.z = z;
-%     input.xN = xN;
-
+    input.x=x;        % states and controls of the first N stages (nx by N+1 matrix)
+    input.u=u;           % states of the terminal stage (nu by N vector)
     input.od=para;               % on-line parameters (np by N+1 matrix)
     input.W=Q;                   % weights of the first N stages (ny by ny matrix)
     input.WN=QN;                 % weights of the terminal stage (nyN by nyN matrix)
