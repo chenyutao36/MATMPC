@@ -125,12 +125,12 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
         }
     }
         
-    eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &one_i, work);
+    eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &neq, work);
             
     for (i=0;i<N*nu;i++)
-        ineq_res += MIN(uu[i],0) + MAX(lu[i],0);  
+        ineq_res += MAX(-1*uu[i],0) + MAX(lu[i],0);
     for (i=0;i<nineq;i++)
-        ineq_res += MIN(uc[i],0) + MAX(lc[i],0);
+        ineq_res += MAX(-1*uc[i],0) + MAX(lc[i],0);
         
     cons_res = eq_res + ineq_res;
     
@@ -330,7 +330,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     // backtracking
     double cons_res;
-    double sigma = 0.0, pd, grad, mu_lb=0, obj, obj_new, dir_grad;
+    double sigma, pd, grad, mu_lb=0, obj, obj_new, dir_grad;
     double alpha = 1.0;
     bool newpoint = false;
     if (sqp_maxit > 1 ){
@@ -344,6 +344,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 
         if (pd>0)
             sigma = 0.5;
+        else
+            sigma = 0.0;
         
         if (cons_res>0)
             mu_lb=(grad+sigma*pd)/(1-rho)/cons_res;
@@ -355,7 +357,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                        nx, nu, np, ny, N) + mu_merit[0]*cons_res;
                 
         dir_grad = grad - mu_merit[0] * cons_res;
-                        
+                                
         while (!newpoint && alpha > 1E-4){
             memcpy(x_new, x, nx_t*sizeof(double));
             memcpy(u_new, u, nu_t*sizeof(double));
@@ -375,7 +377,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             else
                 alpha *= tau;
         }
-        
+                
     }
                
     // update

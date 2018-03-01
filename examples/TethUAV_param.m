@@ -107,4 +107,4 @@ path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states
 %% NMPC sampling time [s]
 
 Ts = 0.01; % simulation sample time
-Ts_st = 0.2; % shooting interval time
+Ts_st = 0.1; % shooting interval time
