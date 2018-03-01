@@ -101,8 +101,9 @@ gN_fun=Function('gN_fun',{states,params,refN,QN},{gxN});
 Ci_fun=Function('Ci_fun',{states,controls,params},{Cxi, Cui});
 CN_fun=Function('CN_fun',{states,params},{CxN});
 
-dobj = SX.zeros(nx+nu,1) + jacobian(obji,[states;controls])';
-dobjN = SX.zeros(nx,1) + jacobian(objN,states)';
+dobj = [gxi;gui];
+dobjN = gxN;
+
 adj_dG = SX.zeros(nx+nu,1) + jtimes(X, [states;controls], lambdai, true);
 
 if nc>0
@@ -117,7 +118,7 @@ else
     adj_dBN = SX.zeros(nx,1);
 end
 
-adj_fun = Function('adj_fun',{states,controls,params,refs,Q, lambdai, mui},{dobj, adj_dG, adj_dB});
+adj_fun = Function('adj_fun',{states,controls,params,refs,Q,lambdai,mui},{dobj, adj_dG, adj_dB});
 adjN_fun = Function('adjN_fun',{states,params,refN, QN, muN},{dobjN, adj_dBN});
 
 %% Code generation and Compile
@@ -214,10 +215,11 @@ if strcmp(compile,'y')
     Compile_Mex;
     cd ../model_src
 
-cd ..
 display('    Compilation completed!');
 
 end
+
+cd ..
 %% NMPC preparation
 
 display('                           ');

@@ -36,11 +36,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     memcpy(mu, mu_vec, nc*N*sizeof(double));
     memcpy(muN, mu_vec+N*nc, ncN*sizeof(double));
  
-    int i;
+    int i,j;
         
     char *nTrans = "N", *Trans="T";
-    double one_d = 1.0, zero = 0.0;
-    mwSignedIndex one_i = 1;
+    double one_d = 1.0, zero = 0.0, minus_one_d = -1.0;
+    size_t one_i = 1;
        
     memcpy(dx, ds0, nx*sizeof(double)); 
     
@@ -54,16 +54,27 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     dgemv(nTrans,&nx,&nx,&one_d,Q+N*nx*nx,&nx,dx+N*nx,&one_i,&one_d,lambda+N*nx,&one_i);
     
     if (ncN>0){
-        dgemv(Trans,&ncN,&nx,&one_d,CN,&ncN,mu_vec+N*nc,&one_i,&one_d,lambda+N*nx,&one_i);
+        dgemv(Trans,&ncN,&nx,&one_d,CN,&ncN,muN,&one_i,&one_d,lambda+N*nx,&one_i);
     }
-    for (i=N-1;i>-1;i--){
+    for (i=N-1;i>0;i--){
         memcpy(lambda+i*nx,gx+i*nx, nx*sizeof(double));
         dgemv(nTrans,&nx,&nx,&one_d,Q+i*nx*nx,&nx,dx+i*nx,&one_i,&one_d,lambda+i*nx,&one_i);
         dgemv(nTrans,&nx,&nu,&one_d,S+i*nx*nu,&nx,du+i*nu,&one_i,&one_d,lambda+i*nx,&one_i);
         dgemv(Trans,&nx,&nx,&one_d,A+i*nx*nx,&nx,lambda+(i+1)*nx,&one_i,&one_d,lambda+i*nx,&one_i);
         
         if (nc>0)
-            dgemv(Trans,&nc,&nx,&one_d,Cx+i*nc*nx,&nc,mu_vec+i*nc,&one_i,&one_d,lambda+i*nx,&one_i);       
+            dgemv(Trans,&nc,&nx,&one_d,Cx+i*nc*nx,&nc,mu+i*nc,&one_i,&one_d,lambda+i*nx,&one_i);       
     }
+    
+    // lambda_0 has a different sign
+    for (j=0;j<nx;j++)
+        lambda[j] = -1.0*gx[j];
+    dgemv(nTrans,&nx,&nx,&minus_one_d,Q,&nx,dx,&one_i,&one_d,lambda,&one_i);
+    dgemv(nTrans,&nx,&nu,&minus_one_d,S+i*nx*nu,&nx,du+i*nu,&one_i,&one_d,lambda+i*nx,&one_i);
+    dgemv(Trans,&nx,&nx,&minus_one_d,A+i*nx*nx,&nx,lambda+(i+1)*nx,&one_i,&one_d,lambda+i*nx,&one_i);
+        
+    if (nc>0)
+        dgemv(Trans,&nc,&nx,&minus_one_d,Cx+i*nc*nx,&nc,mu+i*nc,&one_i,&one_d,lambda+i*nx,&one_i);      
+    
     
 }

@@ -155,8 +155,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_out[0] = L+i*nz;
         adj_Fun(casadi_in, casadi_out);
         
-        for (j=0;j<nx;j++){
-            casadi_out[1][j] -= lambda[i*nx+j];
+        if (i>0){
+            for (j=0;j<nx;j++)
+                casadi_out[1][j] -= lambda[i*nx+j];
+        }else{
+            for (j=0;j<nx;j++)
+                casadi_out[1][j] += lambda[j];
         }
         
         daxpy(&nz, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
@@ -219,6 +223,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     casadi_out[0] = L+N*nz;
     adjN_Fun(casadi_in, casadi_out);
+    for (j=0;j<nx;j++)
+        casadi_out[0][j] -= lambda[N*nx+j];
     
     if (ncN>0)
         daxpy(&nx, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
@@ -232,13 +238,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
     }
          
-    eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &one_i, work);
-    KKT = dlange(Norm, &nw, &one_i, L, &one_i, work);
+    eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &neq, work);
+    KKT = dlange(Norm, &nw, &one_i, L, &nw, work);
     
     for (i=0;i<N*nu;i++)
-        ineq_res += MIN(uu[i],0) + MAX(lu[i],0);  
+        ineq_res += MAX(-1*uu[i],0) + MAX(lu[i],0);
     for (i=0;i<nineq;i++)
-        ineq_res += MIN(uc[i],0) + MAX(lc[i],0);
+        ineq_res += MAX(-1*uc[i],0) + MAX(lc[i],0);
     
     plhs[0] = mxCreateDoubleScalar(eq_res); // eq_res
     plhs[1] = mxCreateDoubleScalar(ineq_res); // ineq_res
