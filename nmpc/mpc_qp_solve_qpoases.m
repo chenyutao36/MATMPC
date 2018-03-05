@@ -16,6 +16,12 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
                mem.ub_du,mem.lcc,mem.ucc,mem.qpoases_opt);
         end
     end
+    
+    %The dual solution vector contains exactly one entry per lower/upper bound as well as exactly one entry per
+    %lower/upper constraints bound. Positive entries correspond to active lower (constraints) bounds, negative
+    %entries to active upper (constraints) bounds and a zero entry means that both corresponding (constraints)
+    %bounds are inactive.
+    
     mem.mu_u_new  = - multiplier(1:N*nu);
     mu_vec   = - multiplier(N*nu+1:end);
     cpt_qp   = auxOutput.cpuTime*1e3;

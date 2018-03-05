@@ -31,8 +31,8 @@ N  = 15;             % No. of shooting points
 settings.N = N;
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
-opt.hessian='gauss_newton';  % 'gauss_newton', 
-opt.qpsolver='qpoases'; %'qpoases'
+opt.hessian='gauss_newton';  % 'gauss_newton' 
+opt.qpsolver='qpoases'; %'qpoases', 'quadprog'
 opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
@@ -92,7 +92,7 @@ while time(end) < Tf
     input.x0 = state_sim(end,:)';
     
     % call the NMPC solver   
-    [output, mem]=mpc_nmpcsolver(input, settings, mem);
+    [output, mem]=mpc_nmpcsolver(input, settings, mem, opt);
     
     % obtain the solution and update the data
     switch opt.shifting
@@ -148,7 +148,7 @@ while time(end) < Tf
     CPT = [CPT; cpt, tshooting, tcond, tqp];
 end
 
-qpOASES_sequence( 'c', mem.warm_start);
+% qpOASES_sequence( 'c', mem.warm_start);
 clear mex;
 
 %% draw pictures (optional)
