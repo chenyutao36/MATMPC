@@ -14,15 +14,22 @@ function [input, mem] = InitMemory(settings, opt, input)
 
     %% memory
     mem = struct;
-    if strcmp(opt.qpsolver,'qpoases')
-        mem.warm_start=0;
-        mem.hot_start=0;
-        if strcmp(opt.hotstart, 'yes')
-            mem.hot_start=1;
-        end
-        
+    mem.warm_start=0;
+    mem.hot_start=0;
+    if strcmp(opt.hotstart, 'yes')
+        mem.hot_start=1;
+    end
+    if strcmp(opt.qpsolver,'qpoases')        
         mem.qpoases_opt = qpOASES_options('MPC');
 %           mem.qpoases_opt = qpOASES_options('default');
+    end
+    
+    if strcmp(opt.qpsolver,'quadprog')
+        mem.quadprog_opt.Algorithm = 'interior-point-convex';
+        mem.quadprog_opt.Display = 'off';
+        mem.quadprog_opt.OptimalityTolerance = 1e-6;
+        mem.quadprog_opt.ConstraintTolerance = 1e-6;
+        mem.quadprog_opt.StepTolerance = 1e-6;
     end
       
     switch opt.integrator

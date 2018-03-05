@@ -1,4 +1,4 @@
-function [output, mem] = mpc_nmpcsolver(input, settings, mem)
+function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
 
     tic;
 
@@ -22,7 +22,12 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem)
         tCOND=toc(tcond)*1e3;
                 
 %         %% ----------  Solving QP
-        [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
+        switch opt.qpsolver
+            case 'qpoases'
+                [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
+            case 'quadprog'
+                [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);
+        end
         
         %% ---------- Line search
 
