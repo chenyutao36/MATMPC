@@ -1,0 +1,43 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{color}
+\usepackage{subeqnarray}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{indentfirst,comment} 
+\usepackage{tikz}
+\usepackage{multirow}
+\usepackage{booktabs,array}
+\usepackage{hyperref}
+
+\begin{document}
+	\title{MATMPC User Manual}
+	\author{Yutao Chen}
+	
+	\maketitle
+	
+\section{Installation}
+MATMPC requires two fundamental software and toolboxes
+\begin{enumerate}
+	\item MATLAB (R2014b or above) 
+	\item CaADi (3.3.0 or above)
+\end{enumerate}
+CasADi is the state-of-art automatic differentiation (AD) tool that is employed in MATMPC for computing derivatives of a number of functions. For how to download and install CasADi, please visit \url{https://github.com/casadi/casadi/wiki/InstallationInstructions}
+
+\subsection{Advanced functionalities}
+
+\subsubsection{Linear Algebra Library}
+MATMPC employs MATLAB built in linear algebra (LA) library \emph{lapack} and \emph{blas}. However, for a specific application, it is easy to exploit tailored LA library such as openBLAS and blasfeo. In the \emph{test} folder, openBLAS is linked against.
+
+\subsubsection{QP Solver}
+MATMPC comes with MATLAB built-in QP solver \emph{quadprog} but other QP solvers can also be used. The possible best dense QP solver, qpOASES, is employed in MATMPC. For how to download and install qpOASES (MATLAB interface only), please visit \url{https://projects.coin-or.org/qpOASES/wiki/QpoasesInstallation}.
+
+For more options, it is recommended to use MATMPC in Linux systems. In this case, state-of-the-art open source solvers can be employed, including HPIPM and QORE. HPIPM uses interior point method (IPM) for solving structured QP problems. QORE is a variant of qpOASES which use blasfeo as LA kernel. In the \emph{test} folder, QORE is linked against.
+
+\section{Numerical Structures and Algorithms}
+
+
+\end{document}
