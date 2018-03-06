@@ -1,4 +1,4 @@
-function [input, mem] = InitMemory(settings, opt, input)
+function [mem] = InitMemory(settings, opt, input)
 
     Ts  = settings.Ts;       % Sampling time
     Ts_st = settings.Ts_st;  % Shooting interval
@@ -69,7 +69,7 @@ function [input, mem] = InitMemory(settings, opt, input)
     end
     
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-1;             % tolerance on optimality
+    mem.kkt_lim = 1e-4;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor
@@ -90,9 +90,6 @@ function [input, mem] = InitMemory(settings, opt, input)
     mem.lb_du = zeros(N*nu,1);
     mem.ub_du = zeros(N*nu,1);
     
-    mem.G = zeros(nx,N^2*nu);
-    mem.W_mat = zeros(nx, N^2*nu);
-    mem.w_vec = zeros(nx, N);
     mem.Hc = zeros(N*nu,N*nu);
     mem.Cc = zeros(N*nc+ncN,N*nu);
     mem.gc = zeros(N*nu,1);
@@ -127,12 +124,6 @@ function [input, mem] = InitMemory(settings, opt, input)
         mem.S = zeros(nx,nu*N);
         mem.R = zeros(nu,nu*N);
     end
-          
-    %% input
-    input.lambda=zeros(nx,N+1);
-    input.mu=zeros(nc,N);
-    input.muN=zeros(ncN,1);
-    input.mu_u = zeros(N*nu,1);
-    
+              
 end
 

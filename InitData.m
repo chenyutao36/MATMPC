@@ -54,22 +54,6 @@ function [input, data] = InitData(settings)
               lb_gN=[1.045;1.045;1.045;1.045;1.045;1.045];  % lower bounds for ineq constraints at terminal point
               ub_gN=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints at terminal point
               
-              % store the constraint data into input
-              input.lb=repmat([lb_g;lb_x],1,N);
-              input.ub=repmat([ub_g;ub_x],1,N); 
-              input.lbN=[lb_gN;lb_xN];               
-              input.ubN=[ub_gN;ub_xN]; 
-
-              lbu = -inf(nu,1);
-              ubu = inf(nu,1);
-              for i=1:nbu
-                  lbu(nbu_idx(i)) = lb_u(i);
-                  ubu(nbu_idx(i)) = ub_u(i);
-              end
-
-              input.lbu = repmat(lbu,1,N);
-              input.ubu = repmat(ubu,1,N);
-
         case 'InvertedPendulum'
             input.x0 = [0;pi;0;0];    
             input.u0 = zeros(nu,1);    
@@ -93,22 +77,6 @@ function [input, data] = InitData(settings)
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
-
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_xN];               
-            input.ubN=[ub_gN;ub_xN]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
 
         case 'ChainofMasses_Lin'
             n=15;
@@ -144,22 +112,6 @@ function [input, data] = InitData(settings)
             lb_gN = [];
             ub_gN = [];
 
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_xN];               
-            input.ubN=[ub_gN;ub_xN]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
-
         case 'ChainofMasses_NLin'
             n=10;
             data.n=n;
@@ -192,22 +144,6 @@ function [input, data] = InitData(settings)
             lb_gN = [];
             ub_gN = [];
 
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_xN];               
-            input.ubN=[ub_gN;ub_xN]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
-
         case 'Hexacopter'
             input.x0=zeros(nx,1);
             input.u0=zeros(nu,1);
@@ -232,22 +168,6 @@ function [input, data] = InitData(settings)
             lb_gN = [];
             ub_gN = [];
 
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_x];               
-            input.ubN=[ub_gN;ub_x]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
-
         case 'TiltHex'
             input.x0=zeros(nx,1);
             input.u0=zeros(nu,1);
@@ -271,22 +191,6 @@ function [input, data] = InitData(settings)
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
-
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_x];               
-            input.ubN=[ub_gN;ub_x]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
 
             %Frequency for x(t) in rad/s 
             data.f_rif_x=1.2;
@@ -375,22 +279,6 @@ function [input, data] = InitData(settings)
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
-
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_x];               
-            input.ubN=[ub_gN;ub_x]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
             
         case 'TethUAV'
             input.x0=[0; 0; 0; 0; 0; 0];%zeros(nx,1);
@@ -420,22 +308,6 @@ function [input, data] = InitData(settings)
             ub_g = fL_max;            
             lb_gN = fL_min;
             ub_gN = fL_max;
-
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_x];               
-            input.ubN=[ub_gN;ub_x]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
             
         case 'TethUAV_param'
             input.x0=[0; 0; 0; 0; 0; 0];%zeros(nx,1);
@@ -467,36 +339,39 @@ function [input, data] = InitData(settings)
             lb_gN = fL_min;
             ub_gN = fL_max;
 
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_x];               
-            input.ubN=[ub_gN;ub_x]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
     end
 
     % prepare the data
+    
+    input.lb=repmat([lb_g;lb_x],1,N);
+    input.ub=repmat([ub_g;ub_x],1,N); 
+    input.lbN=[lb_gN;lb_x];               
+    input.ubN=[ub_gN;ub_x]; 
+            
+    lbu = -inf(nu,1);
+    ubu = inf(nu,1);
+    for i=1:nbu
+        lbu(nbu_idx(i)) = lb_u(i);
+        ubu(nbu_idx(i)) = ub_u(i);
+    end
+            
+    input.lbu = repmat(lbu,1,N);
+    input.ubu = repmat(ubu,1,N);
 
     x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
-    para = repmat(para0,1,N+1); % initialize all parameters with the same initial para
-
-    input.x=x;        % states and controls of the first N stages (nx by N+1 matrix)
+    para = repmat(para0,1,N+1);  % initialize all parameters with the same initial para
+    
+    input.x=x;           % states and controls of the first N stages (nx by N+1 matrix)
     input.u=u;           % states of the terminal stage (nu by N vector)
-    input.od=para;               % on-line parameters (np by N+1 matrix)
-    input.W=Q;                   % weights of the first N stages (ny by ny matrix)
-    input.WN=QN;                 % weights of the terminal stage (nyN by nyN matrix)
+    input.od=para;       % on-line parameters (np by N+1 matrix)
+    input.W=Q;           % weights of the first N stages (ny by ny matrix)
+    input.WN=QN;         % weights of the terminal stage (nyN by nyN matrix)
 
-
+    input.lambda=zeros(nx,N+1);
+    input.mu=zeros(nc,N);
+    input.muN=zeros(ncN,1);
+    input.mu_u = zeros(N*nu,1);
     %% Reference generation
 
     switch settings.model
