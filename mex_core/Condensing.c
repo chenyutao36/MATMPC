@@ -7,12 +7,15 @@
 
 #include "blas.h"
 
-static double *L = NULL;
+static double *L = NULL, *G=NULL, *W_mat=NULL, *w_vec=NULL;
 static double *Hi = NULL, *Cci = NULL, *CcN = NULL;
 static bool mem_alloc = false;
 
 void exitFcn(){
     if (mem_alloc){
+        mxFree(G);
+        mxFree(W_mat);
+        mxFree(w_vec);
         mxFree(L);
         mxFree(Hi);
         mxFree(Cci);   
@@ -46,12 +49,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
             
     /*Outputs*/
-    double  *Hc, *gc, *Cc, *lcc, *ucc, *G, *W_mat, *w_vec; 
-    
-    G = mxGetPr( mxGetField(prhs[0], 0, "G")  );
-    W_mat = mxGetPr( mxGetField(prhs[0], 0, "W_mat")  );
-    w_vec = mxGetPr( mxGetField(prhs[0], 0, "w_vec")  );
-    
+    double  *Hc, *gc, *Cc, *lcc, *ucc; 
+       
     Hc = mxGetPr( mxGetField(prhs[0], 0, "Hc")  );
     gc = mxGetPr( mxGetField(prhs[0], 0, "gc")  );
     Cc = mxGetPr( mxGetField(prhs[0], 0, "Cc")  );
@@ -66,7 +65,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     /*Allocate memory*/
     int i=0,j=0;
      
-    if (!mem_alloc){              
+    if (!mem_alloc){
+        G = (double *)mxMalloc(nx*N*N*nu * sizeof(double));
+        mexMakeMemoryPersistent(G);
+        W_mat = (double *)mxMalloc(nx*N*N*nu * sizeof(double));
+        mexMakeMemoryPersistent(W_mat);  
+        w_vec = (double *)mxMalloc(nx*N * sizeof(double));
+        mexMakeMemoryPersistent(w_vec);          
         L = (double *)mxMalloc((N+1)*nx * sizeof(double));
         mexMakeMemoryPersistent(L);        
         Hi = (double *)mxMalloc(nu*nu * sizeof(double));
