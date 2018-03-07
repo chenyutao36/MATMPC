@@ -16,19 +16,24 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         tshoot = tic;
         qp_generation(input, settings, mem);
         tSHOOT = toc(tshoot)*1e3; 
-                      
-        tcond=tic;
-        Condensing(mem, settings);        
-        tCOND=toc(tcond)*1e3;
-                
-%         %% ----------  Solving QP
+                                            
+        %% ----------  Solving QP
         switch opt.qpsolver
             case 'qpoases'
+                tcond=tic;
+                Condensing(mem, settings);        
+                tCOND=toc(tcond)*1e3;
                 [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
             case 'quadprog'
+                tcond=tic;
+                Condensing(mem, settings);        
+                tCOND=toc(tcond)*1e3;
                 [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);
+            case 'hpipm'
+                tCOND = 0;
+                [tQP,mem] = mpc_qp_solve_hpipm(settings,mem);
         end
-        
+                
         %% ---------- Line search
 
         Line_search(mem, input, settings);
