@@ -45,7 +45,7 @@ opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 
 %% Initialize Solvers (only for advanced users)
 
-[input, mem] = InitMemory(settings, opt, input);
+mem = InitMemory(settings, opt, input);
 
 %% Simulation (start your simulation...)
 
