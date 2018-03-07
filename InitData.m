@@ -413,4 +413,3 @@ function [input, data] = InitData(settings)
     end
     
 end
-   
