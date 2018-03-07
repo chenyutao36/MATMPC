@@ -19,9 +19,13 @@ function [mem] = InitMemory(settings, opt, input)
     if strcmp(opt.hotstart, 'yes')
         mem.hot_start=1;
     end
-    if strcmp(opt.qpsolver,'qpoases')        
+    if strcmp(opt.qpsolver,'qpoases') 
+        mem.qpsolver = 0;
         mem.qpoases_opt = qpOASES_options('MPC');
 %           mem.qpoases_opt = qpOASES_options('default');
+    end
+    if strcmp(opt.qpsolver,'QORE')
+        mem.qpsolver=1;
     end
     
     if strcmp(opt.qpsolver,'quadprog')

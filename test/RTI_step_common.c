@@ -19,6 +19,7 @@ int rti_step_calculate_workspace_size(rti_step_dims *dim)
     size += ny*nu*sizeof(double); // Jac[1]
     size += nyN*nx*sizeof(double); // Jac_N
     
+    size += nx*nu*N*N * sizeof(double); // G
     size += (N+1)*nx * sizeof(double); // L
     size += nx*nu*N*N * sizeof(double); // W_mat
     size += nx*N * sizeof(double); // w_vec
@@ -57,14 +58,17 @@ void *rti_step_cast_workspace(rti_step_dims *dim, void *raw_memory)
     workspace->Jac_N = (double *)c_ptr;
     c_ptr += nyN*nx*sizeof(double);
     
+    workspace->G = (double *)c_ptr;
+    c_ptr += nx*nu*N*N*sizeof(double);
+    
     workspace->L = (double *)c_ptr;
     c_ptr += (N+1)*nx*sizeof(double);
     
-    workspace->w_vec = (double *)c_ptr;
-    c_ptr += N*nx*sizeof(double);
-       
     workspace->W_mat = (double *)c_ptr;
     c_ptr += nx*nu*N*N*sizeof(double);
+    
+    workspace->w_vec = (double *)c_ptr;
+    c_ptr += N*nx*sizeof(double);   
         
     workspace->Hi = (double *)c_ptr;
     c_ptr += nu*nu*sizeof(double);

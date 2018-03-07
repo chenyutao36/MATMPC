@@ -132,8 +132,8 @@ void qp_generation(double *Q, double *S, double *R, double *A, double *B, double
 
 void condensing(double *Q, double *S, double *R, double *A, double *B, double *Cx, double *Cu, double *CN, 
         double *gx, double *gu, double *a, double *ds0, double *lc, double *uc,
-        double *G, double *Hc, double *gc, double *Cc, double *lcc, double *ucc,
-        int iter, bool cond_save,
+        double *Hc, double *gc, double *Cc, double *lcc, double *ucc,
+        int iter, bool cond_save, int qpsolver,
         rti_step_dims *dim, rti_step_workspace *work)
 {
     int nx = dim->nx;
@@ -145,6 +145,7 @@ void condensing(double *Q, double *S, double *R, double *A, double *B, double *C
     int ncN = dim->ncN;   
     int N = dim->N;
     
+    double *G = work->G;
     double *L = work->L;
     double *W_mat = work->W_mat;
     double *w_vec = work->w_vec;
@@ -186,12 +187,16 @@ void condensing(double *Q, double *S, double *R, double *A, double *B, double *C
         /* Compute Cc */
         if (nc>0){         
             for(i=0;i<N;i++){
-//                 Block_Fill(nc, nu, Cu+i*nc*nu, Cc, i*nc, i*nu, N*nc+ncN);
-                Block_Fill_Trans(nc,nu, Cu+i*nc*nu, Cc, i*nu, i*nc, N*nu);
+                if (qpsolver==0)
+                    Block_Fill(nc, nu, Cu+i*nc*nu, Cc, i*nc, i*nu, N*nc+ncN);
+                if (qpsolver==1)
+                    Block_Fill_Trans(nc,nu, Cu+i*nc*nu, Cc, i*nu, i*nc, N*nu);
                 for(j=i+1;j<N;j++){   
                     dgemm_(nTrans, nTrans, &nc, &nu, &nx, &one_d, Cx+j*nc*nx, &nc, G+(i*N+j-1)*nx*nu, &nx, &zero, Cci, &nc);
-//                     Block_Fill(nc, nu, Cci, Cc, j*nc, i*nu, N*nc+ncN);
-                    Block_Fill_Trans(nc, nu, Cci, Cc, i*nu, j*nc, N*nu);
+                    if (qpsolver==0)
+                        Block_Fill(nc, nu, Cci, Cc, j*nc, i*nu, N*nc+ncN);
+                    if (qpsolver==1)
+                        Block_Fill_Trans(nc, nu, Cci, Cc, i*nu, j*nc, N*nu);
                 }    
             }  
         }
@@ -200,8 +205,10 @@ void condensing(double *Q, double *S, double *R, double *A, double *B, double *C
         if (ncN>0){          
             for(i=0;i<N;i++){                 
                 dgemm_(nTrans, nTrans, &ncN, &nu, &nx, &one_d, CN, &ncN, G+(i*N+N-1)*nx*nu, &nx, &zero, CcN, &ncN);
-//                 Block_Fill(ncN, nu, CcN, Cc, N*nc, i*nu, N*nc+ncN);
-                Block_Fill_Trans(ncN, nu, CcN, Cc, i*nu, N*nc, N*nu);
+                if (qpsolver==0)
+                    Block_Fill(ncN, nu, CcN, Cc, N*nc, i*nu, N*nc+ncN);
+                if (qpsolver==1)
+                    Block_Fill_Trans(ncN, nu, CcN, Cc, i*nu, N*nc, N*nu);
             }
         }
     }

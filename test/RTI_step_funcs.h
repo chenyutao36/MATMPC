@@ -9,8 +9,8 @@ void qp_generation(double *Q, double *S, double *R, double *A, double *B, double
 
 void condensing(double *Q, double *S, double *R, double *A, double *B, double *Cx, double *Cu, double *CN, 
         double *gx, double *gu, double *a, double *ds0, double *lc, double *uc,
-        double *G, double *Hc, double *gc, double *Cc, double *lcc, double *ucc,
-        int iter, bool cond_save,
+        double *Hc, double *gc, double *Cc, double *lcc, double *ucc,
+        int iter, bool cond_save, int qpsolver,
         rti_step_dims *dim, rti_step_workspace *work);
 
 void recover(double *A, double *B, double *a, double *ds0, double *dx, double *du, rti_step_dims *dim);
