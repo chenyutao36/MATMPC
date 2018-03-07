@@ -2,7 +2,9 @@ function [cpt_qp, mem] = mpc_qp_solve_quadprog(sizes,mem)
 
     nc=sizes.nc;
     ncN=sizes.ncN;
-    N=sizes.N;   
+    N=sizes.N; 
+    
+    warning off;
     
     tqp = tic;
     [mem.du,fval,exitflag,output,lambda] = quadprog(mem.Hc,mem.gc,[mem.Cc;-mem.Cc],...
