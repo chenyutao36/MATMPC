@@ -27,12 +27,12 @@ nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
 %% solver configurations
-N  = 15;             % No. of shooting points
+N  = 30;             % No. of shooting points
 settings.N = N;
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton', 
-opt.qpsolver='qpoases'; %'qpoases'
+opt.qpsolver='qpoases'; %0-'qpoases', 1-'QORE'
 opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
@@ -45,12 +45,12 @@ opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 
 %% Initialize Solvers (only for advanced users)
 
-[input, mem] = InitMemory(settings, opt, input);
+mem = InitMemory(settings, opt, input);
 
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
-Tf = 20;  % simulation time
+Tf = 15;  % simulation time
 state_sim= [input.x0]';
 controls_MPC = [input.u0]';
 y_sim = [];

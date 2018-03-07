@@ -315,7 +315,7 @@ function [input, data] = InitData(settings)
             alpha = 20*pi/180;
             para0=[-alpha; alpha];
             
-            q = [10, 30, 10, 30, 0.5, 0.5, 80, 40, 10, 0];
+            q = [10, 30, 10, 30, 0.01, 0.01, 80, 40, 10, 0];
             qN = q(1:nyN);
             Q = diag(q);
             QN = diag(qN);
@@ -361,6 +361,8 @@ function [input, data] = InitData(settings)
     x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
     para = repmat(para0,1,N+1);  % initialize all parameters with the same initial para
+    
+%     load init_data;    % if you want to use your own initiliazation data
     
     input.x=x;           % states and controls of the first N stages (nx by N+1 matrix)
     input.u=u;           % states of the terminal stage (nu by N vector)
