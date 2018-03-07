@@ -33,6 +33,8 @@ void exitFcn(){
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
+    int qpsolver = mxGetScalar( mxGetField(prhs[2], 0, "qpsolver") );
+    
     /* from input */
     double *x = mxGetPr( mxGetField(prhs[0], 0, "x") );
     double *u = mxGetPr( mxGetField(prhs[0], 0, "u") );
@@ -48,10 +50,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *x0 = mxGetPr( mxGetField(prhs[0], 0, "x0") );
     double *lbu = mxGetPr( mxGetField(prhs[0], 0, "lbu") );
     double *ubu = mxGetPr( mxGetField(prhs[0], 0, "ubu") );
-    double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda") );
-    double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu") );
-    double *muN = mxGetPr( mxGetField(prhs[0], 0, "muN") );
-    double *mu_u = mxGetPr( mxGetField(prhs[0], 0, "mu_u") );
     
     /* from settings */
     int nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
@@ -82,11 +80,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *CN = mxGetPr( mxGetField(prhs[2], 0, "CN") );
     int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );    
     
-    double *G = mxGetPr( mxGetField(prhs[2], 0, "G")  );
     double *Hc = mxGetPr( mxGetField(prhs[2], 0, "Hc")  );
     double *gc = mxGetPr( mxGetField(prhs[2], 0, "gc")  );
-//     double *Cc = mxGetPr( mxGetField(prhs[2], 0, "Cc")  );
-    double *Cc = mxGetPr( mxGetField(prhs[2], 0, "Cc_qore")  );
+    double *Cc;
+    if (qpsolver==0)
+        Cc = mxGetPr( mxGetField(prhs[2], 0, "Cc")  );
+    if (qpsolver==1)
+        Cc = mxGetPr( mxGetField(prhs[2], 0, "Cc_qore")  );
     double *lcc = mxGetPr( mxGetField(prhs[2], 0, "lcc")  );
     double *ucc = mxGetPr( mxGetField(prhs[2], 0, "ucc")  );
     int iter = mxGetScalar( mxGetField(prhs[2], 0, "iter") );
@@ -94,7 +94,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     double *dx = mxGetPr( mxGetField(prhs[2], 0, "dx") );
     double *du = mxGetPr( mxGetField(prhs[2], 0, "du") );
-
+    
     bool cond_save = (hot_start==1) && (lin_obj==1) ;
     
     rti_step_dims dim;
@@ -137,71 +137,76 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     condensing(Q, S, R, A, B, Cx, Cu, CN, 
         gx, gu, a, ds0, lc, uc, 
-        G, Hc, gc, Cc, lcc, ucc,
-        iter, cond_save,
+        Hc, gc, Cc, lcc, ucc,
+        iter, cond_save, qpsolver,
         &dim, workspace);
-    
-//     mxArray *qpoases_in[10];
-//     mxArray *qpoases_out[7];
-//     double *du;
-//     if (iter == 1){
-//         qpoases_in[0] = mxCreateString("i");        
-//         qpoases_in[1] = mxGetField(prhs[2], 0, "Hc");
-//         qpoases_in[2] = mxGetField(prhs[2], 0, "gc");
-//         qpoases_in[3] = mxGetField(prhs[2], 0, "Cc");
-//         qpoases_in[4] = mxGetField(prhs[2], 0, "lb_du");
-//         qpoases_in[5] = mxGetField(prhs[2], 0, "ub_du");
-//         qpoases_in[6] = mxGetField(prhs[2], 0, "lcc");
-//         qpoases_in[7] = mxGetField(prhs[2], 0, "ucc");
-//         qpoases_in[8] = mxGetField(prhs[2], 0, "qpoases_opt");
-//         
-//         mexCallMATLAB(7, qpoases_out, 9, qpoases_in, "qpOASES_sequence");
-//         
-//         mxSetField(prhs[2], 0, "warm_start", qpoases_out[0]);       
-//         du = mxGetPr(qpoases_out[1]);        
-//     }else{
-//         if (!hot_start){
-//             qpoases_in[0] = mxCreateString("m");
-//             qpoases_in[1] = mxGetField(prhs[2], 0, "warm_start");
-//             qpoases_in[2] = mxGetField(prhs[2], 0, "Hc");
-//             qpoases_in[3] = mxGetField(prhs[2], 0, "gc");
-//             qpoases_in[4] = mxGetField(prhs[2], 0, "Cc");
-//             qpoases_in[5] = mxGetField(prhs[2], 0, "lb_du");
-//             qpoases_in[6] = mxGetField(prhs[2], 0, "ub_du");
-//             qpoases_in[7] = mxGetField(prhs[2], 0, "lcc");
-//             qpoases_in[8] = mxGetField(prhs[2], 0, "ucc");       
-//             qpoases_in[9] = mxGetField(prhs[2], 0, "qpoases_opt");
-//             mexCallMATLAB(6, qpoases_out, 10, qpoases_in, "qpOASES_sequence");
-//         }else{
-//             qpoases_in[0] = mxCreateString("h");
-//             qpoases_in[1] = mxGetField(prhs[2], 0, "warm_start");
-//             qpoases_in[2] = mxGetField(prhs[2], 0, "gc");
-//             qpoases_in[3] = mxGetField(prhs[2], 0, "lb_du");
-//             qpoases_in[4] = mxGetField(prhs[2], 0, "ub_du");
-//             qpoases_in[5] = mxGetField(prhs[2], 0, "lcc");
-//             qpoases_in[6] = mxGetField(prhs[2], 0, "ucc");       
-//             qpoases_in[7] = mxGetField(prhs[2], 0, "qpoases_opt");
-//             mexCallMATLAB(6, qpoases_out, 8, qpoases_in, "qpOASES_sequence");
-//         }                        
-//         du = mxGetPr(qpoases_out[0]);
-//     }
-    
-    memcpy(lb_qore, lb_du, N*nu*sizeof(double));
-    memcpy(lb_qore+N*nu, lcc, (N*nc+ncN)*sizeof(double));
-    memcpy(ub_qore, ub_du, N*nu*sizeof(double));
-    memcpy(ub_qore+N*nu, ucc, (N*nc+ncN)*sizeof(double));
-    if (iter==1){
-        err = QPDenseSetData(problem[0], N*nu, N*nc+ncN, Cc, Hc);
-        err = QPDenseOptimize(problem[0], lb_qore, ub_qore, gc, NULL, NULL);
-    }else{
-        if (!hot_start){
-            //         err = QPDenseSetInt(problem[0], "warmstrategy", 1);
-            err = QPDenseUpdateMatrices(problem[0], N*nu, N*nc+ncN, Cc, Hc);
+   
+    if (qpsolver==0){
+        mxArray *qpoases_in[10];
+        mxArray *qpoases_out[7];
+        double *sol;
+        if (iter == 1){
+            qpoases_in[0] = mxCreateString("i");        
+            qpoases_in[1] = mxGetField(prhs[2], 0, "Hc");
+            qpoases_in[2] = mxGetField(prhs[2], 0, "gc");
+            qpoases_in[3] = mxGetField(prhs[2], 0, "Cc");
+            qpoases_in[4] = mxGetField(prhs[2], 0, "lb_du");
+            qpoases_in[5] = mxGetField(prhs[2], 0, "ub_du");
+            qpoases_in[6] = mxGetField(prhs[2], 0, "lcc");
+            qpoases_in[7] = mxGetField(prhs[2], 0, "ucc");
+            qpoases_in[8] = mxGetField(prhs[2], 0, "qpoases_opt");
+
+            mexCallMATLAB(7, qpoases_out, 9, qpoases_in, "qpOASES_sequence");
+
+            mxSetField(prhs[2], 0, "warm_start", qpoases_out[0]);
+            sol = mxGetPr(qpoases_out[1]);
+        }else{
+            if (!hot_start){
+                qpoases_in[0] = mxCreateString("m");
+                qpoases_in[1] = mxGetField(prhs[2], 0, "warm_start");
+                qpoases_in[2] = mxGetField(prhs[2], 0, "Hc");
+                qpoases_in[3] = mxGetField(prhs[2], 0, "gc");
+                qpoases_in[4] = mxGetField(prhs[2], 0, "Cc");
+                qpoases_in[5] = mxGetField(prhs[2], 0, "lb_du");
+                qpoases_in[6] = mxGetField(prhs[2], 0, "ub_du");
+                qpoases_in[7] = mxGetField(prhs[2], 0, "lcc");
+                qpoases_in[8] = mxGetField(prhs[2], 0, "ucc");       
+                qpoases_in[9] = mxGetField(prhs[2], 0, "qpoases_opt");
+                mexCallMATLAB(6, qpoases_out, 10, qpoases_in, "qpOASES_sequence");
+            }else{
+                qpoases_in[0] = mxCreateString("h");
+                qpoases_in[1] = mxGetField(prhs[2], 0, "warm_start");
+                qpoases_in[2] = mxGetField(prhs[2], 0, "gc");
+                qpoases_in[3] = mxGetField(prhs[2], 0, "lb_du");
+                qpoases_in[4] = mxGetField(prhs[2], 0, "ub_du");
+                qpoases_in[5] = mxGetField(prhs[2], 0, "lcc");
+                qpoases_in[6] = mxGetField(prhs[2], 0, "ucc");       
+                qpoases_in[7] = mxGetField(prhs[2], 0, "qpoases_opt");
+                mexCallMATLAB(6, qpoases_out, 8, qpoases_in, "qpOASES_sequence");
+            }                        
+            sol = mxGetPr(qpoases_out[0]);
         }
-        err = QPDenseOptimize(problem[0], lb_qore, ub_qore, gc, NULL, NULL);
-    }   
-    err = QPDenseGetDblVector(problem[0], "primalsol", x_qore);
-    memcpy(du, x_qore, N*nu*sizeof(double));
+        memcpy(du,sol,N*nu*sizeof(double));
+    }
+    
+    if (qpsolver==1){
+        memcpy(lb_qore, lb_du, N*nu*sizeof(double));
+        memcpy(lb_qore+N*nu, lcc, (N*nc+ncN)*sizeof(double));
+        memcpy(ub_qore, ub_du, N*nu*sizeof(double));
+        memcpy(ub_qore+N*nu, ucc, (N*nc+ncN)*sizeof(double));
+        if (iter==1){
+            err = QPDenseSetData(problem[0], N*nu, N*nc+ncN, Cc, Hc);
+            err = QPDenseOptimize(problem[0], lb_qore, ub_qore, gc, NULL, NULL);
+        }else{
+            if (!hot_start){
+                //  err = QPDenseSetInt(problem[0], "warmstrategy", 1);
+                err = QPDenseUpdateMatrices(problem[0], N*nu, N*nc+ncN, Cc, Hc);
+            }
+            err = QPDenseOptimize(problem[0], lb_qore, ub_qore, gc, NULL, NULL);
+        }   
+        err = QPDenseGetDblVector(problem[0], "primalsol", x_qore);
+        memcpy(du, x_qore, N*nu*sizeof(double));
+    }
     
     recover(A, B, a, ds0, dx, du, &dim);
     

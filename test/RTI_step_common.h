@@ -19,7 +19,8 @@ typedef struct{
     double **Jac;
     double *Jac_N;
     
-    double *L;
+    double *G;
+    double *L;    
     double *w_vec;
     double *W_mat; 
     double *Hi;   
