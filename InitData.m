@@ -482,6 +482,58 @@ function [input, data] = InitData(settings)
             
             input.lbu = repmat(lbu,1,N);
             input.ubu = repmat(ubu,1,N);
+			 case 'ActiveSeat_onlyAS'
+            
+            input.x0 = [zeros(1,nx-4), 0.0001, 0, 0, 0]';
+            input.u0 = zeros(nu,1);
+            para0 = 0;
+            
+            Q_daccX=10;
+            Q_daccY=10;
+            Q_droll=10;
+            Q_ypress=1;
+            Q_press=0;
+            Q_accX=0.0001;
+            Q_accY=0.0001;        
+
+            Wq_t(1) = Q_ypress; % uscita pressione y
+
+            Wq = diag(Wq_t); % diag matrix coi pesi
+            Wr = diag([Q_daccX Q_droll Q_daccY Q_press]); % pesi su ingressi effettivi daccX, dRoll, daccY, dpressY
+                      
+            Wr3 = diag([Q_accX Q_accY]); % acc x tripod  % acc y tripod
+            Q = blkdiag(Wq, Wr*Ts^2,Wr3);
+            QN = Wq(1:nyN,1:nyN)*0;
+            
+            % upper and lower bounds for states (=nbu)
+            lb_x = -inf(nu,1);
+            ub_x = -lb_x;
+            
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [];
+            ub_u = [];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_x];               
+            input.ubN=[ub_gN;ub_x]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
+            input.lbu = repmat(lbu,1,N);
+            input.ubu = repmat(ubu,1,N);
     end
 
     % prepare the data
@@ -535,6 +587,10 @@ function [input, data] = InitData(settings)
             
         case 'TethUAV_param'
             data.REF = zeros(1,ny);
+
+		case 'ActiveSeat_onlyAS'
+            data.REF = AS_REF_AS(25,Ts);
+        
     end
     
 end
