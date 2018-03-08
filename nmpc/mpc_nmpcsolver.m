@@ -29,9 +29,16 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 Condensing(mem, settings);        
                 tCOND=toc(tcond)*1e3;
                 [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);
-            case 'hpipm'
+            case 'hpipm_sparse'
                 tCOND = 0;
-                [tQP,mem] = mpc_qp_solve_hpipm(settings,mem);
+                tqp=tic;
+                hpipm_sparse(mem,settings);
+                tQP = toc(tqp)*1e3;
+            case 'hpipm_dense'
+                tcond=tic;
+                Condensing(mem, settings);        
+                tCOND=toc(tcond)*1e3;
+                [tQP, mem] = mpc_qp_solve_dense(settings,mem);
         end
                 
         %% ---------- Line search
