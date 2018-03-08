@@ -7,7 +7,7 @@
 * Developed at IMTEK (University of Freiburg) under the supervision of Moritz Diehl.              *
 * All rights reserved.                                                                            *
 *                                                                                                 *
-* HPIPM is free software; you can redistribute it and/or                                          *
+* HPIPM is mxFree software; you can redistribute it and/or                                          *
 * modify it under the terms of the GNU Lesser General Public                                      *
 * License as published by the Free Software Foundation; either                                    *
 * version 2.1 of the License, or (at your option) any later version.                              *
@@ -58,69 +58,45 @@ void dgemv_n_3l(int m, int n, double alpha, double *A, int lda, double *x, doubl
 		}
 	
 	}
-
-
-
-// the gateway function 
+ 
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	{
 		
 	// get data 
-	int k_max;
-	double mu0, tol, *A, *B, *b, *Q, *Qf, *R, *S, *q, *qf, *r, *x, *u, *lb, *ub, *C, *D, *lg, *ug, *CN, *lgN, *ugN, *stat, *kkk, *inf_norm_res, *pi, *lam/*, *t*/;
-	double *mu_u, *mu, *muN;
     
-	kkk   = mxGetPr(prhs[0]);
-	k_max = (int) mxGetScalar(prhs[1]);
-	mu0   = mxGetScalar(prhs[2]);
-	tol   = mxGetScalar(prhs[3]);
-	int N   = (int) mxGetScalar(prhs[4]);
-	int nx  = (int) mxGetScalar(prhs[5]);
-	int nu  = (int) mxGetScalar(prhs[6]);
-	int nb  = (int) mxGetScalar(prhs[7]);
-	int ng  = (int) mxGetScalar(prhs[8]);
-	int ngN = (int) mxGetScalar(prhs[9]);
-	int time_invariant = (int) mxGetScalar(prhs[10]);
-	int free_x0 = (int) mxGetScalar(prhs[11]);
-	int warm_start = (int) mxGetScalar(prhs[12]);
-
-	A    = mxGetPr(prhs[13]);
-	B    = mxGetPr(prhs[14]);
-	b    = mxGetPr(prhs[15]);
-	Q    = mxGetPr(prhs[16]);
-	Qf   = mxGetPr(prhs[17]);
-	R    = mxGetPr(prhs[18]);
-	S    = mxGetPr(prhs[19]);
-	q    = mxGetPr(prhs[20]);
-	qf   = mxGetPr(prhs[21]);
-	r    = mxGetPr(prhs[22]);
-	lb   = mxGetPr(prhs[23]);
-	ub   = mxGetPr(prhs[24]);
-	C    = mxGetPr(prhs[25]);
-	D    = mxGetPr(prhs[26]);
-	lg   = mxGetPr(prhs[27]);
-	ug   = mxGetPr(prhs[28]);
-	CN   = mxGetPr(prhs[29]);
-	lgN  = mxGetPr(prhs[30]);
-	ugN  = mxGetPr(prhs[31]);
-	x    = mxGetPr(prhs[32]);
-	u    = mxGetPr(prhs[33]);
-	pi  = mxGetPr(prhs[34]);
+    double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q") );
+    double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
+    double *R = mxGetPr( mxGetField(prhs[0], 0, "R") );
+    double *A = mxGetPr( mxGetField(prhs[0], 0, "A") );
+    double *B = mxGetPr( mxGetField(prhs[0], 0, "B") );
+    double *C = mxGetPr( mxGetField(prhs[0], 0, "Cx") );
+    double *D = mxGetPr( mxGetField(prhs[0], 0, "Cu") );
+    double *CN = mxGetPr( mxGetField(prhs[0], 0, "CN") );
+    double *q = mxGetPr( mxGetField(prhs[0], 0, "gx") );
+    double *r = mxGetPr( mxGetField(prhs[0], 0, "gu") );   
+    double *b = mxGetPr( mxGetField(prhs[0], 0, "a") );
+    double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
+    double *lg = mxGetPr( mxGetField(prhs[0], 0, "lc") );
+    double *ug = mxGetPr( mxGetField(prhs[0], 0, "uc") );
+    double *lb = mxGetPr( mxGetField(prhs[0], 0, "lb_du") );
+    double *ub = mxGetPr( mxGetField(prhs[0], 0, "ub_du") );
     
-// 	lam = mxGetPr(prhs[35]);
-// 	inf_norm_res = mxGetPr(prhs[36]);
-// 	stat = mxGetPr(prhs[37]);
+    double *x = mxGetPr( mxGetField(prhs[0], 0, "dx") );
+    double *u = mxGetPr( mxGetField(prhs[0], 0, "du") );
+    double *pi = mxGetPr( mxGetField(prhs[0], 0, "lambda_new") );
+    double *mu_u = mxGetPr( mxGetField(prhs[0], 0, "mu_u_new") );
+    double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu_new") );
+    double *muN = mxGetPr( mxGetField(prhs[0], 0, "muN_new") );
     
-    mu_u = mxGetPr(prhs[35]);
-    mu = mxGetPr(prhs[36]);
-    muN = mxGetPr(prhs[37]);  
-    inf_norm_res = mxGetPr(prhs[38]);
-	stat = mxGetPr(prhs[39]);
-    
-    lam = mxGetPr(prhs[40]);
-	
-	int kk = -1;
-
+    int nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
+    int nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
+    int ng = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
+    int ngN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
+    int N = mxGetScalar( mxGetField(prhs[1], 0, "N") );  
+       
+    int nb = nu;
+    memcpy(x, ds0, nx*sizeof(double));
+        	
 	// 
 	int ii, jj;
 	int i_tmp;
@@ -167,7 +143,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		ns_v[ii] = 0;
 
 	int *hidxb[N+1];
-	int *ptr_idx = (int *) malloc((N+1)*nb*sizeof(int));
+	int *ptr_idx = (int *) mxMalloc((N+1)*nb*sizeof(int));
 	for(ii=0; ii<=N; ii++)
 		{
 		hidxb[ii] = ptr_idx+ii*nb;
@@ -177,10 +153,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 
 	double b0[nx];
-	dgemv_n_3l(nx, nx, 1.0, A, nx, x, 1.0, b, b0);
+	dgemv_n_3l(nx, nx, 1.0, A, nx, x, 1.0, b, b0); // b0 = 1.0*b+1.0*A*x
     
 	double r0[nu];
-	dgemv_n_3l(nu, nx, 1.0, S, nu, x, 1.0, r, r0);
+	dgemv_n_3l(nu, nx, 1.0, S, nu, x, 1.0, r, r0); // r0 = 1.0*r+1.0*S*x
 
 	double lb0[nb0];
 	for(ii=0; ii<nb0; ii++)
@@ -194,11 +170,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	double ubN[nbN];
 
 	double lg0[ng];
-	dgemv_n_3l(ng, nx, -1.0, C, ng, x, 1.0, lg, lg0);
+	dgemv_n_3l(ng, nx, -1.0, C, ng, x, 1.0, lg, lg0); // lg0 = 1.0*lg-1.0*C*x
 
-	double ug0[ng];
-	dgemv_n_3l(ng, nx, -1.0, C, ng, x, 1.0, ug, ug0);
-
+	double ug0[ng]; 
+	dgemv_n_3l(ng, nx, -1.0, C, ng, x, 1.0, ug, ug0); // ug0 = 1.0*ug-1.0*C*x
 
 
 	double *hA[N];
@@ -223,136 +198,60 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	double *hlam_lg[N+1];
 	double *hlam_ug[N+1];
 
+    for(ii=1; ii<N; ii++)
+		hA[ii] = A+ii*nx*nx;
 
+	for(ii=0; ii<N; ii++)
+		hB[ii] = B+ii*nx*nu;
 
-	if(time_invariant)
-		{
+	hb[0] = b0;
+	for(ii=1; ii<N; ii++)
+		hb[ii] = b+ii*nx;
 
-		for(ii=1; ii<N; ii++)
-			hA[ii] = A;
+	for(ii=1; ii<=N; ii++)
+		hQ[ii] = Q+ii*nx*nx;
+        
+	for(ii=1; ii<N; ii++)
+		hS[ii] = S+ii*nx*nu;
 
-		for(ii=0; ii<N; ii++)
-			hB[ii] = B;
+    for(ii=0; ii<N; ii++)
+		hR[ii] = R+ii*nu*nu;
 
-		hb[0] = b0;
-		for(ii=1; ii<N; ii++)
-			hb[ii] = b;
-
-		for(ii=1; ii<N; ii++)
-			hQ[ii] = Q;
-		hQ[N] = Qf;
-
-		for(ii=1; ii<N; ii++)
-			hS[ii] = S;
-
-		for(ii=0; ii<N; ii++)
-			hR[ii] = R;
-
-		for(ii=1; ii<N; ii++)
-			hq[ii] = q;
-		hq[N] = qf;
+	for(ii=1; ii<=N; ii++)
+		hq[ii] = q+ii*nx;
 		
-		hr[0] = r0;
-		for(ii=1; ii<N; ii++)
-			hr[ii] = r;
+	hr[0] = r0;
+	for(ii=1; ii<N; ii++)
+		hr[ii] = r+ii*nu;
 
-		for(ii=0; ii<nbN; ii++)
-			lbN[ii] = lb[nu+ii];
+	for(ii=0; ii<nbN; ii++)
+		lbN[ii] = lb[nu+ii];
+	hlb[0] = lb0;
+	for(ii=1; ii<N; ii++)
+		hlb[ii] = lb+ii*nb;
+	hlb[N] = lbN;
 
-		hlb[0] = lb0;
-		for(ii=1; ii<N; ii++)
-			hlb[ii] = lb;
-		hlb[N] = lbN;
+	for(ii=0; ii<nbN; ii++)
+		ubN[ii] = ub[nu+ii];
+	hub[0] = ub0;
+	for(ii=1; ii<N; ii++)
+		hub[ii] = ub+ii*nb;
+	hub[N] = ubN;
 
-		for(ii=0; ii<nbN; ii++)
-			ubN[ii] = ub[nu+ii];
+	for(ii=1; ii<N; ii++)
+		hC[ii] = C+ii*ng*nx;
+	hC[N] = CN;
 
-		hub[0] = ub0;
-		for(ii=1; ii<N; ii++)
-			hub[ii] = ub;
-		hub[N] = ubN;
+	for(ii=0; ii<N; ii++)
+		hD[ii] = D+ii*ng*nu;
 
-		for(ii=1; ii<N; ii++)
-			hC[ii] = C;
-		hC[N] = CN;
+	hlg[0] = lg0;
+	for(ii=1; ii<=N; ii++)
+		hlg[ii] = lg+ii*ng;
 
-		for(ii=0; ii<N; ii++)
-			hD[ii] = D;
-
-		hlg[0] = lg0;
-		for(ii=1; ii<N; ii++)
-			hlg[ii] = lg;
-		hlg[N] = lgN;
-
-		hug[0] = ug0;
-		for(ii=1; ii<N; ii++)
-			hug[ii] = ug;
-		hug[N] = ugN;
-
-		}
-	else
-		{
-
-		for(ii=1; ii<N; ii++)
-			hA[ii] = A+ii*nx*nx;
-
-		for(ii=0; ii<N; ii++)
-			hB[ii] = B+ii*nx*nu;
-
-		hb[0] = b0;
-		for(ii=1; ii<N; ii++)
-			hb[ii] = b+ii*nx;
-
-		for(ii=1; ii<N; ii++)
-			hQ[ii] = Q+ii*nx*nx;
-		hQ[N] = Qf;
-
-		for(ii=1; ii<N; ii++)
-			hS[ii] = S+ii*nu*nx;
-
-		for(ii=0; ii<N; ii++)
-			hR[ii] = R+ii*nu*nu;
-
-		for(ii=1; ii<N; ii++)
-			hq[ii] = q+ii*nx;
-		hq[N] = qf;
-		
-		hr[0] = r0;
-		for(ii=1; ii<N; ii++)
-			hr[ii] = r+ii*nu;
-
-		for(ii=0; ii<nbN; ii++)
-			lbN[ii] = lb[nu+ii];
-		hlb[0] = lb0;
-		for(ii=1; ii<N; ii++)
-			hlb[ii] = lb+ii*nb;
-		hlb[N] = lbN;
-
-		for(ii=0; ii<nbN; ii++)
-			ubN[ii] = ub[nu+ii];
-		hub[0] = ub0;
-		for(ii=1; ii<N; ii++)
-			hub[ii] = ub+ii*nb;
-		hub[N] = ubN;
-
-		for(ii=1; ii<N; ii++)
-			hC[ii] = C+ii*ng*nx;
-		hC[N] = CN;
-
-		for(ii=0; ii<N; ii++)
-			hD[ii] = D+ii*ng*nu;
-
-		hlg[0] = lg0;
-		for(ii=1; ii<N; ii++)
-			hlg[ii] = lg+ii*ng;
-		hlg[N] = lgN;
-
-		hug[0] = ug0;
-		for(ii=1; ii<N; ii++)
-			hug[ii] = ug+ii*ng;
-		hug[N] = ugN;
-
-		}
+	hug[0] = ug0;
+	for(ii=1; ii<=N; ii++)
+		hug[ii] = ug+ii*ng;
 	
 	for(ii=0; ii<=N; ii++)
 		hx[ii] = x+ii*nx;
@@ -363,33 +262,18 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	for(ii=0; ii<N; ii++)
 		hpi[ii] = pi+(ii+1)*nx;
     
+    double *lam = (double *) mxMalloc((2*(N+1)*nb+2*N*ng+2*ngN)*sizeof(double));
     for(ii=0; ii<=N; ii++)
         {
 		hlam_lb[ii] = lam+ii*nb;
 		hlam_ub[ii] = lam+(N+1)*nb+ii*nb;
 		hlam_lg[ii] = lam+2*(N+1)*nb+ii*ng;
-// 		hlam_ug[ii] = lam+2*(N+1)*nb+(N+1)*ng+ii*ng;
         hlam_ug[ii] = lam+2*(N+1)*nb+N*ng+ngN+ii*ng;
         }
     
-    
-	// Partial condensing horizon
-//	int N2 = N;
-
-//	int work_space_size = hpmpc_d_ip_ocp_hard_tv_work_space_size_bytes(N, nx_v, nu_v, nb_v, hidxb, ng_v, N2);
-//	void *work = malloc( work_space_size );
-
-
-
-	// call solver 
-//	fortran_order_d_ip_ocp_hard_tv(&kk, k_max, mu0, tol, N, nx_v, nu_v, nb_v, hidxb, ng_v, N2, warm_start, hA, hB, hb, hQ, hS, hR, hq, hr, hlb, hub, hC, hD, hlg, hug, hx, hu, hpi, hlam, /*ht,*/ inf_norm_res, work, stat);
-
-
-
-
 	// qp dim
 	int dim_size = d_memsize_ocp_qp_dim(N);
-	void *dim_mem = malloc(dim_size);
+	void *dim_mem = mxMalloc(dim_size);
 
 	struct d_ocp_qp_dim dim;
 	d_create_ocp_qp_dim(N, &dim, dim_mem);
@@ -397,7 +281,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	// qp
 	int qp_size = d_memsize_ocp_qp(&dim);
-	void *qp_mem = malloc(qp_size);
+	void *qp_mem = mxMalloc(qp_size);
 	struct d_ocp_qp qp;
 	d_create_ocp_qp(&dim, &qp, qp_mem);
 	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, &qp);
@@ -405,14 +289,14 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	// qp sol
 	int qp_sol_size = d_memsize_ocp_qp_sol(&dim);
-	void *qp_sol_mem = malloc(qp_sol_size);
+	void *qp_sol_mem = mxMalloc(qp_sol_size);
 	struct d_ocp_qp_sol qp_sol;
 	d_create_ocp_qp_sol(&dim, &qp_sol, qp_sol_mem);
 
 
 	// ipm arg
 	int ipm_arg_size = d_memsize_ocp_qp_ipm_arg(&dim);
-	void *ipm_arg_mem = malloc(ipm_arg_size);
+	void *ipm_arg_mem = mxMalloc(ipm_arg_size);
 
 	struct d_ocp_qp_ipm_arg arg;
 	d_create_ocp_qp_ipm_arg(&dim, &arg, ipm_arg_mem);
@@ -423,16 +307,16 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	arg.res_b_max = 1e-6;
 	arg.res_d_max = 1e-6;
 	arg.res_m_max = 1e-6;
-	arg.mu0 = 2.0;
+	arg.mu0 = 100.0;
 	arg.iter_max = 50;
 	arg.stat_max = 100;
-	arg.pred_corr = 0.995;
-	arg.cond_pred_corr = 0.995;
+	arg.pred_corr = 1;
+	arg.cond_pred_corr = 1;
 
 
 	// ipm
 	int ipm_size = d_memsize_ocp_qp_ipm(&dim, &arg);
-	void *ipm_mem = malloc(ipm_size);
+	void *ipm_mem = mxMalloc(ipm_size);
 
 	struct d_ocp_qp_ipm_workspace workspace;
 	d_create_ocp_qp_ipm(&dim, &arg, &workspace, ipm_mem);
@@ -443,39 +327,20 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	// convert back solution
 	d_cvt_ocp_qp_sol_to_colmaj(&qp_sol, hu, hx, NULL, NULL, hpi, hlam_lb, hlam_ub, hlam_lg, hlam_ug, NULL, NULL);
 
-	// inf norm residual
-	inf_norm_res[0] = workspace.qp_res[0];
-	inf_norm_res[1] = workspace.qp_res[1];
-	inf_norm_res[2] = workspace.qp_res[2];
-	inf_norm_res[3] = workspace.qp_res[3];
-
-	// stat
-	for(jj=0; jj<workspace.iter; jj++)
-		for(ii=0; ii<5; ii++)
-			stat[ii+5*jj] = workspace.stat[ii+5*jj];
-
-	*kkk = (double) workspace.iter;
     
     // extrac multipliers
-    
-//     for(ii=0;ii<N;ii++){
-//         for(jj=0;jj<nb;jj++)
-//             mu_u[ii*nb+jj] = hlam_ub[ii][jj] - hlam_lb[ii][jj];
-//         for(jj=0;jj<ng;jj++)
-//             mu[ii*ng+jj] = hlam_ug[ii][jj] - hlam_lg[ii][jj];
-//     }
-//     for(jj=0;jj<ngN;jj++)
-//         muN[jj] = hlam_ug[N][jj] - hlam_lg[N][jj];
-    
-    for(ii=0;ii<N*nb;ii++)
-        mu_u[ii] = lam[(N+1)*nb+ii] - lam[ii];
-    for(ii=0;ii<N*ng;ii++)
-        mu[ii] = lam[2*(N+1)*nb+N*ng+ngN+ii] - lam[2*(N+1)*nb+ii];
-    for(ii=0;ii<ngN;ii++)
-        muN[ii] = lam[2*(N+1)*nb+N*ng+ngN+N*ng+ii] - lam[2*(N+1)*nb+N*ng+ii];
-    
+    for(ii=0;ii<N;ii++){
+        for(jj=0;jj<nb;jj++)
+            mu_u[ii*nb+jj] = hlam_ub[ii][jj] - hlam_lb[ii][jj];
+        
+        for(jj=0;jj<ng;jj++)
+            mu[ii*ng+jj] = hlam_ug[ii][jj] - hlam_lg[ii][jj];
+    }
+    for(jj=0;jj<ngN;jj++)
+        muN[jj] = hlam_ug[N][jj] - hlam_lg[N][jj]; 
+            
     char *nTrans = "N", *Trans="T";
-    double one_d = 1.0, zero = 0.0, minus_one_d = -1.0;
+    double one_d = 1.0, minus_one_d = -1.0;
     int one_i = 1;
     memcpy(pi, q, nx*sizeof(double));
     dgemv_(Trans,&nx,&nx,&minus_one_d,A,&nx,pi+nx,&one_i,&minus_one_d,pi,&one_i);
@@ -485,15 +350,13 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     
     // Free memory
 
-	free(ptr_idx);
-	free(dim_mem);
-	free(qp_mem);
-	free(qp_sol_mem);
-	free(ipm_arg_mem);
-	free(ipm_mem);
-
-
-	return;
+	mxFree(ptr_idx);
+    mxFree(lam);
+	mxFree(dim_mem);
+	mxFree(qp_mem);
+	mxFree(qp_sol_mem);
+	mxFree(ipm_arg_mem);
+	mxFree(ipm_mem);
 
 	}
 
