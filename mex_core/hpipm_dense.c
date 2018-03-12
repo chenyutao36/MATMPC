@@ -58,6 +58,11 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
     int ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
     int N = mxGetScalar( mxGetField(prhs[1], 0, "N") );  
+    
+    double mu0 = mxGetScalar( mxGetField(prhs[0], 0, "mu0") ); 
+    int max_qp_it = mxGetScalar( mxGetField(prhs[0], 0, "max_qp_it") );
+    int pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "pred_corr") );
+    int cond_pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "cond_pred_corr") );
         
     int nv = N*nu;
     int ne = 0;
@@ -110,11 +115,11 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	arg.res_b_max = 1e-6;
 	arg.res_d_max = 1e-6;
 	arg.res_m_max = 1e-6;
-	arg.mu0 = 100.0;
-	arg.iter_max = 50;
+	arg.mu0 = mu0;
+	arg.iter_max = max_qp_it;
 	arg.stat_max = 100;
-	arg.pred_corr = 1;
-	arg.cond_pred_corr = 1;
+	arg.pred_corr = pred_corr;
+	arg.cond_pred_corr = cond_pred_corr;
 
     double *lam = (double *) mxMalloc(2*(nb+ng)*sizeof(double));
     double *lam_lb = lam;
@@ -140,6 +145,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mu_u[i] = lam_ub[i]-lam_lb[i];
     for(i=0;i<ng;i++)
         mu_vec[i] = lam_ug[i]-lam_lg[i];
+    
+    //print stats
+    mexPrintf("res_g:%5.3e  res_b:%5.3e  res_d:%5.3e  res_m:%5.3e", workspace.qp_res[0],workspace.qp_res[1],workspace.qp_res[2],workspace.qp_res[3]);
+    mexPrintf("  No. of It: %d\n", workspace.iter);
         
     // Free memory
     mxFree(idxb);

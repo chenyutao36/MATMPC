@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='TethUAV_param'; % see the folder "examples" for details
+settings.model='InvertedPendulum'; % see the folder "examples" for details
 
 run(settings.model);
 
@@ -166,7 +166,7 @@ if strcmp(generate,'y')
         P.add(adjN_fun);
         
         P.generate();
-    cd ../model_src
+    cd ..
 
 display('    Code generation completed!');
 
@@ -204,6 +204,7 @@ if strcmp(compile,'y')
     OP_FLAGS='-O';
     PRINT_FLAGS='-silent';
     
+    cd model_src
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_N_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'h_fun.c');
@@ -213,13 +214,12 @@ if strcmp(compile,'y')
        
     cd ../mex_core
     Compile_Mex;
-    cd ../model_src
+    cd ..
 
 display('    Compilation completed!');
 
 end
 
-cd ..
 %% NMPC preparation
 
 display('                           ');

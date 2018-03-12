@@ -89,6 +89,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
     
     int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );
+    double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
     
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - x[i];
@@ -192,6 +193,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             dsyrk(UPLO, Trans, &nx, &ny, &one_d, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
             dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
             dsyrk(UPLO, Trans, &nu, &ny, &one_d, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
+            
+            regularization(nx, Q+i*nx*nx, reg);
+            regularization(nu, R+i*nu*nu, reg);
         }
         
         // gradient
@@ -227,6 +231,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     if (!lin_obj){
         JN_Fun(casadi_in, Jac_N);
         dsyrk(UPLO, Trans, &nx, &nyN, &one_d, Jac_N, &nyN, &zero, Q+N*nx*nx, &nx);
+        regularization(nx, Q+N*nx*nx, reg);
     }
     
     casadi_out[0] = gx+N*nx;

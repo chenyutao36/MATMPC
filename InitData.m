@@ -79,7 +79,7 @@ function [input, data] = InitData(settings)
             ub_gN = [];
 
         case 'ChainofMasses_Lin'
-            n=15;
+            n=5;
             data.n=n;
             input.x0=zeros(nx,1);
             for i=1:n
