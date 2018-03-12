@@ -22,7 +22,7 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
     %entries to active upper (constraints) bounds and a zero entry means that both corresponding (constraints)
     %bounds are inactive.
     
-    mem.mu_u_new  = - multiplier(1:N*nu);
+    mem.mu_u_new  = - multiplier(1:N*nu);  
     mu_vec   = - multiplier(N*nu+1:end);
     cpt_qp   = auxOutput.cpuTime*1e3;
             
