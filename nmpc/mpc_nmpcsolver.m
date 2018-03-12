@@ -21,7 +21,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         switch opt.qpsolver
             case 'qpoases'
                 tcond=tic;
-                Condensing(mem, settings);        
+                Condensing(mem, settings);
                 tCOND=toc(tcond)*1e3;
                 [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
             case 'quadprog'
@@ -38,7 +38,12 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 tcond=tic;
                 Condensing(mem, settings);        
                 tCOND=toc(tcond)*1e3;
-                [tQP, mem] = mpc_qp_solve_dense(settings,mem);
+                [tQP, mem] = mpc_qp_solve_hpipm_dense(settings,mem);
+%             case 'hpipm_pcond'
+%                 tCOND = 0;
+%                 tqp=tic;
+%                 hpipm_pcond(mem,settings);
+%                 tQP = toc(tqp)*1e3;
         end
                 
         %% ---------- Line search
