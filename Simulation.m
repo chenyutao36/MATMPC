@@ -32,7 +32,7 @@ settings.N = N;
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton' 
-opt.qpsolver='hpipm_dense'; %'qpoases', 'quadprog', 'hpipm_sparse', 'hpipm_dense'
+opt.qpsolver='hpipm_pcond'; %'qpoases', 'quadprog', 'hpipm_sparse', 'hpipm_dense','hpipm_pcond'
 opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='yes'; % 'yes','no'

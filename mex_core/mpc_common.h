@@ -15,4 +15,6 @@ void print_matrix(double *A, size_t m, size_t n);
 
 void print_vector(double *x, size_t m);
 
+void regularization(size_t n, double *A, double reg);
+
 #endif

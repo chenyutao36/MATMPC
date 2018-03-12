@@ -92,45 +92,64 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
     int ng = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
     int ngN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
-    int N = mxGetScalar( mxGetField(prhs[1], 0, "N") );  
+    int N = mxGetScalar( mxGetField(prhs[1], 0, "N") ); 
+    int nbu = mxGetScalar( mxGetField(prhs[1], 0, "nbu") ); 
+    double *nbu_idx = mxGetPr( mxGetField(prhs[1], 0, "nbu_idx") ); 
+    
+    double mu0 = mxGetScalar( mxGetField(prhs[0], 0, "mu0") ); 
+    int max_qp_it = mxGetScalar( mxGetField(prhs[0], 0, "max_qp_it") );
+    int pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "pred_corr") );
+    int cond_pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "cond_pred_corr") );
        
-    int nb = nu;
+    int nb = nbu;
     memcpy(x, ds0, nx*sizeof(double));
         	
 	// 
 	int ii, jj;
-	int i_tmp;
+// 	int i_tmp;
 
-	int nb0 = nb<nu ? nb : nu;
-	int nbN = nb-nu>0 ? nb-nu : 0;
+// 	int nb0 = nb<nu ? nb : nu;
+// 	int nbN = nb-nu>0 ? nb-nu : 0;
+    int nb0 = nbu;
+    int nbN = 0;
 
+    // number of states for each stage
 	int nx_v[N+1];
 	nx_v[0] = 0;
 	for(ii=1; ii<=N; ii++)
 		nx_v[ii] = nx;
 
+    // number of controls for each stage
 	int nu_v[N+1];
 	for(ii=0; ii<N; ii++)
 		nu_v[ii] = nu;
 	nu_v[N] = 0;
 
+    // always nbu
 	int nb_v[N+1];
-	nb_v[0] = nb<nu ? nb : nu;
+// 	nb_v[0] = nb<nu ? nb : nu;
+    nb_v[0] = nbu;
 	for(ii=1; ii<N; ii++)
-		nb_v[ii] = nb;
-	i_tmp = nb-nu;
-	nb_v[N] = i_tmp<0 ? 0 : i_tmp;
-
+// 		nb_v[ii] = nb;
+        nb_v[ii] = nbu;
+// 	i_tmp = nb-nu;
+// 	nb_v[N] = i_tmp<0 ? 0 : i_tmp;
+    nb_v[N] = 0;
+    
+    // always nbu
 	int nbu_v[N+1];
 	for(ii=0; ii<N; ii++)
-		nbu_v[ii] = nb<nu ? nb : nu;
+// 		nbu_v[ii] = nb<nu ? nb : nu;
+        nbu_v[ii] = nbu;
 	nbu_v[N] = 0;
 
+    // always zero
 	int nbx_v[N+1];
 	for(ii=0; ii<=N; ii++)
 		{
-		i_tmp = nb_v[ii]-nbu_v[ii];
-		nbx_v[ii] = i_tmp>=0 ? i_tmp : 0;
+// 		i_tmp = nb_v[ii]-nbu_v[ii];
+// 		nbx_v[ii] = i_tmp>=0 ? i_tmp : 0;
+        nbx_v[ii] = 0;
 		}
 
 	int ng_v[N+1];
@@ -148,9 +167,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		{
 		hidxb[ii] = ptr_idx+ii*nb;
 		for(jj=0; jj<nb_v[ii]; jj++)
-			hidxb[ii][jj] = jj;
+			hidxb[ii][jj] = (int) nbu_idx[jj]-1;
 		}
-
 
 	double b0[nx];
 	dgemv_n_3l(nx, nx, 1.0, A, nx, x, 1.0, b, b0); // b0 = 1.0*b+1.0*A*x
@@ -302,16 +320,16 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	d_create_ocp_qp_ipm_arg(&dim, &arg, ipm_arg_mem);
 	d_set_default_ocp_qp_ipm_arg(&arg);
 
-	arg.alpha_min = 1e-8;
+	arg.alpha_min = 1e-10;
 	arg.res_g_max = 1e-4;
 	arg.res_b_max = 1e-6;
 	arg.res_d_max = 1e-6;
 	arg.res_m_max = 1e-6;
-	arg.mu0 = 100.0;
-	arg.iter_max = 50;
+	arg.mu0 = mu0;
+	arg.iter_max = max_qp_it;
 	arg.stat_max = 100;
-	arg.pred_corr = 1;
-	arg.cond_pred_corr = 1;
+	arg.pred_corr = pred_corr;
+	arg.cond_pred_corr = cond_pred_corr;
 
 
 	// ipm
@@ -348,8 +366,11 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     dgemv_(nTrans,&nx,&nu,&minus_one_d,S,&nx,u,&one_i,&one_d,pi,&one_i);
     dgemv_(Trans,&ng,&nx,&minus_one_d,C,&ng,mu,&one_i,&one_d,pi,&one_i);
     
+    // print stats
+//     mexPrintf("res_g:%5.3e  res_b:%5.3e  res_d:%5.3e  res_m:%5.3e", workspace.qp_res[0],workspace.qp_res[1],workspace.qp_res[2],workspace.qp_res[3]);
+//     mexPrintf("  No. of It: %d\n", workspace.iter);
+    
     // Free memory
-
 	mxFree(ptr_idx);
     mxFree(lam);
 	mxFree(dim_mem);

@@ -49,3 +49,10 @@ void print_vector(double *x, size_t m){
         mexPrintf("\n");
     }
 }
+
+void regularization(size_t n, double *A, double reg){
+    int i;
+    for (i=0;i<n;i++)
+        if (A[i*n+i]<reg)
+            A[i*n+i] = reg;
+}
