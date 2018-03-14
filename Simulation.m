@@ -27,7 +27,8 @@ nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
 %% solver configurations
-N  = 40;             % No. of shooting points
+
+N  = 60;             % No. of shooting points
 settings.N = N;
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
@@ -35,9 +36,9 @@ opt.hessian='gauss_newton';  % 'gauss_newton'
 opt.qpsolver='hpipm_pcond'; %'qpoases', 'quadprog', 'hpipm_sparse', 'hpipm_dense','hpipm_pcond'
 opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
-opt.shifting='yes'; % 'yes','no'
+opt.shifting='no'; % 'yes','no'
 opt.lin_obj='yes'; % 'yes','no' % if objective function is linear least square
-opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
+opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 
 %% Initialize Data (all users have to do this)
 
@@ -45,12 +46,20 @@ opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 
 %% Initialize Solvers (only for advanced users)
 
+<<<<<<< HEAD
+[mem] = InitMemory(settings, opt, input);
+=======
 mem = InitMemory(settings, opt, input);
+>>>>>>> upstream/master
 
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
+<<<<<<< HEAD
+Tf = 25;  % simulation time
+=======
 Tf = 4;  % simulation time
+>>>>>>> upstream/master
 state_sim= [input.x0]';
 controls_MPC = [input.u0]';
 y_sim = [];
@@ -58,8 +67,17 @@ constraints = [];
 CPT = [];
 ref_traj = [];
 input_u = input.u0';
-
+if strcmp(settings.model,'ActiveSeat_onlyP')
+    load(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_onlyP\activeseatsim.mat']);
+end
 while time(end) < Tf
+    
+    if strcmp(settings.model,'ActiveSeat_onlyP')
+        N=60;
+        para0=[accX(mem.iter) roll_ref(mem.iter) accY(mem.iter)];  
+        para = repmat(para0,1,N+1);
+        input.od=para;
+    end
     
     % the reference input.y is a ny by N matrix
     % the reference input.yN is a nyN by 1 vector
@@ -121,6 +139,7 @@ while time(end) < Tf
     sim_input.x = state_sim(end,:).';
     sim_input.u = output.u(:,1);
     sim_input.p = input.od(:,1)';
+
     xf=full( Simulate_system('Simulate_system', sim_input.x, sim_input.u, sim_input.p) ); 
     
     % Collect outputs

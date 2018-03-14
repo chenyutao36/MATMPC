@@ -1,7 +1,8 @@
 function [Yref] = AS_REF(Tf,Ts)
 
     %% find your path to the original active seat model files
-    cd('e:/study/NNID/Active_seat_belt/Nonlinear');
+    %cd('e:/study/NNID/Active_seat_belt/Nonlinear');
+     cd('C:\Users\enrico\Documents\MATLAB\active seat(original)\nonlinear');
 
     %% read data
     filen = 'Calabogie';
@@ -79,9 +80,12 @@ function [Yref] = AS_REF(Tf,Ts)
     end
 
     %% save your data in the path of your MATMPC
-    save('e:/study/NNID/MATMPC/data/ActiveSeat/AS_REF_DATA', 'REF_XY', 'REF_YX', 'rif_pressione');
+%     save('e:/study/NNID/MATMPC/data/ActiveSeat/AS_REF_DATA', 'REF_XY', 'REF_YX', 'rif_pressione');
+%     
+%     cd('e:/study/NNID/MATMPC');
+    save('C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat\AS_REF_DATA', 'REF_XY', 'REF_YX', 'rif_pressione');
     
-    cd('e:/study/NNID/MATMPC');
+    cd('C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC');
     
     clc;
 end
