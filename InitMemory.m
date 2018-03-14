@@ -19,23 +19,34 @@ function [mem] = InitMemory(settings, opt, input)
     if strcmp(opt.hotstart, 'yes')
         mem.hot_start=1;
     end
-    if strcmp(opt.qpsolver,'qpoases') 
-        mem.qpsolver = 0;
-        mem.qpoases_opt = qpOASES_options('MPC');
-%           mem.qpoases_opt = qpOASES_options('default');
-    end
-    if strcmp(opt.qpsolver,'QORE')
-        mem.qpsolver=1;
-    end
     
-    if strcmp(opt.qpsolver,'quadprog')
-        mem.quadprog_opt.Algorithm = 'interior-point-convex';
-        mem.quadprog_opt.Display = 'off';
-        mem.quadprog_opt.OptimalityTolerance = 1e-6;
-        mem.quadprog_opt.ConstraintTolerance = 1e-6;
-        mem.quadprog_opt.StepTolerance = 1e-6;
+    switch opt.qpsolver
+        case 'qpoases'   
+            mem.qpsolver = 0;
+            mem.qpoases_opt = qpOASES_options('MPC');
+        case 'quadprog'
+            mem.quadprog_opt.Algorithm = 'interior-point-convex';
+            mem.quadprog_opt.Display = 'off';
+            mem.quadprog_opt.OptimalityTolerance = 1e-6;
+            mem.quadprog_opt.ConstraintTolerance = 1e-6;
+            mem.quadprog_opt.StepTolerance = 1e-6;
+        case 'hpipm_sparse'
+            mem.mu0=1e2;
+            mem.max_qp_it = 100;
+            mem.pred_corr = 1;
+            mem.cond_pred_corr = 1;
+        case 'hpipm_dense'
+            mem.mu0=1e2;
+            mem.max_qp_it = 100;
+            mem.pred_corr = 1;
+            mem.cond_pred_corr = 1;
+        case 'hpipm_pcond'
+            mem.mu0=1e2;
+            mem.max_qp_it = 100;
+            mem.pred_corr = 1;
+            mem.cond_pred_corr = 1;
     end
-      
+          
     switch opt.integrator
         case 'ERK4-CASADI'
             mem.sim_method = 0;
@@ -67,13 +78,13 @@ function [mem] = InitMemory(settings, opt, input)
             mem.Sx = eye(nx);
             mem.Su = zeros(nx,nu);
             mem.newton_iter = 8;
-            mem.JFK = mem.h*[mem.B(1)*eye(nx,nx), mem.B(2)*eye(nx,nx), mem.B(3)*eye(nx,nx)];
+            mem.JFK = mem.h*[mem.B_tab(1)*eye(nx,nx), mem.B_tab(2)*eye(nx,nx), mem.B_tab(3)*eye(nx,nx)];
         otherwise 
             error('Please choose a correct integrator');       
     end
     
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-4;          % tolerance on optimality
+    mem.kkt_lim = 1e-1;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor
@@ -114,6 +125,11 @@ function [mem] = InitMemory(settings, opt, input)
         
         [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W);
         Qi = full(Jx'*Jx);
+        for i=1:nx
+            if Qi(i,i)<1e-8
+                Qi(i,i)=1e-8;
+            end
+        end
         Si = full(Jx'*Ju);
         Ri = full(Ju'*Ju);
         mem.Q = repmat(Qi,1,N+1);
@@ -121,13 +137,20 @@ function [mem] = InitMemory(settings, opt, input)
         mem.R = repmat(Ri,1,N);
         
         JN = JN_fun('JN_fun',zeros(nx,1),zeros(np,1),zeros(nyN,1), input.WN);
-        mem.Q(:,N*nx+1:end) = full(JN'*JN);
+        Qf = full(JN'*JN);
+        for i=1:nx
+            if Qf(i,i)<1e-8
+                Qf(i,i)=1e-8;
+            end
+        end
+        mem.Q(:,N*nx+1:end) = Qf;
     else
         mem.lin_obj = 0;
         mem.Q = zeros(nx,nx*(N+1));
         mem.S = zeros(nx,nu*N);
         mem.R = zeros(nu,nu*N);
     end
+    mem.reg = 1e-8;
               
 end
 
