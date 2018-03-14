@@ -162,7 +162,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		ns_v[ii] = 0;
 
 	int *hidxb[N+1];
-	int *ptr_idx = (int *) mxMalloc((N+1)*nb*sizeof(int));
+	int *ptr_idx = (int *) mxCalloc((N+1)*nb, sizeof(int));
 	for(ii=0; ii<=N; ii++)
 		{
 		hidxb[ii] = ptr_idx+ii*nb;
@@ -280,7 +280,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	for(ii=0; ii<N; ii++)
 		hpi[ii] = pi+(ii+1)*nx;
     
-    double *lam = (double *) mxMalloc((2*(N+1)*nb+2*N*ng+2*ngN)*sizeof(double));
+    double *lam = (double *) mxCalloc((2*(N+1)*nb+2*N*ng+2*ngN),sizeof(double));
     for(ii=0; ii<=N; ii++)
         {
 		hlam_lb[ii] = lam+ii*nb;
@@ -291,7 +291,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     
 	// qp dim
 	int dim_size = d_memsize_ocp_qp_dim(N);
-	void *dim_mem = mxMalloc(dim_size);
+// 	void *dim_mem = mxMalloc(dim_size);
+    void *dim_mem = mxCalloc(dim_size,1);
 
 	struct d_ocp_qp_dim dim;
 	d_create_ocp_qp_dim(N, &dim, dim_mem);
@@ -299,7 +300,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	// qp
 	int qp_size = d_memsize_ocp_qp(&dim);
-	void *qp_mem = mxMalloc(qp_size);
+// 	void *qp_mem = mxMalloc(qp_size);
+    void *qp_mem = mxCalloc(qp_size,1);
 	struct d_ocp_qp qp;
 	d_create_ocp_qp(&dim, &qp, qp_mem);
 	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, &qp);
@@ -307,14 +309,16 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	// qp sol
 	int qp_sol_size = d_memsize_ocp_qp_sol(&dim);
-	void *qp_sol_mem = mxMalloc(qp_sol_size);
+// 	void *qp_sol_mem = mxMalloc(qp_sol_size);
+    void *qp_sol_mem = mxCalloc(qp_sol_size,1);
 	struct d_ocp_qp_sol qp_sol;
 	d_create_ocp_qp_sol(&dim, &qp_sol, qp_sol_mem);
 
 
 	// ipm arg
 	int ipm_arg_size = d_memsize_ocp_qp_ipm_arg(&dim);
-	void *ipm_arg_mem = mxMalloc(ipm_arg_size);
+// 	void *ipm_arg_mem = mxMalloc(ipm_arg_size);
+    void *ipm_arg_mem = mxCalloc(ipm_arg_size,1);
 
 	struct d_ocp_qp_ipm_arg arg;
 	d_create_ocp_qp_ipm_arg(&dim, &arg, ipm_arg_mem);
@@ -334,7 +338,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	// ipm
 	int ipm_size = d_memsize_ocp_qp_ipm(&dim, &arg);
-	void *ipm_mem = mxMalloc(ipm_size);
+// 	void *ipm_mem = mxMalloc(ipm_size);
+    void *ipm_mem = mxCalloc(ipm_size,1);
 
 	struct d_ocp_qp_ipm_workspace workspace;
 	d_create_ocp_qp_ipm(&dim, &arg, &workspace, ipm_mem);

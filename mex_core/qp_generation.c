@@ -6,6 +6,7 @@
 #include "erk.h"
 #include "irk.h"
 #include "casadi_wrapper.h"
+#include "mpc_common.h"
 
 #include "blas.h"
 
