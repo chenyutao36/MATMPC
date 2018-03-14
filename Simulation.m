@@ -27,12 +27,13 @@ nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
 
 %% solver configurations
+
 N  = 60;             % No. of shooting points
 settings.N = N;
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton' 
-opt.qpsolver='qpoases'; %'qpoases', 'quadprog'
+opt.qpsolver='hpipm_pcond'; %'qpoases', 'quadprog', 'hpipm_sparse', 'hpipm_dense','hpipm_pcond'
 opt.condensing='full';  %'full'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
@@ -45,12 +46,20 @@ opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 
 %% Initialize Solvers (only for advanced users)
 
+<<<<<<< HEAD
 [mem] = InitMemory(settings, opt, input);
+=======
+mem = InitMemory(settings, opt, input);
+>>>>>>> upstream/master
 
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
+<<<<<<< HEAD
 Tf = 25;  % simulation time
+=======
+Tf = 4;  % simulation time
+>>>>>>> upstream/master
 state_sim= [input.x0]';
 controls_MPC = [input.u0]';
 y_sim = [];
@@ -151,14 +160,17 @@ while time(end) < Tf
     % go to the next sampling instant
     nextTime = mem.iter*Ts; 
     mem.iter = mem.iter+1;
-    disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT)]);
+    disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT) '  SQP_IT:' num2str(output.info.iteration_num)]);
         
     time = [time nextTime];
     
     CPT = [CPT; cpt, tshooting, tcond, tqp];
 end
 
-% qpOASES_sequence( 'c', mem.warm_start);
+%%
+if strcmp(opt.qpsolver, 'qpoases')
+    qpOASES_sequence( 'c', mem.warm_start);
+end
 clear mex;
 
 %% draw pictures (optional)
