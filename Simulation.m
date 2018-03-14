@@ -45,7 +45,7 @@ opt.ref_type=1; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 
 %% Initialize Solvers (only for advanced users)
 
-[input, mem] = InitMemory(settings, opt, input);
+[mem] = InitMemory(settings, opt, input);
 
 %% Simulation (start your simulation...)
 
@@ -58,8 +58,17 @@ constraints = [];
 CPT = [];
 ref_traj = [];
 input_u = input.u0';
-
+if strcmp(settings.model,'ActiveSeat_onlyP')
+    load(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_onlyP\activeseatsim.mat']);
+end
 while time(end) < Tf
+    
+    if strcmp(settings.model,'ActiveSeat_onlyP')
+        N=60;
+        para0=[accX(mem.iter) roll_ref(mem.iter) accY(mem.iter)];  
+        para = repmat(para0,1,N+1);
+        input.od=para;
+    end
     
     % the reference input.y is a ny by N matrix
     % the reference input.yN is a nyN by 1 vector
@@ -121,6 +130,7 @@ while time(end) < Tf
     sim_input.x = state_sim(end,:).';
     sim_input.u = output.u(:,1);
     sim_input.p = input.od(:,1)';
+
     xf=full( Simulate_system('Simulate_system', sim_input.x, sim_input.u, sim_input.p) ); 
     
     % Collect outputs

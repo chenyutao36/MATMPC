@@ -20,11 +20,11 @@ c2 = 2000;
 
 %% Dimensions
 
-nx=8;   % No. of states
-nu=4;   % No. of controls
-ny=7;   % No. of outputs
+nx=5;   % No. of states
+nu=1;   % No. of controls
+ny=2;   % No. of outputs
 nyN=1;  % No. of outputs at the terminal point
-np=0;   % No. of model parameters
+np=3;   % No. of model parameters
 nc=0;   % No. of general constraints
 ncN=0;  % No. of general constraints at the terminal point
 nbx = 0;% nbx = 6; % No. of bounds on states
@@ -43,29 +43,23 @@ QN       = SX.sym('QN',nyN,nyN);
 
 
 %% Active Seat Dynamics
+accX=params(1); 
+roll=params(2); 
+accY=params(3);
 
-accX=states(1);
-roll=states(2);
-accY=states(3);
-prY1=states(4); 
-prY2=states(5); 
-prY3=states(6); 
-y_press=states(7);
-pressY=states(8);
+prY1=states(1); 
+prY2=states(2); 
+prY3=states(3); 
+y_press=states(4);
+pressY=states(5);
 
-daccX=controls(1);
-droll=controls(2);
-daccY=controls(3);
-dpressY=controls(4);
+dpressY=controls(1);
 
 tmp1= (sqrt(prY2^2)*prY3) ;
 tmp2= m*accX*cos(pi/180*alpha)+MM*g*sin(pi/180*alpha) ;
 tmp3= 1/(pi)*atan(tmp2)+0.6 ;
 
-x_dot=[ daccX;...
-        droll;...
-        daccY;...
-        prY2;...
+x_dot=[ prY2;...
        -(c1*(10*prY1)^2+c2)/m*prY2-(k1*(10*prY1)^2+k2)*prY1/m+accY+g*roll-sigma_0*prY3/m; ...
        prY2-tmp1/((Fc*tmp3+((Fs-Fc)*tmp3*exp(-(prY2/vs)^2)))/sigma_0);...               
        200*k1*prY1^2*prY2+(100*k1*prY1^2+k2)*prY2+dpressY;...
@@ -77,7 +71,7 @@ impl_f = xdot - x_dot;
 %% Objectives and constraints
 
 % objectives
-h = [y_press; controls(1:3);pressY; accX; accY ]; 
+h = [y_press; pressY]; 
 hN=pressY;
 
 h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
@@ -111,6 +105,6 @@ Ts_st = 0.005; % shooting interval time
 
 %%
 
-cd('C:\Users\enrico\Documents\MATLAB\GITLAB\NMPCtool');
+cd('C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC');
 
 clc;
