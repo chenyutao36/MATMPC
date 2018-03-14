@@ -77,10 +77,10 @@ casadi_real if_else(casadi_real c, casadi_real x, casadi_real y) { return c!=0 ?
   #endif
 #endif
 
-static const int casadi_s0[36] = {32, 1, 0, 32, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
-static const int casadi_s1[11] = {7, 1, 0, 7, 0, 1, 2, 3, 4, 5, 6};
-static const int casadi_s2[4] = {0, 1, 0, 0};
-static const int casadi_s3[10] = {6, 1, 0, 6, 0, 1, 2, 3, 4, 5};
+static const int casadi_s0[9] = {5, 1, 0, 5, 0, 1, 2, 3, 4};
+static const int casadi_s1[5] = {1, 1, 0, 1, 0};
+static const int casadi_s2[7] = {3, 1, 0, 3, 0, 1, 2};
+static const int casadi_s3[3] = {0, 0, 0};
 
 void casadi_fill(casadi_real* x, int n, casadi_real alpha) {
   int i;
@@ -178,20 +178,8 @@ mxArray* casadi_to_mex(const int* sp, const casadi_real* x) {
 
 #endif
 
-/* path_con_fun:(states[32],controls[7],params[0])->(path_con[6]) */
+/* path_con_fun:(states[5],controls,params[3])->(path_con[]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, int* iw, casadi_real* w, void* mem) {
-  casadi_real a0=arg[0] ? arg[0][4] : 0;
-  if (res[0]!=0) res[0][0]=a0;
-  a0=arg[0] ? arg[0][5] : 0;
-  if (res[0]!=0) res[0][1]=a0;
-  a0=arg[0] ? arg[0][13] : 0;
-  if (res[0]!=0) res[0][2]=a0;
-  a0=arg[0] ? arg[0][14] : 0;
-  if (res[0]!=0) res[0][3]=a0;
-  a0=arg[0] ? arg[0][20] : 0;
-  if (res[0]!=0) res[0][4]=a0;
-  a0=arg[0] ? arg[0][25] : 0;
-  if (res[0]!=0) res[0][5]=a0;
   return 0;
 }
 
@@ -245,7 +233,7 @@ CASADI_SYMBOL_EXPORT int path_con_fun_work(int *sz_arg, int* sz_res, int *sz_iw,
   if (sz_arg) *sz_arg = 3;
   if (sz_res) *sz_res = 1;
   if (sz_iw) *sz_iw = 0;
-  if (sz_w) *sz_w = 1;
+  if (sz_w) *sz_w = 0;
   return 0;
 }
 
@@ -255,15 +243,15 @@ void mex_path_con_fun(int resc, mxArray *resv[], int argc, const mxArray *argv[]
   if (argc>3) mexErrMsgIdAndTxt("Casadi:RuntimeError","Evaluation of \"path_con_fun\" failed. Too many input arguments (%d, max 3)", argc);
   if (resc>1) mexErrMsgIdAndTxt("Casadi:RuntimeError","Evaluation of \"path_con_fun\" failed. Too many output arguments (%d, max 1)", resc);
   int *iw = 0;
-  casadi_real w[77];
+  casadi_real w[14];
   const casadi_real* arg[3] = {0};
-  if (--argc>=0) arg[0] = casadi_from_mex(argv[0], w, casadi_s0, w+45);
-  if (--argc>=0) arg[1] = casadi_from_mex(argv[1], w+32, casadi_s1, w+45);
-  if (--argc>=0) arg[2] = casadi_from_mex(argv[2], w+39, casadi_s2, w+45);
+  if (--argc>=0) arg[0] = casadi_from_mex(argv[0], w, casadi_s0, w+9);
+  if (--argc>=0) arg[1] = casadi_from_mex(argv[1], w+5, casadi_s1, w+9);
+  if (--argc>=0) arg[2] = casadi_from_mex(argv[2], w+6, casadi_s2, w+9);
   casadi_real* res[1] = {0};
   --resc;
-  res[0] = w+39;
-  i = path_con_fun(arg, res, iw, w+45, 0);
+  res[0] = w+9;
+  i = path_con_fun(arg, res, iw, w+9, 0);
   if (i) mexErrMsgIdAndTxt("Casadi:RuntimeError","Evaluation of \"path_con_fun\" failed.");
   if (res[0]) resv[0] = casadi_to_mex(casadi_s3, res[0]);
 }

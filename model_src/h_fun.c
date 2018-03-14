@@ -52,6 +52,7 @@ casadi_real if_else(casadi_real c, casadi_real x, casadi_real y) { return c!=0 ?
 #define casadi_s0 CASADI_PREFIX(s0)
 #define casadi_s1 CASADI_PREFIX(s1)
 #define casadi_s2 CASADI_PREFIX(s2)
+#define casadi_s3 CASADI_PREFIX(s3)
 #define casadi_to_mex CASADI_PREFIX(to_mex)
 
 /* Printing routine */
@@ -76,9 +77,10 @@ casadi_real if_else(casadi_real c, casadi_real x, casadi_real y) { return c!=0 ?
   #endif
 #endif
 
-static const int casadi_s0[36] = {32, 1, 0, 32, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
-static const int casadi_s1[11] = {7, 1, 0, 7, 0, 1, 2, 3, 4, 5, 6};
-static const int casadi_s2[4] = {0, 1, 0, 0};
+static const int casadi_s0[9] = {5, 1, 0, 5, 0, 1, 2, 3, 4};
+static const int casadi_s1[5] = {1, 1, 0, 1, 0};
+static const int casadi_s2[7] = {3, 1, 0, 3, 0, 1, 2};
+static const int casadi_s3[6] = {2, 1, 0, 2, 0, 1};
 
 void casadi_fill(casadi_real* x, int n, casadi_real alpha) {
   int i;
@@ -176,85 +178,12 @@ mxArray* casadi_to_mex(const int* sp, const casadi_real* x) {
 
 #endif
 
-/* h_fun:(states[32],controls[7],params[0])->(h[32]) */
+/* h_fun:(states[5],controls,params[3])->(h[2]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, int* iw, casadi_real* w, void* mem) {
-  casadi_real a0=arg[0] ? arg[0][0] : 0;
-  casadi_real a1=arg[0] ? arg[0][8] : 0;
-  a0=(a0+a1);
+  casadi_real a0=arg[0] ? arg[0][3] : 0;
   if (res[0]!=0) res[0][0]=a0;
-  a0=arg[0] ? arg[0][2] : 0;
-  casadi_real a2=-7.8480000000000008e+000;
-  casadi_real a3=arg[0] ? arg[0][4] : 0;
-  a2=(a2*a3);
-  a0=(a0+a2);
-  a2=8.0000000000000004e-001;
-  casadi_real a4=arg[0] ? arg[0][7] : 0;
-  casadi_real a5=(a2*a4);
-  a0=(a0+a5);
+  a0=arg[0] ? arg[0][4] : 0;
   if (res[0]!=0) res[0][1]=a0;
-  if (res[0]!=0) res[0][2]=a3;
-  a3=arg[0] ? arg[0][5] : 0;
-  if (res[0]!=0) res[0][3]=a3;
-  a3=arg[0] ? arg[0][6] : 0;
-  if (res[0]!=0) res[0][4]=a3;
-  if (res[0]!=0) res[0][5]=a1;
-  a3=arg[0] ? arg[0][9] : 0;
-  a0=arg[0] ? arg[0][17] : 0;
-  a3=(a3+a0);
-  if (res[0]!=0) res[0][6]=a3;
-  a3=arg[0] ? arg[0][11] : 0;
-  a5=7.8480000000000008e+000;
-  casadi_real a6=arg[0] ? arg[0][13] : 0;
-  a5=(a5*a6);
-  a3=(a3+a5);
-  a5=arg[0] ? arg[0][16] : 0;
-  casadi_real a7=(a2*a5);
-  a3=(a3+a7);
-  if (res[0]!=0) res[0][7]=a3;
-  if (res[0]!=0) res[0][8]=a6;
-  a6=arg[0] ? arg[0][14] : 0;
-  if (res[0]!=0) res[0][9]=a6;
-  a6=arg[0] ? arg[0][15] : 0;
-  if (res[0]!=0) res[0][10]=a6;
-  if (res[0]!=0) res[0][11]=a0;
-  a6=arg[0] ? arg[0][18] : 0;
-  a3=arg[0] ? arg[0][22] : 0;
-  a2=(a2*a3);
-  a6=(a6+a2);
-  if (res[0]!=0) res[0][12]=a6;
-  a6=arg[0] ? arg[0][20] : 0;
-  if (res[0]!=0) res[0][13]=a6;
-  a6=arg[0] ? arg[0][21] : 0;
-  if (res[0]!=0) res[0][14]=a6;
-  a6=arg[0] ? arg[0][23] : 0;
-  a2=arg[0] ? arg[0][26] : 0;
-  a6=(a6+a2);
-  if (res[0]!=0) res[0][15]=a6;
-  a6=arg[0] ? arg[0][25] : 0;
-  if (res[0]!=0) res[0][16]=a6;
-  if (res[0]!=0) res[0][17]=a2;
-  a6=arg[0] ? arg[0][30] : 0;
-  if (res[0]!=0) res[0][18]=a6;
-  a6=arg[1] ? arg[1][0] : 0;
-  if (res[0]!=0) res[0][19]=a6;
-  a6=arg[1] ? arg[1][1] : 0;
-  if (res[0]!=0) res[0][20]=a6;
-  a6=arg[1] ? arg[1][2] : 0;
-  if (res[0]!=0) res[0][21]=a6;
-  a6=arg[1] ? arg[1][3] : 0;
-  if (res[0]!=0) res[0][22]=a6;
-  a6=arg[1] ? arg[1][4] : 0;
-  if (res[0]!=0) res[0][23]=a6;
-  a6=arg[1] ? arg[1][5] : 0;
-  if (res[0]!=0) res[0][24]=a6;
-  a6=arg[0] ? arg[0][31] : 0;
-  if (res[0]!=0) res[0][25]=a6;
-  if (res[0]!=0) res[0][26]=a4;
-  if (res[0]!=0) res[0][27]=a1;
-  if (res[0]!=0) res[0][28]=a5;
-  if (res[0]!=0) res[0][29]=a0;
-  if (res[0]!=0) res[0][30]=a3;
-  if (res[0]!=0) res[0][31]=a2;
   return 0;
 }
 
@@ -299,7 +228,7 @@ CASADI_SYMBOL_EXPORT const int* h_fun_sparsity_in(int i) {
 
 CASADI_SYMBOL_EXPORT const int* h_fun_sparsity_out(int i) {
   switch (i) {
-    case 0: return casadi_s0;
+    case 0: return casadi_s3;
     default: return 0;
   }
 }
@@ -308,7 +237,7 @@ CASADI_SYMBOL_EXPORT int h_fun_work(int *sz_arg, int* sz_res, int *sz_iw, int *s
   if (sz_arg) *sz_arg = 3;
   if (sz_res) *sz_res = 1;
   if (sz_iw) *sz_iw = 0;
-  if (sz_w) *sz_w = 8;
+  if (sz_w) *sz_w = 1;
   return 0;
 }
 
@@ -318,17 +247,17 @@ void mex_h_fun(int resc, mxArray *resv[], int argc, const mxArray *argv[]) {
   if (argc>3) mexErrMsgIdAndTxt("Casadi:RuntimeError","Evaluation of \"h_fun\" failed. Too many input arguments (%d, max 3)", argc);
   if (resc>1) mexErrMsgIdAndTxt("Casadi:RuntimeError","Evaluation of \"h_fun\" failed. Too many output arguments (%d, max 1)", resc);
   int *iw = 0;
-  casadi_real w[103];
+  casadi_real w[16];
   const casadi_real* arg[3] = {0};
-  if (--argc>=0) arg[0] = casadi_from_mex(argv[0], w, casadi_s0, w+71);
-  if (--argc>=0) arg[1] = casadi_from_mex(argv[1], w+32, casadi_s1, w+71);
-  if (--argc>=0) arg[2] = casadi_from_mex(argv[2], w+39, casadi_s2, w+71);
+  if (--argc>=0) arg[0] = casadi_from_mex(argv[0], w, casadi_s0, w+11);
+  if (--argc>=0) arg[1] = casadi_from_mex(argv[1], w+5, casadi_s1, w+11);
+  if (--argc>=0) arg[2] = casadi_from_mex(argv[2], w+6, casadi_s2, w+11);
   casadi_real* res[1] = {0};
   --resc;
-  res[0] = w+39;
-  i = h_fun(arg, res, iw, w+71, 0);
+  res[0] = w+9;
+  i = h_fun(arg, res, iw, w+11, 0);
   if (i) mexErrMsgIdAndTxt("Casadi:RuntimeError","Evaluation of \"h_fun\" failed.");
-  if (res[0]) resv[0] = casadi_to_mex(casadi_s0, res[0]);
+  if (res[0]) resv[0] = casadi_to_mex(casadi_s3, res[0]);
 }
 #endif
 
