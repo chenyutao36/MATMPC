@@ -468,8 +468,9 @@ switch settings.model
         
     case 'ActiveSeat'
         % load the data you saved
-        load('e:/study/NNID/MATMPC/data/ActiveSeat/AS_REF_DATA');
+        %load('e:/study/NNID/MATMPC/data/ActiveSeat/AS_REF_DATA');
         
+        load('C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat\AS_REF_DATA');
         figure
         plot(time(1:end-1),y_sim(:,1))
         hold on; grid on;
@@ -559,6 +560,52 @@ switch settings.model
         legend('Actual lateral trunk pressure','Active seat trunk pressure','Pressure induced by platform motion')
         xlabel('time [s]'); ylabel('[Pa]');
         
+%     case 'ActiveSeat_onlyAS'
+%         % load the data you saved
+%         load('C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_vp\AS_REF_DATA');
+%         
+%         figure(1)
+%         plot(time(1:end-1),y_sim(:,1)/0.016,'r','Linewidth',2)
+%         hold on; grid on;
+%         plot(time(1:end-1),rif_pressione(1:Tf/0.005)/0.016,'b-.','Linewidth',2)
+%         legend('Active seat trunk pressure','Reference Pressure')
+%         xlabel('time [s]'); ylabel('[Pa]');
+%         xlabel('time [s]'); ylabel('[m/s^2]');
+% 
+%         figure(2)
+%         plot(time(1:end-1),y_sim(:,2),'r','Linewidth',2)
+%         hold on; grid on;
+%         plot(time(1:end-1),accX(:),'b-.','Linewidth',2)
+%         legend('Actual acceleration X','Reference acceleration X')
+%         xlabel('time [s]'); ylabel('[m/s^2]');
+% 
+%         figure(3)
+%         plot(time(1:end-1),y_sim(:,3),'r','Linewidth',2)
+%         hold on; grid on;
+%         plot(time(1:end-1),roll_ref(:),'b-.','Linewidth',2)
+%         legend('Actual roll angle','Reference roll angle')
+%         xlabel('time [s]'); ylabel('[rad]');
+%         
+%         figure(4)
+%         plot(time(1:end-1),y_sim(:,4),'r','Linewidth',2)
+%         grid on;hold on;
+%         plot(time(1:end-1),accY(:),'b-.','Linewidth',2)
+%         legend('Actual acceleration Y','Reference acceleration Y')
+%         xlabel('time [s]'); ylabel('[m/s^2]');
+%         
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   case 'ActiveSeat_onlyP'
+        % load the data you saved
+        load([pwd,'\data\ActiveSeat_onlyP/AS_REF_DATA_onlyP']);
+        
+        figure(1)
+        plot(time(1:end-1),y_sim(:,1)/0.016,'r','Linewidth',2)
+        hold on; grid on;
+        plot(time(1:end-1),rif_pressione(1:Tf/0.005)/0.016,'b-.','Linewidth',2)
+        legend('Active seat trunk pressure','Reference Pressure')
+        xlabel('time [s]'); ylabel('[Pa]');
+        xlabel('time [s]'); ylabel('[m/s^2]');
+
     case 'TethUAV'
         axes_ref = [];
         axes_lim = [];

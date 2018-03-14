@@ -45,7 +45,7 @@ omega=states(4);
 u=controls(1);
 
 a=-m*l*sin(theta)*omega^2+m*g*cos(theta)*sin(theta)+u;
-b=-m*l*cos(theta)*omega^2+u*cos(theta)+(M+m)*g*sin(theta);
+b=-m*l*cos(theta)*sin(theta)*omega^2+u*cos(theta)+(M+m)*g*sin(theta);
 c=M+m-m*(cos(theta))^2;
 
 x_dot=[v;omega;a/c;b/(l*c)];
