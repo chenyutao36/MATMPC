@@ -80,7 +80,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     
     // dense qp dim
     int dense_qp_dim_size = d_memsize_dense_qp_dim();
-	void *dense_qp_dim_mem = mxMalloc(dense_qp_dim_size);
+	void *dense_qp_dim_mem = mxCalloc(dense_qp_dim_size,1);
 
 	struct d_dense_qp_dim qp_dim;
 	d_create_dense_qp_dim(&qp_dim, dense_qp_dim_mem);
@@ -89,7 +89,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     
     // dense qp
 	int qp_size = d_memsize_dense_qp(&qp_dim);
-	void *qp_mem = mxMalloc(qp_size);
+	void *qp_mem = mxCalloc(qp_size,1);
 
 	struct d_dense_qp qp;
 	d_create_dense_qp(&qp_dim, &qp, qp_mem);
@@ -97,20 +97,20 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     
     // dense qp sol
     int qp_sol_size = d_memsize_dense_qp_sol(&qp_dim);
-	void *qp_sol_mem = mxMalloc(qp_sol_size);
+	void *qp_sol_mem = mxCalloc(qp_sol_size,1);
 
 	struct d_dense_qp_sol qp_sol;
 	d_create_dense_qp_sol(&qp_dim, &qp_sol, qp_sol_mem);
 
 	// ipm arg
 	int ipm_arg_size = d_memsize_dense_qp_ipm_arg(&qp_dim);
-	void *ipm_arg_mem = mxMalloc(ipm_arg_size);
+	void *ipm_arg_mem = mxCalloc(ipm_arg_size,1);
 
 	struct d_dense_qp_ipm_arg arg;
 	d_create_dense_qp_ipm_arg(&qp_dim, &arg, ipm_arg_mem);
 	d_set_default_dense_qp_ipm_arg(&arg);
 
-	arg.alpha_min = 1e-8;
+// 	arg.alpha_min = 1e-8;
 	arg.res_g_max = 1e-4;
 	arg.res_b_max = 1e-6;
 	arg.res_d_max = 1e-6;
@@ -121,7 +121,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	arg.pred_corr = pred_corr;
 	arg.cond_pred_corr = cond_pred_corr;
 
-    double *lam = (double *) mxMalloc(2*(nb+ng)*sizeof(double));
+    double *lam = (double *) mxCalloc(2*(nb+ng),sizeof(double));
     double *lam_lb = lam;
     double *lam_ub = lam+nb;
     double *lam_lg = lam+2*nb;
@@ -129,7 +129,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	// ipm
 	int ipm_size = d_memsize_dense_qp_ipm(&qp_dim, &arg);
-	void *ipm_mem = mxMalloc(ipm_size);
+	void *ipm_mem = mxCalloc(ipm_size,1);
 
 	struct d_dense_qp_ipm_workspace workspace;
 	d_create_dense_qp_ipm(&qp_dim, &arg, &workspace, ipm_mem);
@@ -147,8 +147,26 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mu_vec[i] = lam_ug[i]-lam_lg[i];
     
     //print stats
-    mexPrintf("res_g:%5.3e  res_b:%5.3e  res_d:%5.3e  res_m:%5.3e", workspace.qp_res[0],workspace.qp_res[1],workspace.qp_res[2],workspace.qp_res[3]);
-    mexPrintf("  No. of It: %d\n", workspace.iter);
+    int err = 0;
+    if (workspace.qp_res[0]>arg.res_g_max){
+        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[0], arg.res_g_max);
+        err++;
+    }
+    if (workspace.qp_res[1]>arg.res_b_max){
+        mexPrintf("res_b:%5.3e   res_b_max:%5.3e\n", workspace.qp_res[1], arg.res_b_max);
+        err++;
+    }
+    if (workspace.qp_res[2]>arg.res_d_max){
+        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[2], arg.res_d_max);
+        err++;
+    }
+    if (workspace.qp_res[3]>arg.res_m_max){
+        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[3], arg.res_m_max);
+        err++;
+    }
+    
+    if (err > 0)
+        mexErrMsgTxt("QP solver does not converge!");
         
     // Free memory
     mxFree(idxb);
