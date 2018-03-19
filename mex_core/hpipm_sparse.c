@@ -93,15 +93,15 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int ng = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
     int ngN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
     int N = mxGetScalar( mxGetField(prhs[1], 0, "N") ); 
-    int nbu = mxGetScalar( mxGetField(prhs[1], 0, "nbu") ); 
-    double *nbu_idx = mxGetPr( mxGetField(prhs[1], 0, "nbu_idx") ); 
+//     int nbu = mxGetScalar( mxGetField(prhs[1], 0, "nbu") ); 
+//     double *nbu_idx = mxGetPr( mxGetField(prhs[1], 0, "nbu_idx") ); 
     
     double mu0 = mxGetScalar( mxGetField(prhs[0], 0, "mu0") ); 
     int max_qp_it = mxGetScalar( mxGetField(prhs[0], 0, "max_qp_it") );
     int pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "pred_corr") );
     int cond_pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "cond_pred_corr") );
        
-    int nb = nbu;
+    int nb = nu;
     memcpy(x, ds0, nx*sizeof(double));
         	
 	// 
@@ -110,7 +110,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 // 	int nb0 = nb<nu ? nb : nu;
 // 	int nbN = nb-nu>0 ? nb-nu : 0;
-    int nb0 = nbu;
+    int nb0 = nu;
     int nbN = 0;
 
     // number of states for each stage
@@ -128,10 +128,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     // always nbu
 	int nb_v[N+1];
 // 	nb_v[0] = nb<nu ? nb : nu;
-    nb_v[0] = nbu;
+    nb_v[0] = nb;
 	for(ii=1; ii<N; ii++)
-// 		nb_v[ii] = nb;
-        nb_v[ii] = nbu;
+		nb_v[ii] = nb;
+//         nb_v[ii] = nbu;
 // 	i_tmp = nb-nu;
 // 	nb_v[N] = i_tmp<0 ? 0 : i_tmp;
     nb_v[N] = 0;
@@ -140,7 +140,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	int nbu_v[N+1];
 	for(ii=0; ii<N; ii++)
 // 		nbu_v[ii] = nb<nu ? nb : nu;
-        nbu_v[ii] = nbu;
+        nbu_v[ii] = nb;
 	nbu_v[N] = 0;
 
     // always zero
@@ -167,7 +167,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		{
 		hidxb[ii] = ptr_idx+ii*nb;
 		for(jj=0; jj<nb_v[ii]; jj++)
-			hidxb[ii][jj] = (int) nbu_idx[jj]-1;
+// 			hidxb[ii][jj] = (int) nbu_idx[jj]-1;
+            hidxb[ii][jj] = jj;
 		}
 
 	double b0[nx];

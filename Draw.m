@@ -596,7 +596,7 @@ switch settings.model
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    case 'ActiveSeat_onlyP'
         % load the data you saved
-        load([pwd,'\data\ActiveSeat_onlyP/AS_REF_DATA_onlyP']);
+        load([pwd,'/data/ActiveSeat_onlyP/AS_REF_DATA_onlyP']);
         
         figure(1)
         plot(time(1:end-1),y_sim(:,1)/0.016,'r','Linewidth',2)
@@ -703,6 +703,161 @@ switch settings.model
         title('fL');
         
     case 'TethUAV_param'
+         
+        phi_ref = input.od(1,1);
+        phi_ref = repmat(phi_ref, size(time));
+        theta_ref = input.od(2,1);
+        theta_ref = repmat(theta_ref, size(time));
+        axes_ref = [];
+        axes_lim = [];
+        
+        figure();      
+        subplot(221)
+        hold on;
+        grid on;
+        plot(time(1:end),rad2deg(state_sim(:,1)),'Color',red);
+%         if isempty(ref_traj) ~=1
+%             plot(time(1:end-1),ref_traj(1,:), 'k--');
+%         end
+        plot(time(1:end),rad2deg(phi_ref),'k--');
+        title('\phi');
+        legend('\phi','ref');
+        ax = gca; % current axes
+        axes_ref = [axes_ref; ax];
+        axes_lim = [axes_lim; ax.YLim];
+        
+        subplot(222)
+        hold on;
+        grid on;
+        plot(time(1:end),rad2deg(state_sim(:,2)),'Color',red);
+%         if isempty(ref_traj) ~=1
+%             plot(time(1:end-1),ref_traj(2,:), 'k--');
+%         end
+        title('\phi_{dot}');
+        legend('\phi_{dot}')
+%         legend('\phi_{dot}','ref');
+        ax = gca; % current axes
+        axes_ref = [axes_ref; ax];
+        axes_lim = [axes_lim; ax.YLim];
+         
+        subplot(223)
+        hold on;
+        grid on;
+        plot(time(1:end),rad2deg(state_sim(:,3)),'Color',red);
+%         if isempty(ref_traj) ~=1
+%             plot(time(1:end-1),ref_traj(3,:), 'k--');
+%         end
+        plot(time(1:end),rad2deg(theta_ref),'k--');
+        title('\theta');
+        legend('\theta','ref');
+        ax = gca; % current axes
+        axes_ref = [axes_ref; ax];
+        axes_lim = [axes_lim; ax.YLim];
+        
+        subplot(224)
+        hold on;
+        grid on;
+        plot(time(1:end),rad2deg(state_sim(:,4)),'Color',red);
+%         if isempty(ref_traj) ~=1
+%             plot(time(1:end-1),ref_traj(4,:), 'k--');
+%         end
+        title('\theta_{dot}');
+        legend('\theta_{dot}');%,'ref');
+        ax = gca; % current axes
+        axes_ref = [axes_ref; ax];
+        axes_lim = [axes_lim; ax.YLim];
+        
+        % set axes limits, the same for all the plots:
+        maxY = max(axes_lim(:,2));
+        minY = min(axes_lim(:,1));
+        for i = 1 : length(axes_lim)
+            cur_ax = axes_ref(i);
+            cur_ax.YLim = [minY maxY];
+        end
+        
+        figure()
+        subplot(211)
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,5),'Color',red);
+        title('f1');
+        
+        subplot(212)
+        hold on;
+        grid on;
+        plot(time(1:end),state_sim(:,6),'Color',red);
+        title('f2');
+        
+        figure();
+        subplot(211)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,1),'Color',red);
+        title('df1');
+        
+        subplot(212)
+        hold on;
+        grid on;
+        plot(time(1:end),controls_MPC(:,2),'Color',red);
+        title('df2');
+        
+        figure();
+        grid on;
+        plot(time(1:end-1),constraints(:,1),'Color',red);
+        title('fL');
+
+        % plot time statistics
+        
+        figure();
+        hold on;
+        grid on;
+        plot(time(2:end-1)', CPT(2:end, 1)); % cpt, tshooting, tcond, tqp
+%         plot(time(2:end-1)', CPT(2:end, 2));
+%         plot(time(2:end-1)', CPT(2:end, 3));
+%         plot(time(2:end-1)', CPT(2:end, 4));
+        title('Time statistics');
+%         legend('cpt', 'tshooting', 'tcond', 'tqp');
+        xlabel('[s]')
+        ylabel('[ms]')
+        
+        % plot nonlinear cost fcn terms
+        
+        figure();
+        hold on;
+        grid on;
+        plot(time', rad2deg(state_sim(:,1)+state_sim(:,3)));
+        plot(time', rad2deg(pi/2)*ones(size(time)));
+        title('Cost fcn: Avoid singularity');
+        legend('\phi + \theta', '\pi/2');
+        xlabel('[s]')
+        ylabel('[deg]')
+        
+        figure();
+        hold on;
+        grid on;
+        plot(time', rad2deg(state_sim(:,1)), 'k');
+        plot(time, rad2deg(phi_ref), 'k--');
+        plot(time', rad2deg(state_sim(:,3)), 'r');
+        plot(time, rad2deg(theta_ref), 'r--');
+        title('Cost fcn: Attitude behavior close to the ground');
+        legend('\phi', '\phi_{ref}', '\theta', '\theta_{ref}');
+        xlabel('[s]')
+        ylabel('[deg]')
+        
+        figure();
+        hold on;
+        grid on;
+        plot(time', rad2deg(state_sim(:,2)), 'r');
+        plot(time', rad2deg(state_sim(:,4)), 'b');
+        plot(time', rad2deg(state_sim(:,1)), 'k');
+        plot(time, rad2deg(phi_ref), 'k--');
+        title('Cost fcn: \phi and \theta velocities close to the ground');
+        leg = legend('$\dot{\phi}$', '$\dot{\theta}$', '$\phi$', '$\phi_{ref}$');
+        set(leg,'Interpreter','latex');
+        xlabel('[s]')
+        ylabel('[deg]')
+        
+    case 'TethUAV_param_1order_slack'
          
         phi_ref = input.od(1,1);
         phi_ref = repmat(phi_ref, size(time));

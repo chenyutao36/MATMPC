@@ -1,9 +1,5 @@
 %% find your path to the original active seat model files
 
-addpath(genpath('C:\Users\enrico\Documents\MATLAB\active seat(original)\nonlinear'));
-
-cd('C:\Users\enrico\Documents\MATLAB\active seat(original)\nonlinear');
-
 %% initialization parameters
 m = 67;
 sigma_0 = 10^4;
@@ -102,9 +98,3 @@ path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states
 
 Ts = 0.005; % simulation sample time
 Ts_st = 0.005; % shooting interval time
-
-%%
-
-cd('C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC');
-
-clc;

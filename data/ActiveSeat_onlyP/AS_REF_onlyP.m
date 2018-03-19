@@ -1,7 +1,7 @@
 function [Yref] = AS_REF_onlyP(Tf,Ts)
 
     %% find your path to the original active seat model files
-    cd(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_onlyP']);
+%     cd(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_onlyP']);
 
 % %% Input signals assignment
     
@@ -15,10 +15,10 @@ for i=1:Tf/Ts
 end
 
     %% save your data in the path of your MATMPC
-    save(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_onlyP\AS_REF_DATA_onlyP'], 'rif_pressione');
+%     save(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_onlyP\AS_REF_DATA_onlyP'], 'rif_pressione');
     
-    cd('C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC'); %return to main
+%     cd('C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC'); %return to main
     
-    clc;
+%     clc;
 end
 

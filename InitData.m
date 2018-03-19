@@ -385,6 +385,70 @@ function [input, data] = InitData(settings)
             ub_g = fL_max;            
             lb_gN = fL_min;
             ub_gN = fL_max;
+        
+        case 'TethUAV_param_1order_slack'
+            
+            input.x0=[0; 0; 0; 0; 9.81; 0];%zeros(nx,1);
+            input.u0=[0; 0; 0; 0];%zeros(nu,1);%
+            alpha = pi/6;
+            para0=[-alpha; alpha];
+            % phi phi_dot theta theta_dot 
+            q = [200, 1, 200, 0, 0.0001, 0.0001, 1, 1, 1, 0, 5000, 5000];
+%             q = [80, 40, 0, 50, 0.0001, 0.0001, 80, 40, 10, 0, 1, 1];
+
+            qN = q(1:nyN);
+            Q = diag(q);
+            QN = diag(qN);
+            
+            b = 1;
+            fR_min = 0;%-inf;
+            fR_max = 15;%inf;
+            tauR_min = -1.2;%-inf;
+            tauR_max = 1.2;%inf;
+            fL_min = 0;%-inf;
+            fL_max = 10;%inf;
+            constr_max = 0;
+            constr_min = -inf;
+            s1_min = 0;
+            s1_max = inf;
+            s2_min = 0;
+            s2_max = inf;
+            
+%             % upper and lower bounds for states (=nbx) if f1,2 are the
+%             % angular velocities
+%             lb_x = 0*ones(nbx,1);
+%             ub_x = omegaMax*ones(nbx,1);
+
+            % upper and lower bounds for states (=nbx) if f1,2 are f_R,
+            % tau_R
+            lb_x = [fR_min; tauR_min];%0*ones(nbx,1);
+            ub_x = [fR_max; tauR_max]; %omegaMax*ones(nbx,1);
+            
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [s1_min; s2_min];
+            ub_u = [s1_max; s2_max];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [fL_min; constr_min; constr_min];
+            ub_g = [fL_max; constr_max; constr_max];            
+            lb_gN = [fL_min];
+            ub_gN = [fL_max];   
+
+            % store the constraint data into input
+            input.lb=repmat([lb_g;lb_x],1,N);
+            input.ub=repmat([ub_g;ub_x],1,N); 
+            input.lbN=[lb_gN;lb_x];               
+            input.ubN=[ub_gN;ub_x]; 
+            
+            lbu = -inf(nu,1);
+            ubu = inf(nu,1);
+            for i=1:nbu
+                lbu(nbu_idx(i)) = lb_u(i);
+                ubu(nbu_idx(i)) = ub_u(i);
+            end
+            
+            input.lbu = repmat(lbu,1,N);
+            input.ubu = repmat(ubu,1,N);
 
     end
 
@@ -470,6 +534,9 @@ function [input, data] = InitData(settings)
             
         case 'TethUAV_param'
             data.REF = zeros(1,ny);
+            
+        case 'TethUAV_param_1order_slack'
+        	data.REF = zeros(1, ny); %[0 0 0 0 0 0];
     end
     
 end
