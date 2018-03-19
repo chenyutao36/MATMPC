@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='InvertedPendulum'; % see the folder "examples" for details
+settings.model='TethUAV_param_1order_slack'; % see the folder "examples" for details
 
 run(settings.model);
 

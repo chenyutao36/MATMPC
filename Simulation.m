@@ -28,15 +28,15 @@ ncN = settings.ncN;  % No. of constraints at terminal stage
 
 %% solver configurations
 
-N  = 40;             % No. of shooting points
+N  = 60;             % No. of shooting points
 settings.N = N;
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
-opt.hessian='gauss_newton';  % 'gauss_newton' 
+opt.hessian='gauss_newton';  % 'gauss_newton'
+opt.condensing='default_full';  %'default_full', 'hpipm_full','hpipm_partial','no'
 opt.qpsolver='qpoases'; %'qpoases', 'quadprog', 'hpipm_sparse', 'hpipm_dense','hpipm_pcond'
-opt.condensing='hpipm_full';  %'default_full', 'hpipm_full','hpipm_partial','no'
-opt.hotstart='no'; %'yes','no' (only for qpoases)
-opt.shifting='yes'; % 'yes','no'
+opt.hotstart='yes'; %'yes','no' (only for qpoases)
+opt.shifting='no'; % 'yes','no'
 opt.lin_obj='yes'; % 'yes','no' % if objective function is linear least square
 opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 
@@ -51,7 +51,7 @@ mem = InitMemory(settings, opt, input);
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
-Tf = 4;  % simulation time
+Tf = 20;  % simulation time
 state_sim= [input.x0]';
 controls_MPC = [input.u0]';
 y_sim = [];
@@ -60,7 +60,7 @@ CPT = [];
 ref_traj = [];
 input_u = input.u0';
 if strcmp(settings.model,'ActiveSeat_onlyP')
-    load(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_onlyP\activeseatsim.mat']);
+    load(['/home/chen/Documents/Packages/MATMPC/data/ActiveSeat_onlyP/activeseatsim.mat']);
 end
 while time(end) < Tf
     
