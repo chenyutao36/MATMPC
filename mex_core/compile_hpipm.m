@@ -36,7 +36,7 @@ mexfiles_pcond = ['hpipm_pcond.c ', ...
        
 mexcmd = 'mex';
 
-mexcmd = [mexcmd, ' -DINT64 CFLAGS="\$CFLAGS -std=c99" GCC="/usr/bin/gcc-4.9"'];
+mexcmd = [mexcmd, ' -O -DINT64 CFLAGS="\$CFLAGS -std=c99" GCC="/usr/bin/gcc-4.9"'];
 
 mexcmd = [mexcmd, ' -I.. -I/opt/OpenBLAS/include -I/opt/hpipm/include -I/opt/blasfeo/include'];
 
