@@ -93,8 +93,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int ng = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
     int ngN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
     int N = mxGetScalar( mxGetField(prhs[1], 0, "N") ); 
-//     int nbu = mxGetScalar( mxGetField(prhs[1], 0, "nbu") ); 
-//     double *nbu_idx = mxGetPr( mxGetField(prhs[1], 0, "nbu_idx") ); 
     
     double mu0 = mxGetScalar( mxGetField(prhs[0], 0, "mu0") ); 
     int max_qp_it = mxGetScalar( mxGetField(prhs[0], 0, "max_qp_it") );
@@ -106,10 +104,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         	
 	// 
 	int ii, jj;
-// 	int i_tmp;
-
-// 	int nb0 = nb<nu ? nb : nu;
-// 	int nbN = nb-nu>0 ? nb-nu : 0;
     int nb0 = nu;
     int nbN = 0;
 
@@ -125,33 +119,24 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		nu_v[ii] = nu;
 	nu_v[N] = 0;
 
-    // always nbu
+    // always nu
 	int nb_v[N+1];
-// 	nb_v[0] = nb<nu ? nb : nu;
     nb_v[0] = nb;
 	for(ii=1; ii<N; ii++)
 		nb_v[ii] = nb;
-//         nb_v[ii] = nbu;
-// 	i_tmp = nb-nu;
-// 	nb_v[N] = i_tmp<0 ? 0 : i_tmp;
     nb_v[N] = 0;
     
-    // always nbu
+    // always nu
 	int nbu_v[N+1];
 	for(ii=0; ii<N; ii++)
-// 		nbu_v[ii] = nb<nu ? nb : nu;
         nbu_v[ii] = nb;
 	nbu_v[N] = 0;
 
     // always zero
 	int nbx_v[N+1];
 	for(ii=0; ii<=N; ii++)
-		{
-// 		i_tmp = nb_v[ii]-nbu_v[ii];
-// 		nbx_v[ii] = i_tmp>=0 ? i_tmp : 0;
         nbx_v[ii] = 0;
-		}
-
+		
 	int ng_v[N+1];
 	for(ii=0; ii<N; ii++)
 		ng_v[ii] = ng;
@@ -162,12 +147,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		ns_v[ii] = 0;
 
 	int *hidxb[N+1];
-	int *ptr_idx = (int *) mxCalloc((N+1)*nb, sizeof(int));
 	for(ii=0; ii<=N; ii++)
 		{
-		hidxb[ii] = ptr_idx+ii*nb;
+		hidxb[ii] = (int *)mxCalloc(nb_v[ii],sizeof(int));
 		for(jj=0; jj<nb_v[ii]; jj++)
-// 			hidxb[ii][jj] = (int) nbu_idx[jj]-1;
             hidxb[ii][jj] = jj;
 		}
 
@@ -281,13 +264,12 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	for(ii=0; ii<N; ii++)
 		hpi[ii] = pi+(ii+1)*nx;
     
-    double *lam = (double *) mxCalloc((2*(N+1)*nb+2*N*ng+2*ngN),sizeof(double));
     for(ii=0; ii<=N; ii++)
         {
-		hlam_lb[ii] = lam+ii*nb;
-		hlam_ub[ii] = lam+(N+1)*nb+ii*nb;
-		hlam_lg[ii] = lam+2*(N+1)*nb+ii*ng;
-        hlam_ug[ii] = lam+2*(N+1)*nb+N*ng+ngN+ii*ng;
+		hlam_lb[ii] = (double *)mxCalloc(nb_v[ii],sizeof(double));
+		hlam_ub[ii] = (double *)mxCalloc(nb_v[ii],sizeof(double));
+		hlam_lg[ii] = (double *)mxCalloc(ng_v[ii],sizeof(double));
+        hlam_ug[ii] = (double *)mxCalloc(ng_v[ii],sizeof(double));
         }
     
 	// qp dim
@@ -390,8 +372,14 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mexErrMsgTxt("QP solver does not converge!");
       
     // Free memory
-	mxFree(ptr_idx);
-    mxFree(lam);
+	for(ii=0;ii<=N;ii++){
+        mxFree(hidxb[ii]);
+        mxFree(hlam_lb[ii]);
+        mxFree(hlam_ub[ii]);
+        mxFree(hlam_lg[ii]);
+        mxFree(hlam_ug[ii]);
+    }
+    
 	mxFree(dim_mem);
 	mxFree(qp_mem);
 	mxFree(qp_sol_mem);

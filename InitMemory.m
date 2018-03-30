@@ -24,6 +24,9 @@ function [mem] = InitMemory(settings, opt, input)
         case 'qpoases'   
             mem.qpsolver = 0;
             mem.qpoases_opt = qpOASES_options('MPC');
+        case 'qore'
+            addpath(genpath('/home/chen/Documents/Packages/QORE/Matlab_dense'));
+            mem.qpsolver = 1;
         case 'quadprog'
             mem.quadprog_opt.Algorithm = 'interior-point-convex';
             mem.quadprog_opt.Display = 'off';
@@ -31,16 +34,6 @@ function [mem] = InitMemory(settings, opt, input)
             mem.quadprog_opt.ConstraintTolerance = 1e-6;
             mem.quadprog_opt.StepTolerance = 1e-6;
         case 'hpipm_sparse'
-            mem.mu0=1e2;
-            mem.max_qp_it = 100;
-            mem.pred_corr = 1;
-            mem.cond_pred_corr = 1;
-        case 'hpipm_dense'
-            mem.mu0=1e2;
-            mem.max_qp_it = 100;
-            mem.pred_corr = 1;
-            mem.cond_pred_corr = 1;
-        case 'hpipm_pcond'
             mem.mu0=1e2;
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
