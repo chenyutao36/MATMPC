@@ -38,6 +38,11 @@ function [mem] = InitMemory(settings, opt, input)
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
+        case 'hpipm_pcond'
+            mem.mu0=1e2;
+            mem.max_qp_it = 100;
+            mem.pred_corr = 1;
+            mem.cond_pred_corr = 1;
     end
           
     switch opt.integrator

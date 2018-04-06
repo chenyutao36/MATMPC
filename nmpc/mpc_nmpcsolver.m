@@ -38,6 +38,10 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 tqp=tic;
                 hpipm_sparse(mem,settings);
                 tQP = toc(tqp)*1e3;
+            case 'hpipm_pcond'               
+                tqp=tic;
+                hpipm_pcond(mem,settings);
+                tQP = toc(tqp)*1e3;
         end
         
 

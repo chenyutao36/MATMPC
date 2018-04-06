@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='TethUAV_param_1order_slack'; % see the folder "examples" for details
+settings.model='InvertedPendulum'; % see the folder "examples" for details
 
 run(settings.model);
 
@@ -18,7 +18,7 @@ mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality co
 muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 1; % No. of integration steps per sample interval
+s  = 2; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
@@ -34,7 +34,7 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-s  = 1; % No. of integration steps per shooting interval
+s  = 2; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
 
