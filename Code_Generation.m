@@ -121,6 +121,8 @@ end
 adj_fun = Function('adj_fun',{states,controls,params,refs,Q,lambdai,mui},{dobj, adj_dG, adj_dB});
 adjN_fun = Function('adjN_fun',{states,params,refN, QN, muN},{dobjN, adj_dBN});
 
+adj_dG_fun = Function('adj_dG_fun',{states,controls,params,refs,Q,lambdai},{dobj, adj_dG});
+
 %% Code generation and Compile
 
 generate=input('Would you like to generate the source code?(y/n)','s');
@@ -164,6 +166,8 @@ if strcmp(generate,'y')
         P.add(CN_fun);
         P.add(adj_fun);
         P.add(adjN_fun);
+        
+        P.add(adj_dG_fun);
         
         P.generate();
     cd ..

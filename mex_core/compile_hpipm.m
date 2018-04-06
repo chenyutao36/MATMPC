@@ -46,8 +46,8 @@ mexcmd_cond = [mexcmd, ' ', mexfiles_cond];
 mexcmd_bcd = [mexcmd, ' ', mexfiles_bcd];
 mexcmd_pcond = [mexcmd, ' ', mexfiles_pcond];
 
-eval(mexcmd_sp);
+% eval(mexcmd_sp);
 % eval(mexcmd_d);
-% eval(mexcmd_cond);
+eval(mexcmd_cond);
 % eval(mexcmd_bcd);
-eval(mexcmd_pcond);
+% eval(mexcmd_pcond);
