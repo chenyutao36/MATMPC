@@ -34,6 +34,7 @@
 #include "hpipm_d_ocp_qp.h"
 #include "hpipm_d_ocp_qp_sol.h"
 #include "hpipm_d_ocp_qp_ipm.h"
+#include "hpipm_d_part_cond.h"
  
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	{
@@ -68,13 +69,17 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
     int ng = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
     int ngN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
-    int N = mxGetScalar( mxGetField(prhs[1], 0, "N") ); 
+    int N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
+    int N2 = mxGetScalar( mxGetField(prhs[1], 0, "N2") ); 
+    int nbu = mxGetScalar( mxGetField(prhs[1], 0, "nbu") ); 
+    double *nbu_idx = mxGetPr( mxGetField(prhs[1], 0, "nbu_idx") ); 
     
     double mu0 = mxGetScalar( mxGetField(prhs[0], 0, "mu0") ); 
     int max_qp_it = mxGetScalar( mxGetField(prhs[0], 0, "max_qp_it") );
     int pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "pred_corr") );
     int cond_pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "cond_pred_corr") );
                	
+	// 
 	int ii, jj;
 
     // number of states for each stage
@@ -219,42 +224,77 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         hlam_ug[ii] = (double *)mxCalloc(ng_v[ii],sizeof(double));
         }
     
-	// qp dim
-	int dim_size = d_memsize_ocp_qp_dim(N);
-    void *dim_mem = mxCalloc(dim_size,1);
+	// ocp qp dim
+	int ocp_qp_dim_size = d_memsize_ocp_qp_dim(N);
+	void *ocp_qp_dim_mem = mxCalloc(ocp_qp_dim_size,1);
 
-	struct d_ocp_qp_dim dim;
-	d_create_ocp_qp_dim(N, &dim, dim_mem);
-	d_cvt_int_to_ocp_qp_dim(N, nx_v, nu_v, nbx_v, nbu_v, ng_v, ns_v, &dim);
+	struct d_ocp_qp_dim ocp_qp_dim;
+	d_create_ocp_qp_dim(N, &ocp_qp_dim, ocp_qp_dim_mem);
+	d_cvt_int_to_ocp_qp_dim(N, nx_v, nu_v, nbx_v, nbu_v, ng_v, ns_v, &ocp_qp_dim);
+
+	// ocp qp
+	int ocp_qp_size = d_memsize_ocp_qp(&ocp_qp_dim);
+	void *ocp_qp_mem = mxCalloc(ocp_qp_size,1);
+	struct d_ocp_qp ocp_qp;
+	d_create_ocp_qp(&ocp_qp_dim, &ocp_qp, ocp_qp_mem);
+	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, &ocp_qp);
+
+    // partial ocp qp dim
+    int nx2[N2+1];
+	int nu2[N2+1];
+	int nb2[N2+1];
+	int nbx2[N2+1];
+	int nbu2[N2+1];
+	int ng2[N2+1];
+	int ns2[N2+1];
     
-//     for(ii=0;ii<=N;ii++){
-//         mexPrintf("%d  %d  %d  %d  %d \n", nx_v[ii], nu_v[ii], nbx_v[ii], nbu_v[ii], ng_v[ii]);
-//     }
+    int ocp_qp_dim_size2 = d_memsize_ocp_qp_dim(N2);
+	void *ocp_qp_dim_mem2 = mxCalloc(ocp_qp_dim_size2,1);
 
-	// qp
-	int qp_size = d_memsize_ocp_qp(&dim);
-    void *qp_mem = mxCalloc(qp_size,1);
-	struct d_ocp_qp qp;
-	d_create_ocp_qp(&dim, &qp, qp_mem);
-	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, &qp);
+	struct d_ocp_qp_dim ocp_qp_dim2;
+	d_create_ocp_qp_dim(N2, &ocp_qp_dim2, ocp_qp_dim_mem2);
+	d_cvt_int_to_ocp_qp_dim(N2, nx2, nu2, nbx2, nbu2, ng2, ns2, &ocp_qp_dim2);
+    
+    int block_size[N2+1];
+    
+    d_compute_block_size_cond_qp_ocp2ocp(N, N2, block_size);
+    d_compute_qp_dim_ocp2ocp(&ocp_qp_dim, block_size, &ocp_qp_dim2);
+        
+    // partial ocp qp
+    int ocp_qp_size2 = d_memsize_ocp_qp(&ocp_qp_dim2);
+	void *ocp_qp_mem2 = mxCalloc(ocp_qp_size2,1);
+	struct d_ocp_qp ocp_qp2;
+	d_create_ocp_qp(&ocp_qp_dim2, &ocp_qp2, ocp_qp_mem2);
+    
+    // partial condensing arg
+    int part_cond_arg_size = d_memsize_cond_qp_ocp2ocp_arg(N2);
+    void *part_cond_arg_mem = mxCalloc(part_cond_arg_size,1);
+    struct d_cond_qp_ocp2ocp_arg part_cond_arg;
+    d_create_cond_qp_ocp2ocp_arg(N2, &part_cond_arg, part_cond_arg_mem);
+    d_set_default_cond_qp_ocp2ocp_arg(N2, &part_cond_arg);
 
-
-	// qp sol
-	int qp_sol_size = d_memsize_ocp_qp_sol(&dim);
-    void *qp_sol_mem = mxCalloc(qp_sol_size,1);
-	struct d_ocp_qp_sol qp_sol;
-	d_create_ocp_qp_sol(&dim, &qp_sol, qp_sol_mem);
-
+    // partial condensing workspace
+	int part_cond_size = d_memsize_cond_qp_ocp2ocp(&ocp_qp_dim, block_size, &ocp_qp_dim2, &part_cond_arg);
+	void *part_cond_mem = mxCalloc(part_cond_size,1);
+	struct d_cond_qp_ocp2ocp_workspace part_cond_ws;
+	d_create_cond_qp_ocp2ocp(&ocp_qp_dim, block_size, &ocp_qp_dim2, &part_cond_arg, &part_cond_ws, part_cond_mem);
+    
+    // call partial condensing
+    d_cond_qp_ocp2ocp(&ocp_qp, &ocp_qp2, &part_cond_arg, &part_cond_ws);
+    
+	// partial qp sol
+	int ocp_qp_sol_size2 = d_memsize_ocp_qp_sol(&ocp_qp_dim2);
+	void *ocp_qp_sol_mem2 = mxCalloc(ocp_qp_sol_size2,1);
+	struct d_ocp_qp_sol ocp_qp_sol2;
+	d_create_ocp_qp_sol(&ocp_qp_dim2, &ocp_qp_sol2, ocp_qp_sol_mem2);
 
 	// ipm arg
-	int ipm_arg_size = d_memsize_ocp_qp_ipm_arg(&dim);
-    void *ipm_arg_mem = mxCalloc(ipm_arg_size,1);
-
+	int ipm_arg_size = d_memsize_ocp_qp_ipm_arg(&ocp_qp_dim2);
+	void *ipm_arg_mem = mxCalloc(ipm_arg_size,1);
 	struct d_ocp_qp_ipm_arg arg;
-	d_create_ocp_qp_ipm_arg(&dim, &arg, ipm_arg_mem);
+	d_create_ocp_qp_ipm_arg(&ocp_qp_dim2, &arg, ipm_arg_mem);
 	d_set_default_ocp_qp_ipm_arg(&arg);
 
-// 	arg.alpha_min = 1e-12;
 	arg.res_g_max = 1e-4;
 	arg.res_b_max = 1e-6;
 	arg.res_d_max = 1e-6;
@@ -265,19 +305,26 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	arg.pred_corr = pred_corr;
 	arg.cond_pred_corr = cond_pred_corr;
 
-
 	// ipm
-	int ipm_size = d_memsize_ocp_qp_ipm(&dim, &arg);
-    void *ipm_mem = mxCalloc(ipm_size,1);
+	int ipm_size = d_memsize_ocp_qp_ipm(&ocp_qp_dim2, &arg);
+	void *ipm_mem = mxCalloc(ipm_size,1);
 
 	struct d_ocp_qp_ipm_workspace workspace;
-	d_create_ocp_qp_ipm(&dim, &arg, &workspace, ipm_mem);
+	d_create_ocp_qp_ipm(&ocp_qp_dim2, &arg, &workspace, ipm_mem);
 
 	// call solver
-	int hpipm_return = d_solve_ocp_qp_ipm(&qp, &qp_sol, &arg, &workspace);
+	int hpipm_return = d_solve_ocp_qp_ipm(&ocp_qp2, &ocp_qp_sol2, &arg, &workspace);
+    
+    // expand
+    int ocp_qp_sol_size = d_memsize_ocp_qp_sol(&ocp_qp_dim);
+	void *ocp_qp_sol_mem = mxCalloc(ocp_qp_sol_size,1);
+	struct d_ocp_qp_sol ocp_qp_sol;
+	d_create_ocp_qp_sol(&ocp_qp_dim, &ocp_qp_sol, ocp_qp_sol_mem);  
+    
+    d_expand_sol_ocp2ocp(&ocp_qp, &ocp_qp2, &ocp_qp_sol2, &ocp_qp_sol, &part_cond_arg, &part_cond_ws);
 
 	// convert back solution
-	d_cvt_ocp_qp_sol_to_colmaj(&qp_sol, hu, hx, NULL, NULL, hpi, hlam_lb, hlam_ub, hlam_lg, hlam_ug, NULL, NULL);
+	d_cvt_ocp_qp_sol_to_colmaj(&ocp_qp_sol, hu, hx, NULL, NULL, hpi, hlam_lb, hlam_ub, hlam_lg, hlam_ug, NULL, NULL);
 
     
     // extrac multipliers
@@ -290,29 +337,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     for(jj=0;jj<ngN;jj++)
         muN[jj] = hlam_ug[N][jj] - hlam_lg[N][jj]; 
-               
-    // print stats
-    int err = 0;
-    if (workspace.qp_res[0]>arg.res_g_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[0], arg.res_g_max);
-        err++;
-    }
-    if (workspace.qp_res[1]>arg.res_b_max){
-        mexPrintf("res_b:%5.3e   res_b_max:%5.3e\n", workspace.qp_res[1], arg.res_b_max);
-        err++;
-    }
-    if (workspace.qp_res[2]>arg.res_d_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[2], arg.res_d_max);
-        err++;
-    }
-    if (workspace.qp_res[3]>arg.res_m_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[3], arg.res_m_max);
-        err++;
-    }
-    
-    if (err > 0)
-        mexErrMsgTxt("QP solver does not converge!");
-      
+                
     // Free memory
 	for(ii=0;ii<=N;ii++){
         mxFree(hidxb[ii]);
@@ -322,9 +347,17 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mxFree(hlam_ug[ii]);
     }
     
-	mxFree(dim_mem);
-	mxFree(qp_mem);
-	mxFree(qp_sol_mem);
+	mxFree(ocp_qp_dim_mem);
+	mxFree(ocp_qp_mem);
+    mxFree(ocp_qp_dim_mem2);
+    mxFree(ocp_qp_mem2);
+    
+    mxFree(part_cond_arg_mem);
+    mxFree(part_cond_mem);
+ 
+    mxFree(ocp_qp_sol_mem);
+	mxFree(ocp_qp_sol_mem2);
+    
 	mxFree(ipm_arg_mem);
 	mxFree(ipm_mem);
 
