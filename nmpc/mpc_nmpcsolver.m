@@ -22,6 +22,10 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 tcond=tic;
                 Condensing(mem, settings);
                 tCOND=toc(tcond)*1e3;
+            case 'hpipm_full'
+                tcond=tic;
+                condensing_hpipm(mem, settings);
+                tCOND=toc(tcond)*1e3;
             case 'no'
                 tCOND = 0;
         end
@@ -29,9 +33,9 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ----------  Solving QP
         switch opt.qpsolver
             case 'qpoases'              
-                [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
+                [tQP,mem] = mpc_qp_solve_qpoases(settings,mem, opt);
             case 'qore'
-                [tQP,mem] = mpc_qp_solve_qore(settings,mem);
+                [tQP,mem] = mpc_qp_solve_qore(settings,mem, opt);
             case 'quadprog'
                 [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);
             case 'hpipm_sparse'               
