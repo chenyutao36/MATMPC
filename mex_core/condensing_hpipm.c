@@ -240,7 +240,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	void *ocp_qp_mem = mxCalloc(ocp_qp_size,1);
 	struct d_ocp_qp ocp_qp;
 	d_create_ocp_qp(&ocp_qp_dim, &ocp_qp, ocp_qp_mem);
-	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, &ocp_qp);
+	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &ocp_qp);
     
     // dense qp dim
     int dense_qp_dim_size = d_memsize_dense_qp_dim();
@@ -288,7 +288,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     double lbb[dense_qp_dim.nb];
     double ubb[dense_qp_dim.nb];
     
-    d_cvt_dense_qp_to_colmaj(&dense_qp, Hc, gc, NULL, NULL, idxb, lbb, ubb, Cc, lgg, ugg, NULL, NULL, NULL, NULL, NULL);
+    d_cvt_dense_qp_to_colmaj(&dense_qp, Hc, gc, NULL, NULL, idxb, lbb, ubb, Cc, lgg, ugg, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     
     
     // Free memory
@@ -304,4 +304,3 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     mxFree(cond_arg_mem);
     mxFree(cond_mem);
 	}
-

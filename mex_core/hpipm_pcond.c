@@ -156,7 +156,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	double *hug[N+1];
 	double *hx[N+1];
 	double *hu[N+1];
-	double *hpi[N+1];
+	double *hpi[N];
 	double *hlam_lb[N+1];
 	double *hlam_ub[N+1];
 	double *hlam_lg[N+1];
@@ -213,8 +213,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	for(ii=0; ii<N; ii++)
 		hu[ii] = u+ii*nu;
 	
-	for(ii=0; ii<=N; ii++)
-		hpi[ii] = pi+ii*nx;
+	for(ii=0; ii<N; ii++)
+		hpi[ii] = pi+(ii+1)*nx;
     
     for(ii=0; ii<=N; ii++)
         {
@@ -237,7 +237,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	void *ocp_qp_mem = mxCalloc(ocp_qp_size,1);
 	struct d_ocp_qp ocp_qp;
 	d_create_ocp_qp(&ocp_qp_dim, &ocp_qp, ocp_qp_mem);
-	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, &ocp_qp);
+	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &ocp_qp);
 
     // partial ocp qp dim
     int nx2[N2+1];
@@ -328,6 +328,9 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     
     // extrac multipliers
+    for(jj=0;jj<nx;jj++)
+        pi[jj] = hlam_ub[0][nu+jj] - hlam_lb[0][nu+jj];
+    
     for(ii=0;ii<N;ii++){       
         for(jj=0;jj<nu;jj++)
             mu_u[ii*nu+jj] = hlam_ub[ii][jj] - hlam_lb[ii][jj];

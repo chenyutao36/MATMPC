@@ -33,8 +33,8 @@ function [cpt_qp, mem] = mpc_qp_solve_qore(sizes,mem, opt)
     dual_sol = QPDenseGetDblVector(mem.qore_id, 'dualsol');
     
     mem.du = reshape(pri_sol(1:N*nu),[nu N]);
-    mem.mu_u_new = dual_sol(1:N*nu);
-    mu_vec = dual_sol(N*nu+1:end);
+    mem.mu_u_new = -dual_sol(1:N*nu);
+    mu_vec = -dual_sol(N*nu+1:end);
     
     if strcmp(opt.condensing,'hpipm_full')
         mem.du = fliplr(mem.du);
