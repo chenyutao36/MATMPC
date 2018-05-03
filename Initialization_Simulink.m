@@ -1,8 +1,8 @@
 clear mex; close all; clear; clc;
 %% Configuration (complete your configuration here...)
-addpath('/home/chen/Documents/Packages/MATMPC/nmpc');
-addpath('/home/chen/Documents/Packages/MATMPC/model_src');
-addpath('/home/chen/Documents/Packages/MATMPC/mex_core');
+addpath([pwd,'/nmpc']);
+addpath([pwd,'/model_src']);
+addpath([pwd,'/mex_core']);
 %% Parametri Simulazione
 
 if exist('settings','file')==2
