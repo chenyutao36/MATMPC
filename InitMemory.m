@@ -8,8 +8,12 @@ function [mem] = InitMemory(settings, opt, input)
     ny = settings.ny;    % No. of outputs (references)    
     nyN= settings.nyN;   % No. of outputs at terminal stage 
     np = settings.np;    % No. of parameters (on-line data)
-    nc = settings.nc;    % No. of constraints
-    ncN = settings.ncN;  % No. of constraints at terminal stage
+    nbx = settings.nbx;  % No. of bounds on states
+    nbu = settings.nbu;  % No. of bounds on controls
+    nbx_idx = settings.nbx_idx; % indexes of states which are bounded
+    nbu_idx = settings.nbu_idx; % indexes of controls which are bounded
+    nc = settings.nc;    % No. of general constraints
+    ncN = settings.ncN;  % No. of general constraints at terminal stage
     N     = settings.N;             % No. of shooting points
 
     %% memory
@@ -81,19 +85,22 @@ function [mem] = InitMemory(settings, opt, input)
             error('Please choose a correct integrator');       
     end
     
+    % globalization
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-1;          % tolerance on optimality
+    mem.kkt_lim = 1e-4;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor
     mem.mu_safty=1.1;            % constraint weight update factor (for merit function)
     mem.rho=0.5;                 % merit function parameter
     
+    % allocate memory
     mem.A = zeros(nx,nx*N);
     mem.B = zeros(nx,nu*N);
-    mem.Cx = zeros(nc,nx*N);
-    mem.Cu = zeros(nc,nu*N);
-    mem.CN = zeros(ncN,nx);
+    mem.Cx = zeros(nbx,nx);
+    mem.Cgx = zeros(nc,nx*N);
+    mem.Cgu = zeros(nc,nu*N);
+    mem.CgN = zeros(ncN,nx);
     mem.gx = zeros(nx,N+1);
     mem.gu = zeros(nu,N);
     mem.a = zeros(nx,N);
@@ -102,21 +109,28 @@ function [mem] = InitMemory(settings, opt, input)
     mem.uc = zeros(N*nc+ncN,1);
     mem.lb_du = zeros(N*nu,1);
     mem.ub_du = zeros(N*nu,1);
+    mem.lb_dx = zeros((N+1)*nbx,1);
+    mem.ub_dx = zeros((N+1)*nbx,1);
     
     mem.Hc = zeros(N*nu,N*nu);
-    mem.Cc = zeros(N*nc+ncN,N*nu);
+    mem.Ccx = zeros((N+1)*nbx,N*nu);
+    mem.Ccg = zeros(N*nc+ncN,N*nu);
     mem.gc = zeros(N*nu,1);
     mem.lcc = zeros(N*nc+ncN,1);
     mem.ucc = zeros(N*nc+ncN,1);
+    mem.lxc = zeros((N+1)*nbx,1);
+    mem.uxc = zeros((N+1)*nbx,1);
     
-    mem.Cc_qore = zeros(N*nu,N*nc+ncN);
-
     mem.dx = zeros(nx,N+1);
     mem.du = zeros(nu,N);
     mem.lambda_new = zeros(nx,N+1);
-    mem.mu_new = zeros(nc,N);
-    mem.muN_new = zeros(ncN,1);
+    mem.mu_new = zeros(N*nc+ncN,1);
+    mem.mu_x_new = zeros((N+1)*nbx,1);
     mem.mu_u_new = zeros(N*nu,1);
+    
+    for i=1:nbx
+        mem.Cx(i,nbx_idx(i)) = 1.0;
+    end
     
     if strcmp(opt.lin_obj,'yes')
         mem.lin_obj = 1;

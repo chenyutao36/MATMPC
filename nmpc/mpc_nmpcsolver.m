@@ -73,7 +73,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
     output.u=input.u;   
     output.lambda=input.lambda;
     output.mu=input.mu;
-    output.muN=input.muN;
+    output.mu_x=input.mu_x;
     output.mu_u=input.mu_u;
 
     output.info.iteration_num=i;    

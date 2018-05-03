@@ -415,7 +415,9 @@ void adj_Fun(double **in, double **out) {
     const double *refi = in[3];
     const double *Qi = in[4];
     const double *lambdai = in[5];
-    const double *mui = in[6];
+    const double *mu_xi = in[6];
+    const double *mu_ui = in[7];
+    const double *mu_gi = in[8];
 
     double *dobj = out[0];
     double *adj_dG = out[1];
@@ -425,7 +427,7 @@ void adj_Fun(double **in, double **out) {
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
-    const double *casadi_arg[7];
+    const double *casadi_arg[9];
     double *casadi_res[3];
 
     casadi_arg[0] = xi;
@@ -434,7 +436,9 @@ void adj_Fun(double **in, double **out) {
     casadi_arg[3] = refi;
     casadi_arg[4] = Qi;
     casadi_arg[5] = lambdai;
-    casadi_arg[6] = mui;
+    casadi_arg[6] = mu_xi;
+    casadi_arg[7] = mu_ui;
+    casadi_arg[8] = mu_gi;
 
     casadi_res[0] = dobj;
     casadi_res[1] = adj_dG;
@@ -449,7 +453,8 @@ void adjN_Fun(double **in, double **out) {
     const double *paraN = in[1];
     const double *refN = in[2];
     const double *QN = in[3];
-    const double *muN = in[4];
+    const double *mu_x = in[4];
+    const double *muN = in[5];
 
     double *dobj = out[0];
     double *adj_dB = out[1];
@@ -458,14 +463,15 @@ void adjN_Fun(double **in, double **out) {
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
-    const double *casadi_arg[5];
+    const double *casadi_arg[6];
     double *casadi_res[2];
 
     casadi_arg[0] = xN;
     casadi_arg[1] = paraN;
     casadi_arg[2] = refN;
     casadi_arg[3] = QN;
-    casadi_arg[4] = muN;
+    casadi_arg[4] = mu_x;
+    casadi_arg[5] = muN;
 
     casadi_res[0] = dobj;
     casadi_res[1] = adj_dB;

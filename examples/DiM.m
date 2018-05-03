@@ -33,6 +33,12 @@ ncN=6; % No. of general inequality constraints at the terminal point
 nbx = 0; % No. of bounds on states
 nbu = 0; % No. of bounds on controls
 
+% state and control bounds
+nbx_idx = 0;  % indexs of states which are bounded
+nbu_idx = 0;  % indexs of controls which are bounded
+
+%% create variables
+
 import casadi.*
 
 states   = SX.sym('states',nx,1);   % state variables
@@ -44,6 +50,7 @@ Q        = SX.sym('Q',ny,ny);       % weighting matrix of the first N stages
 QN       = SX.sym('QN',nyN,nyN);    % weighting matrix of the last stage
 
 %% Vestibular model
+
 [A_S, B_S, C_S, D_S]=tf2ss([5.73*80, 0 0],[5.73*80, 5.73+80, 1]);  % SCC state-space model for angular rotation
 [A_O, B_O, C_O, D_O]=tf2ss([0.4*10, 0.4*1],[0.016*5, 0.016+5, 1]); % OTH state-space model for linear motion
 
@@ -194,7 +201,8 @@ x_dot=[x_VEST;vx_hex_tri;...
  
 xdot = SX.sym('xdot',nx,1);
 impl_f = xdot - x_dot;
-%% Objectives
+
+%% Objectives and constraints
 
 h = [y_VEST;...
      x_hex_tri; y_hex_tri; z;...
@@ -215,10 +223,7 @@ h = [y_VEST;...
 
 hN = h(1:ny-nu);
 
-h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
-hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
-
-%% inequality constraints
+% general inequality path constraints
 q1 = ((x_hex_tri + (2126791213464199*cos(-theta_hex)*cos(-phi_hex))/9007199254740992 - (5935510252496305*cos(-psi_hex)*sin(-phi_hex))/9007199254740992 - (5935510252496305*cos(-phi_hex)*sin(-theta_hex)*sin(-psi_hex))/9007199254740992 + 8346791275420823/18014398509481984)^2 + (y_hex_tri + (5935510252496305*cos(-psi_hex)*cos(-phi_hex))/9007199254740992 + (2126791213464199*cos(-theta_hex)*sin(-phi_hex))/9007199254740992 - (5935510252496305*sin(-theta_hex)*sin(-psi_hex)*sin(-phi_hex))/9007199254740992 - 592520818642875/562949953421312)^2 + (z + (2126791213464199*sin(-theta_hex))/9007199254740992 + (5935510252496305*cos(-theta_hex)*sin(-psi_hex))/9007199254740992 + 1811/2000)^2)^(1/2);
 q2 = (((cos(-psi_hex)*sin(-phi_hex))/8 - x_hex_tri + (cos(-phi_hex)*sin(-theta_hex)*sin(-psi_hex))/8 + (759^(1/2)*cos(-theta_hex)*cos(-phi_hex))/40 - 765438935074863/1125899906842624)^2 + (z + (cos(-theta_hex)*sin(-psi_hex))/8 - (759^(1/2)*sin(-theta_hex))/40 + 1811/2000)^2 + ((sin(-theta_hex)*sin(-psi_hex)*sin(-phi_hex))/8 - (cos(-psi_hex)*cos(-phi_hex))/8 - y_hex_tri + (759^(1/2)*cos(-theta_hex)*sin(-phi_hex))/40 + 522152074465211/562949953421312)^2)^(1/2);
 q3 = ((x_hex_tri + (cos(-psi_hex)*sin(-phi_hex))/8 + (cos(-phi_hex)*sin(-theta_hex)*sin(-psi_hex))/8 - (759^(1/2)*cos(-theta_hex)*cos(-phi_hex))/40 + 6123511480598909/9007199254740992)^2 + (y_hex_tri - (cos(-psi_hex)*cos(-phi_hex))/8 + (sin(-theta_hex)*sin(-psi_hex)*sin(-phi_hex))/8 - (759^(1/2)*cos(-theta_hex)*sin(-phi_hex))/40 + 8354433191443371/9007199254740992)^2 + (z - (cos(-theta_hex)*sin(-psi_hex))/8 - (759^(1/2)*sin(-theta_hex))/40 + 1811/2000)^2)^(1/2);
@@ -226,27 +231,19 @@ q4 = ((z + (8507164853856779*sin(-theta_hex))/36028797018963968 - (5935510252496
 q5 = ((x_hex_tri + (1019226764088171*cos(-theta_hex)*cos(-phi_hex))/2251799813685248 + (4809610345653685*cos(-psi_hex)*sin(-phi_hex))/9007199254740992 - 2091^(1/2)/40 + (4809610345653685*cos(-phi_hex)*sin(-theta_hex)*sin(-psi_hex))/9007199254740992)^2 + (y_hex_tri - (4809610345653685*cos(-psi_hex)*cos(-phi_hex))/9007199254740992 + (1019226764088171*cos(-theta_hex)*sin(-phi_hex))/2251799813685248 + (4809610345653685*sin(-theta_hex)*sin(-psi_hex)*sin(-phi_hex))/9007199254740992 + 1/8)^2 + (z + (1019226764088171*sin(-theta_hex))/2251799813685248 - (4809610345653685*cos(-theta_hex)*sin(-psi_hex))/9007199254740992 + 1811/2000)^2)^(1/2);
 q6 = ((y_hex_tri + (300600646603355*cos(-psi_hex)*cos(-phi_hex))/562949953421312 + (8153814112705379*cos(-theta_hex)*sin(-phi_hex))/18014398509481984 - (300600646603355*sin(-theta_hex)*sin(-psi_hex)*sin(-phi_hex))/562949953421312 - 1/8)^2 + (z + (8153814112705379*sin(-theta_hex))/18014398509481984 + (300600646603355*cos(-theta_hex)*sin(-psi_hex))/562949953421312 + 1811/2000)^2 + ((300600646603355*cos(-psi_hex)*sin(-phi_hex))/562949953421312 - (8153814112705379*cos(-theta_hex)*cos(-phi_hex))/18014398509481984 - x_hex_tri + 2091^(1/2)/40 + (300600646603355*cos(-phi_hex)*sin(-theta_hex)*sin(-psi_hex))/562949953421312)^2)^(1/2);
 
-% general inequality path constraints
 general_con=[q1;q2;q3;q4;q5;q6];  
 general_con_N=[q1;q2;q3;q4;q5;q6]; 
-
-% state and control bounds
-nbx_idx = 0;  % indexs of states which are bounded
-nbu_idx = 0;  % indexs of controls which are bounded
-path_con=general_con;
-path_con_N=general_con_N;
-for i=1:nbx
-    path_con=[path_con;states(nbx_idx(i))];
-    path_con_N=[path_con_N;states(nbx_idx(i))];
-end    
-nc=nc+nbx;
-ncN=ncN+nbx;
-
-% build the function for inequality constraints
-path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
-path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});
 
 %% NMPC sampling time [s]
 
 Ts = 0.01; % simulation sample time
 Ts_st = 0.01; % shooting interval time
+
+%% build casadi function (don't touch)
+
+h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
+hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
+
+path_con_fun=Function('path_con_fun', {states,controls,params}, {general_con},{'states','controls','params'},{'general_con'});
+path_con_N_fun=Function('path_con_N_fun', {states,params}, {general_con_N},{'states','params'},{'general_con_N'});
+

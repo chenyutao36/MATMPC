@@ -13,9 +13,11 @@ run(settings.model);
 %%
 import casadi.*
 
-lambdai=SX.sym('lambdai',nx,1);            % the i th multiplier for equality constraints
-mui=SX.sym('mui',nc,1);                  % the i th multiplier for inequality constraints
-muN=SX.sym('muN',ncN,1);                 % the N th multiplier for inequality constraints
+lambda=SX.sym('lambdai',nx,1);            % the i th multiplier for equality constraints
+mu_u=SX.sym('mu_u',nu,1);                  % the i th multiplier for bounds on controls
+mu_x=SX.sym('mu_x',nbx,1);                  % the i th multiplier for bounds on controls
+mu_g=SX.sym('mu_g',nc,1);                  % the i th multiplier for bounds on controls
+muN_g=SX.sym('muN_g',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
 s  = 2; % No. of integration steps per sample interval
@@ -85,9 +87,9 @@ gxi = jacobian(obji,states)' + SX.zeros(nx,1);
 gui = jacobian(obji,controls)' + SX.zeros(nu,1);
 gxN = jacobian(objN,states)' + SX.zeros(nx,1);
 
-Cxi = jacobian(path_con, states) + SX.zeros(nc, nx);
-Cui = jacobian(path_con, controls) + SX.zeros(nc, nu);
-CxN = jacobian(path_con_N, states) + SX.zeros(ncN, nx);
+Cxi = jacobian(general_con, states) + SX.zeros(nc, nx);
+Cui = jacobian(general_con, controls) + SX.zeros(nc, nu);
+CxN = jacobian(general_con_N, states) + SX.zeros(ncN, nx);
 
 obji_fun = Function('obji_fun',{states,controls,params,refs,Q},{obji+SX.zeros(1,1)});
 objN_fun = Function('objN_fun',{states,params,refN,QN},{objN+SX.zeros(1,1)});
@@ -104,24 +106,35 @@ CN_fun=Function('CN_fun',{states,params},{CxN});
 dobj = [gxi;gui];
 dobjN = gxN;
 
-adj_dG = SX.zeros(nx+nu,1) + jtimes(X, [states;controls], lambdai, true);
+adj_dG = SX.zeros(nx+nu,1) + jtimes(X, [states;controls], lambda, true);
 
+Jxb = zeros(nbx,nx+nu);
+for i=1:nbx
+    Jxb(i,nbx_idx(i)) = 1.0; 
+end
+
+Jub = zeros(nu,nx+nu);
+for i=1:nu
+    Jub(i,i)=1.0;
+end
+adj_dB = SX.zeros(nx+nu,1) + Jxb'*mu_x + Jub'*mu_u;
 if nc>0
-    adj_dB = SX.zeros(nx+nu,1) + jtimes(path_con, [states;controls], mui, true);
-else
-    adj_dB = SX.zeros(nx+nu,1);
+    adj_dB = adj_dB + jtimes(general_con, [states;controls], mu_g, true);
 end
 
+JxbN = zeros(nbx,nx);
+for i=1:nbx
+    JxbN(i,nbx_idx(i)) = 1.0; 
+end
+adj_dBN = SX.zeros(nx,1) + JxbN'*mu_x;
 if ncN>0
-    adj_dBN = SX.zeros(nx,1) + jtimes(path_con_N, states, muN, true);
-else
-    adj_dBN = SX.zeros(nx,1);
+    adj_dBN = adj_dBN + jtimes(general_con_N, states, muN_g, true);
 end
 
-adj_fun = Function('adj_fun',{states,controls,params,refs,Q,lambdai,mui},{dobj, adj_dG, adj_dB});
-adjN_fun = Function('adjN_fun',{states,params,refN, QN, muN},{dobjN, adj_dBN});
+adj_fun = Function('adj_fun',{states,controls,params,refs,Q,lambda,mu_x,mu_u,mu_g},{dobj, adj_dG, adj_dB});
+adjN_fun = Function('adjN_fun',{states,params,refN, QN, mu_x,muN_g},{dobjN, adj_dBN});
 
-adj_dG_fun = Function('adj_dG_fun',{states,controls,params,refs,Q,lambdai},{dobj, adj_dG});
+adj_dG_fun = Function('adj_dG_fun',{states,controls,params,refs,Q,lambda},{dobj, adj_dG});
 
 %% Code generation and Compile
 

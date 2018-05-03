@@ -51,11 +51,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *WN = mxGetPr( mxGetField(prhs[0], 0, "WN") );
     double *lb = mxGetPr( mxGetField(prhs[0], 0, "lb") );
     double *ub = mxGetPr( mxGetField(prhs[0], 0, "ub") );
-    double *lbN = mxGetPr( mxGetField(prhs[0], 0, "lbN") );
-    double *ubN = mxGetPr( mxGetField(prhs[0], 0, "ubN") );
     double *x0 = mxGetPr( mxGetField(prhs[0], 0, "x0") );
     double *lbu = mxGetPr( mxGetField(prhs[0], 0, "lbu") );
     double *ubu = mxGetPr( mxGetField(prhs[0], 0, "ubu") );
+    double *lbx = mxGetPr( mxGetField(prhs[0], 0, "lbx") );
+    double *ubx = mxGetPr( mxGetField(prhs[0], 0, "ubx") );
     
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -64,6 +64,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t nyN = mxGetScalar( mxGetField(prhs[1], 0, "nyN") );
     size_t nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") ); 
     size_t ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
+    size_t nbx = mxGetScalar( mxGetField(prhs[1], 0, "nbx") );
+    double *nbx_idx = mxGetPr( mxGetField(prhs[1], 0, "nbx_idx") );
     size_t N = mxGetScalar( mxGetField(prhs[1], 0, "N") );    
     int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
     
@@ -71,6 +73,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     char *nTrans = "N", *Trans="T", *UPLO="L";
     double one_d = 1.0, zero = 0.0, minus_one_d = -1.0;
     size_t one_i = 1;
+    int idx;
       
     double *Q = mxGetPr( mxGetField(prhs[2], 0, "Q") );
     double *S = mxGetPr( mxGetField(prhs[2], 0, "S") );
@@ -78,8 +81,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *A = mxGetPr( mxGetField(prhs[2], 0, "A") );
     double *B = mxGetPr( mxGetField(prhs[2], 0, "B") );
     double *Cx = mxGetPr( mxGetField(prhs[2], 0, "Cx") );
-    double *Cu = mxGetPr( mxGetField(prhs[2], 0, "Cu") );
-    double *CN = mxGetPr( mxGetField(prhs[2], 0, "CN") );
+    double *Cgx = mxGetPr( mxGetField(prhs[2], 0, "Cgx") );
+    double *Cgu = mxGetPr( mxGetField(prhs[2], 0, "Cgu") );
+    double *CgN = mxGetPr( mxGetField(prhs[2], 0, "CgN") );
     double *gx = mxGetPr( mxGetField(prhs[2], 0, "gx") );
     double *gu = mxGetPr( mxGetField(prhs[2], 0, "gu") );   
     double *a = mxGetPr( mxGetField(prhs[2], 0, "a") );
@@ -88,6 +92,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
     double *lb_du = mxGetPr( mxGetField(prhs[2], 0, "lb_du") );
     double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
+    double *lb_dx = mxGetPr( mxGetField(prhs[2], 0, "lb_dx") );
+    double *ub_dx = mxGetPr( mxGetField(prhs[2], 0, "ub_dx") );
     
     int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
@@ -152,6 +158,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             ub_du[i*nu+j] = ubu[i*nu+j]-u[i*nu+j];
         }
         
+        // state bounds
+        for (j=0;j<nbx;j++){
+            idx = (int)nbx_idx[j]-1;
+            lb_dx[i*nbx+j] = lbx[i*nbx+j]-x[i*nx+idx];
+            ub_dx[i*nbx+j] = ubx[i*nbx+j]-x[i*nx+idx];
+        }
+        
         // integration                      
         switch(sim_method){
             case 0:
@@ -203,7 +216,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_out[0] = gx+i*nx;
         casadi_out[1] = gu+i*nu;
         gi_Fun(casadi_in, casadi_out);
-        
+                
         // constraint residual
         if (nc>0){  
             casadi_in[0]=x+i*nx;
@@ -217,8 +230,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             }
         
             // constraint Jacobian
-            Cons[0] = Cx+i*nc*nx;
-            Cons[1] = Cu+i*nc*nu;
+            Cons[0] = Cgx+i*nc*nx;
+            Cons[1] = Cgu+i*nc*nu;
             Ci_Fun(casadi_in, Cons);
         }
     }
@@ -235,6 +248,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         regularization(nx, Q+N*nx*nx, reg);
     }
     
+    for (j=0;j<nbx;j++){
+        idx = (int)nbx_idx[j]-1;
+        lb_dx[N*nbx+j] = lbx[N*nbx+j]-x[N*nx+idx];
+        ub_dx[N*nbx+j] = ubx[N*nbx+j]-x[N*nx+idx];
+    }
+    
     casadi_out[0] = gx+N*nx;
     gN_Fun(casadi_in, casadi_out);
 
@@ -242,11 +261,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_out[0] = lc + N*nc;
         path_con_N_Fun(casadi_in, casadi_out);
         for (j=0;j<ncN;j++){
-            uc[i*nc+j] = ubN[j] - casadi_out[0][j];
-            casadi_out[0][j] = lbN[j] - casadi_out[0][j];            
+            uc[N*nc+j] = ub[N*nc+j] - casadi_out[0][j];
+            casadi_out[0][j] = lb[N*nc+j] - casadi_out[0][j];            
         }
 
-        CN_Fun(casadi_in, &CN);
+        CN_Fun(casadi_in, &CgN);
     }
     
 }

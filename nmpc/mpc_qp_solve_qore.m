@@ -3,6 +3,7 @@ function [cpt_qp, mem] = mpc_qp_solve_qore(sizes,mem, opt)
     nu=sizes.nu;
     nc=sizes.nc;
     ncN=sizes.ncN;
+    nbx=sizes.nbx;
     N=sizes.N; 
     
     if strcmp(opt.condensing,'hpipm_full')
@@ -14,18 +15,18 @@ function [cpt_qp, mem] = mpc_qp_solve_qore(sizes,mem, opt)
     end
            
     if ~isfield(mem,'qore_id')              
-        [err, mem.qore_id] = QPDenseNew(N*nu, N*nc+ncN);
+        [err, mem.qore_id] = QPDenseNew(N*nu, (N+1)*nbx+N*nc+ncN);
         QPDenseSetInt(mem.qore_id, 'prtfreq', -1);
-        QPDenseSetData(mem.qore_id, (mem.Cc)', mem.Hc);
+        QPDenseSetData(mem.qore_id, [mem.Ccx;mem.Ccg]', mem.Hc);
         
         t1 = tic;
-        QPDenseOptimize(mem.qore_id, [lb_du;mem.lcc], [ub_du;mem.ucc], mem.gc);
+        QPDenseOptimize(mem.qore_id, [lb_du;mem.lxc;mem.lcc], [ub_du;mem.uxc;mem.ucc], mem.gc);
         cpt_qp = toc(t1)*1e3;
     else
-        QPDenseUpdateMatrices(mem.qore_id, (mem.Cc)', mem.Hc);
+        QPDenseUpdateMatrices(mem.qore_id, [mem.Ccx;mem.Ccg]', mem.Hc);
         
         t1 = tic;
-        QPDenseOptimize(mem.qore_id, [lb_du;mem.lcc], [ub_du;mem.ucc], mem.gc);
+        QPDenseOptimize(mem.qore_id, [lb_du;mem.lxc;mem.lcc], [ub_du;mem.uxc;mem.ucc], mem.gc);
         cpt_qp = toc(t1)*1e3;
     end
         
@@ -34,13 +35,15 @@ function [cpt_qp, mem] = mpc_qp_solve_qore(sizes,mem, opt)
     
     mem.du = reshape(pri_sol(1:N*nu),[nu N]);
     mem.mu_u_new = -dual_sol(1:N*nu);
-    mu_vec = -dual_sol(N*nu+1:end);
+    mem.mu_x_new = -dual_sol(N*nu+1:N*nu+(N+1)*nbx);
+    mem.mu_new = -dual_sol(N*nu+(N+1)*nbx+1:end);
     
     if strcmp(opt.condensing,'hpipm_full')
         mem.du = fliplr(mem.du);
         mem.mu_u_new = flipud(mem.mu_u_new);
-        mu_vec = flipud(mu_vec);
+        mem.mu_x_new = flipud(mem.mu_x_new);
+        mem.mu_new = flipud(mem.mu_new);
     end
             
-    Recover(mem, sizes, mu_vec);
+    Recover(mem, sizes);
 end

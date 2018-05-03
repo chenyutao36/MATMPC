@@ -17,6 +17,12 @@ ncN=1;%1; % No. of general inequality constraints
 nbx = 2; % No. of bounds on states
 nbu = 2; % No. of bounds on controls
 
+% state and control bounds
+nbx_idx = 5:6;  % indexs of states which are bounded
+nbu_idx = 3:4;  % indexs of controls which are bounded
+
+%% create variables
+
 import casadi.*
 
 states   = SX.sym('states',nx,1);
@@ -69,15 +75,11 @@ xdot = SX.sym('xdot',nx,1);
 impl_f = xdot - x_dot;
      
 %% Objectives and constraints
-% alpha = pi/6;
-% phi_ref = -alpha;
-% theta_ref = alpha;
 phi_lim_vel = phi_ref + 20*pi/180;
 phi_lim = phi_ref + 16*pi/180;
 gamma2_vel = 180/pi/0.8;
 gamma1 = 1;
 gamma2 = 180/pi/3;
-
 
 h = [phi-phi_ref;phi_dot;theta-theta_ref;theta_dot;df1;df2;
      gamma1*(theta-theta_ref)*(1/(1+exp(-gamma2*(phi_lim-phi)))); % to arrive close to the ground with attitude = surface slope
@@ -88,35 +90,22 @@ h = [phi-phi_ref;phi_dot;theta-theta_ref;theta_dot;df1;df2;
 
 hN = [phi-phi_ref;phi_dot;theta-theta_ref;theta_dot];
 
-h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
-hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
-
 % general inequality path constraints
 general_con = [1/a2*phi_dot^2 + a1/a2*sin(phi) + sin(phi+theta)*(f1+f2); 
                 d*sin(theta-pi/6)-l*sin(pi/6+phi)-s1;
                 -d*sin(theta-pi/6)-l*sin(pi/6+phi)-s2];
 general_con_N = [1/a2*phi_dot^2 + a1/a2*sin(phi) + sin(phi+theta)*(f1+f2)]; 
-%     d*sin(theta-pi/6)-l*sin(pi/6+phi)+s1;
-%     -d*sin(theta-pi/6)-l*sin(pi/6+phi)+s2];
-
-% state and control bounds
-nbx_idx = 5:6;  % indexs of states which are bounded
-nbu_idx = 3:4;  % indexs of controls which are bounded
-path_con=general_con;
-path_con_N=general_con_N;
-for i=1:nbx
-    path_con=[path_con;states(nbx_idx(i))];
-    path_con_N=[path_con_N;states(nbx_idx(i))];
-end    
-
-nc=nc+nbx;
-ncN=ncN+nbx;
-
-% build the function for inequality constraints
-path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
-path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});
 
 %% NMPC sampling time [s]
 
 Ts = 0.01; % simulation sample time
 Ts_st = 0.01; % shooting interval time
+
+%% build casadi function (don't touch)
+
+h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
+hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
+
+% build the function for inequality constraints
+path_con_fun=Function('path_con_fun', {states,controls,params}, {general_con},{'states','controls','params'},{'general_con'});
+path_con_N_fun=Function('path_con_N_fun', {states,params}, {general_con_N},{'states','params'},{'general_con_N'});
