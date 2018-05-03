@@ -25,6 +25,7 @@ nyN= settings.nyN;   % No. of outputs at terminal stage
 np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
+nbx = settings.nbx;
 
 %% solver configurations
 
@@ -36,7 +37,7 @@ settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 mean
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
-opt.condensing='default_full';  %'default_full','hpipm_full','no'
+opt.condensing='default_full';  %'default_full','no'
 opt.qpsolver='qpoases'; %'qpoases','qore', 'quadprog', 'hpipm_sparse', 'hpipm_pcond'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='yes'; % 'yes','no'
@@ -110,17 +111,19 @@ while time(end) < Tf
     % obtain the solution and update the data
     switch opt.shifting
         case 'yes'
-        input.x=[output.x(:,2:end),output.x(:,end)];  
-        input.u=[output.u(:,2:end),output.u(:,end)]; 
-        input.lambda=[output.lambda(:,2:end),output.lambda(:,end)];
-        input.mu=[output.mu(:,2:end),[output.muN;output.mu(ncN+1:nc,end)]];
-        input.muN=output.muN;
+            input.x=[output.x(:,2:end),output.x(:,end)];  
+            input.u=[output.u(:,2:end),output.u(:,end)]; 
+            input.lambda=[output.lambda(:,2:end),output.lambda(:,end)];
+            input.mu=[output.mu(nc+1:end);output.mu(end-nc+1:end)];
+            input.mu_x=[output.mu_x(nbx+1:end);output.mu_x(end-nbx+1:end)];
+            input.mu_u=[output.mu_u(nu+1:end);output.mu_u(end-nu+1:end)];
         case 'no'
-        input.x=output.x;
-        input.u=output.u;
-        input.lambda=output.lambda;
-        input.mu=output.mu;
-        input.muN=output.muN;
+            input.x=output.x;
+            input.u=output.u;
+            input.lambda=output.lambda;
+            input.mu=output.mu;
+            input.mu_x=output.mu_x;
+            input.mu_u=output.mu_u;
     end
     
     % collect the statistics

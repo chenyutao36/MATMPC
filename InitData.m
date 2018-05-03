@@ -41,9 +41,7 @@ function [input, data] = InitData(settings)
               % upper and lower bounds for states (=nbx)
               lb_x = [];
               ub_x = [];
-              lb_xN = [];
-              ub_xN = [];
-              
+                   
               % upper and lower bounds for controls (=nbu)           
               lb_u = [];
               ub_u = [];
@@ -65,8 +63,6 @@ function [input, data] = InitData(settings)
             % upper and lower bounds for states (=nbx)
             lb_x = -2;
             ub_x = 2;
-            lb_xN = -2;
-            ub_xN = 2;
 
             % upper and lower bounds for controls (=nbu)           
             lb_u = -20;
@@ -99,8 +95,6 @@ function [input, data] = InitData(settings)
             % upper and lower bounds for states (=nbx)
             lb_x = [];
             ub_x = [];
-            lb_xN = [];
-            ub_xN = [];
 
             % upper and lower bounds for controls (=nbu)           
             lb_u = [-1;-1;-1];
@@ -131,8 +125,6 @@ function [input, data] = InitData(settings)
             % upper and lower bounds for states (=nbx)
             lb_x = [];
             ub_x = [];
-            lb_xN = [];
-            ub_xN = [];
 
             % upper and lower bounds for controls (=nbu)           
             lb_u = [-1;-1;-1];
@@ -309,23 +301,6 @@ function [input, data] = InitData(settings)
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
-
-            % store the constraint data into input
-            
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_x];               
-            input.ubN=[ub_gN;ub_x]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
                
         case 'TethUAV'
             input.x0=[0; 0; 0; 0; 0; 0];%zeros(nx,1);
@@ -414,11 +389,6 @@ function [input, data] = InitData(settings)
             s2_min = 0;
             s2_max = inf;
             
-%             % upper and lower bounds for states (=nbx) if f1,2 are the
-%             % angular velocities
-%             lb_x = 0*ones(nbx,1);
-%             ub_x = omegaMax*ones(nbx,1);
-
             % upper and lower bounds for states (=nbx) if f1,2 are f_R,
             % tau_R
             lb_x = [fR_min; tauR_min];%0*ones(nbx,1);
@@ -433,31 +403,14 @@ function [input, data] = InitData(settings)
             ub_g = [fL_max; constr_max; constr_max];            
             lb_gN = [fL_min];
             ub_gN = [fL_max];   
-
-            % store the constraint data into input
-            input.lb=repmat([lb_g;lb_x],1,N);
-            input.ub=repmat([ub_g;ub_x],1,N); 
-            input.lbN=[lb_gN;lb_x];               
-            input.ubN=[ub_gN;ub_x]; 
-            
-            lbu = -inf(nu,1);
-            ubu = inf(nu,1);
-            for i=1:nbu
-                lbu(nbu_idx(i)) = lb_u(i);
-                ubu(nbu_idx(i)) = ub_u(i);
-            end
-            
-            input.lbu = repmat(lbu,1,N);
-            input.ubu = repmat(ubu,1,N);
-
     end
 
     % prepare the data
     
-    input.lb=repmat([lb_g;lb_x],1,N);
-    input.ub=repmat([ub_g;ub_x],1,N); 
-    input.lbN=[lb_gN;lb_x];               
-    input.ubN=[ub_gN;ub_x]; 
+    input.lb = repmat(lb_g,N,1);
+    input.ub = repmat(ub_g,N,1);
+    input.lb = [input.lb;lb_gN];
+    input.ub = [input.ub;ub_gN];
             
     lbu = -inf(nu,1);
     ubu = inf(nu,1);
@@ -465,17 +418,22 @@ function [input, data] = InitData(settings)
         lbu(nbu_idx(i)) = lb_u(i);
         ubu(nbu_idx(i)) = ub_u(i);
     end
-            
+                
     input.lbu = repmat(lbu,1,N);
     input.ubu = repmat(ubu,1,N);
+    
+    input.lbx = repmat(lb_x,1,N+1);
+    input.ubx = repmat(ub_x,1,N+1);
 
     x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
     para = repmat(para0,1,N+1);  % initialize all parameters with the same initial para
+    
 %     if strcmp(settings.model,'ActiveSeat_onlyP')
 %         load(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_vp\activeseatsim.mat']);
 %         input.para=[];
 %     end
+
 %     load init_data;    % if you want to use your own initiliazation data
     
     input.x=x;           % states and controls of the first N stages (nx by N+1 matrix)
@@ -490,9 +448,9 @@ function [input, data] = InitData(settings)
 %     end
     
     input.lambda=zeros(nx,N+1);
-    input.mu=zeros(nc,N);
-    input.muN=zeros(ncN,1);
+    input.mu=zeros(N*nc+ncN,N);
     input.mu_u = zeros(N*nu,1);
+    input.mu_x = zeros((N+1)*nbx,1);
     %% Reference generation
 
     switch settings.model
@@ -536,7 +494,7 @@ function [input, data] = InitData(settings)
             data.REF = zeros(1,ny);
             
         case 'TethUAV_param_1order_slack'
-        	data.REF = zeros(1, ny); %[0 0 0 0 0 0];
+        	data.REF = zeros(1, ny);
     end
     
 end

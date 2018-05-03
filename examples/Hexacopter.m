@@ -4,7 +4,6 @@
 
 %------------------------------------------%
 
-
 %% Dimensions
 
 nx=12;  % No. of states
@@ -16,6 +15,12 @@ nc=0; % No. of general inequality constraints
 ncN=0; % No. of general inequality constraints at the terminal point
 nbx = 0; % No. of bounds on states
 nbu = 6; % No. of bounds on controls
+
+% state and control bounds
+nbx_idx = 0;  % indexs of states which are bounded
+nbu_idx = 1:6;  % indexs of controls which are bounded
+
+%% create variables
 
 import casadi.*
 
@@ -92,30 +97,21 @@ h = [x;y;z;phi;theta;psi];
 
 hN = h(1:nyN);
 
-h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
-hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
-
 % general inequality path constraints
 general_con=[];  
 general_con_N=[]; 
-
-% state and control bounds
-nbx_idx = 0;  % indexs of states which are bounded
-nbu_idx = 1:6;  % indexs of controls which are bounded
-path_con=general_con;
-path_con_N=general_con_N;
-for i=1:nbx
-    path_con=[path_con;states(nbx_idx(i))];
-    path_con_N=[path_con_N;states(nbx_idx(i))];
-end    
-nc=nc+nbx;
-ncN=ncN+nbx;
-
-% build the function for inequality constraints
-path_con_fun=Function('path_con_fun', {states,controls,params}, {path_con},{'states','controls','params'},{'path_con'});
-path_con_N_fun=Function('path_con_N_fun', {states,params}, {path_con_N},{'states','params'},{'path_con_N'});
 
 %% NMPC sampling time [s]
 
 Ts = 0.01; % simulation sample time
 Ts_st = 0.1; % shooting interval time
+
+%% build casadi function (don't touch)
+
+h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
+hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
+
+path_con_fun=Function('path_con_fun', {states,controls,params}, {general_con},{'states','controls','params'},{'general_con'});
+path_con_N_fun=Function('path_con_N_fun', {states,params}, {general_con_N},{'states','params'},{'general_con_N'});
+
+
