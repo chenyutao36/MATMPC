@@ -43,8 +43,6 @@ WN=W(1:nyN,1:nyN);
 % upper and lower bounds for states (=nbx)
 lb_x = -2;
 ub_x = 2;
-lb_xN = -2;
-ub_xN = 2;
 
 % upper and lower bounds for controls (=nbu)           
 lb_u = -20;
@@ -56,10 +54,14 @@ ub_g = [];
 lb_gN = [];
 ub_gN = [];
 
-lb=repmat([lb_g;lb_x],1,N);
-ub=repmat([ub_g;ub_x],1,N); 
-lbN=[lb_gN;lb_x];               
-ubN=[ub_gN;ub_x]; 
+lb = repmat(lb_g,N,1);
+ub = repmat(ub_g,N,1);
+lb = [lb;lb_gN];
+ub = [ub;ub_gN];
+if isempty(lb)
+    lb=0;
+    ub=0;
+end
         
 lbu = -inf(nu,1);
 ubu = inf(nu,1);
@@ -70,6 +72,14 @@ end
         
 lbu = repmat(lbu,1,N);
 ubu = repmat(ubu,1,N);
+
+lbx = repmat(lb_x,1,N+1);
+ubx = repmat(ub_x,1,N+1);
+if isempty(lbx)
+    lbx=0;
+    ubx=0;
+end
+
 x = repmat(x0,1,N+1);   
 u = repmat(u0,1,N);    
 para = repmat(para0,1,N+1);  
