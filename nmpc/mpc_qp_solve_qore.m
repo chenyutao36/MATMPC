@@ -14,7 +14,7 @@ function [cpt_qp, mem] = mpc_qp_solve_qore(sizes,mem, opt)
         ub_du = mem.ub_du;
     end
            
-    if ~isfield(mem,'qore_id')              
+    if mem.qore_id==-1            
         [err, mem.qore_id] = QPDenseNew(N*nu, (N+1)*nbx+N*nc+ncN);
         QPDenseSetInt(mem.qore_id, 'prtfreq', -1);
         QPDenseSetData(mem.qore_id, [mem.Ccx;mem.Ccg]', mem.Hc);

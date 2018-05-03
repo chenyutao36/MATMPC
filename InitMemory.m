@@ -31,6 +31,7 @@ function [mem] = InitMemory(settings, opt, input)
         case 'qore'
             addpath(genpath('/home/chen/Documents/Packages/QORE/Matlab_dense'));
             mem.qpsolver = 1;
+            mem.qore_id = -1;
         case 'quadprog'
             mem.quadprog_opt.Algorithm = 'interior-point-convex';
             mem.quadprog_opt.Display = 'off';

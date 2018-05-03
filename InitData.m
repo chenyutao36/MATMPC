@@ -159,43 +159,6 @@ function [input, data] = InitData(settings)
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
-
-        case 'TiltHex'
-            input.x0=zeros(nx,1);
-            input.u0=zeros(nu,1);
-            para0=0;
-
-            q =[5,5,5,0.1,1,0.1,1e-5*ones(1,nu)];
-            qN = q(1:nyN);
-            Q = diag(q);
-            QN = diag(qN);
-            
-            % upper and lower bounds for states (=nbx)
-            lb_x = 0*ones(nbx,1);
-            ub_x = 12*ones(nbx,1);
-
-            % upper and lower bounds for controls (=nbu)           
-            lb_u = -80*ones(nbu,1);
-            ub_u = 80*ones(nbu,1);
-                       
-            % upper and lower bounds for general constraints (=nc)
-            lb_g = [];
-            ub_g = [];            
-            lb_gN = [];
-            ub_gN = [];
-
-            %Frequency for x(t) in rad/s 
-            data.f_rif_x=1.2;
-            %Same frequency used in MPC algorithm
-            data.f_x=data.f_rif_x*0.5/pi;
-            %Amplitude of x(t)
-            data.amplitude_x=1.2;
-            %Frequency for theta(t) in rad/s
-            data.f_rif_theta=1.2;
-            %Same frequency used in MPC algorithm
-            data.f_theta=data.f_rif_theta*0.5/pi;
-            %Amplitude of theta(t)
-            data.amplitude_theta=pi/18;
             
         case 'ActiveSeat'
             
@@ -271,96 +234,7 @@ function [input, data] = InitData(settings)
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
-            
-        case 'ActiveSeat_onlyP'
-            
-            input.x0 = [0, 0.0001, 0, 0, 0]';
-            input.u0 = zeros(nu,1);
-            para0 = [0 0 0];
-            
-            Q_ypress=100;
-            R_press=0.01;
-
-            Wq = Q_ypress; % uscita pressione y
-            Wr = R_press; % pesi su ingressi effettivi dpressY
-                      
-            Q = blkdiag(Wq, Wr);
-            QN = Wq(1:nyN,1:nyN)*0;
-                        
-            % upper and lower bounds for states (=nbx)
-            
-            lb_x = [];%-inf(nu,1);
-            ub_x = [];%-lb_x;
-
-            % upper and lower bounds for controls (=nbu)           
-            lb_u = [];
-            ub_u = [];
-                       
-            % upper and lower bounds for general constraints (=nc)
-            lb_g = [];
-            ub_g = [];            
-            lb_gN = [];
-            ub_gN = [];
-               
-        case 'TethUAV'
-            input.x0=[0; 0; 0; 0; 0; 0];%zeros(nx,1);
-            input.u0=[0; 0];%zeros(nu,1);%
-            para0=0;
-            
-            q = [10, 1, 10, 1, 0.01, 0.01];
-            qN = q(1:nyN);
-            Q = diag(q);
-            QN = diag(qN);
-            
-            b = 1;
-            omegaMax = 10*b;
-            fL_min = 0;
-            fL_max = 10;
-
-            % upper and lower bounds for states (=nbx)
-            lb_x = 0*ones(nbx,1);
-            ub_x = omegaMax*ones(nbx,1);
-
-            % upper and lower bounds for controls (=nbu)           
-            lb_u = [];
-            ub_u = [];
-                       
-            % upper and lower bounds for general constraints (=nc)
-            lb_g = fL_min;
-            ub_g = fL_max;            
-            lb_gN = fL_min;
-            ub_gN = fL_max;
-            
-        case 'TethUAV_param'
-            input.x0=[0; 0; 0; 0; 0; 0];%zeros(nx,1);
-            input.u0=[0; 0];%zeros(nu,1);%
-            alpha = 20*pi/180;
-            para0=[-alpha; alpha];
-            
-            q = [10, 30, 10, 30, 0.01, 0.01, 80, 40, 10, 0];
-            qN = q(1:nyN);
-            Q = diag(q);
-            QN = diag(qN);
-            
-            b = 1;
-            omegaMax = 10*b;
-            fL_min = 0;
-            fL_max = 10;
-
-            % upper and lower bounds for states (=nbx)
-            lb_x = 0*ones(nbx,1);
-            ub_x = omegaMax*ones(nbx,1);
-
-            % upper and lower bounds for controls (=nbu)           
-            lb_u = [];
-            ub_u = [];
-                       
-            % upper and lower bounds for general constraints (=nc)
-            lb_g = fL_min;
-            ub_g = fL_max;            
-            lb_gN = fL_min;
-            ub_gN = fL_max;
-        
+                    
         case 'TethUAV_param_1order_slack'
             
             input.x0=[0; 0; 0; 0; 9.81; 0];%zeros(nx,1);
@@ -477,22 +351,10 @@ function [input, data] = InitData(settings)
         case 'Hexacopter'
 
             data.REF = [1 1 1 0 0 0];
-
-        case 'TiltHex'
-            data.REF = [];
             
         case 'ActiveSeat'
             data.REF = AS_REF(25,Ts);
-                                        
-        case 'ActiveSeat_onlyP'
-            data.REF = AS_REF_onlyP(25,Ts);
-
-        case 'TethUAV'
-            data.REF = [0 0 pi/6 0 0 0];
-            
-        case 'TethUAV_param'
-            data.REF = zeros(1,ny);
-            
+                                                    
         case 'TethUAV_param_1order_slack'
         	data.REF = zeros(1, ny);
     end
