@@ -303,11 +303,6 @@ function [input, data] = InitData(settings)
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
     para = repmat(para0,1,N+1);  % initialize all parameters with the same initial para
     
-%     if strcmp(settings.model,'ActiveSeat_onlyP')
-%         load(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_vp\activeseatsim.mat']);
-%         input.para=[];
-%     end
-
 %     load init_data;    % if you want to use your own initiliazation data
     
     input.x=x;           % states and controls of the first N stages (nx by N+1 matrix)
@@ -315,14 +310,9 @@ function [input, data] = InitData(settings)
     input.od=para;       % on-line parameters (np by N+1 matrix)
     input.W=Q;           % weights of the first N stages (ny by ny matrix)
     input.WN=QN;         % weights of the terminal stage (nyN by nyN matrix)
-
-%     if strcmp(settings.model,'ActiveSeat_onlyP')
-%         load(['C:\Users\enrico\Documents\MATLAB\GITLAB\MATMPC\data\ActiveSeat_vp\activeseatsim.mat']);
-%         input.od=[accX(1) roll_ref(1) accY(1)];   
-%     end
     
     input.lambda=zeros(nx,N+1);
-    input.mu=zeros(N*nc+ncN,N);
+    input.mu=zeros(N*nc+ncN,1);
     input.mu_u = zeros(N*nu,1);
     input.mu_x = zeros((N+1)*nbx,1);
     %% Reference generation
