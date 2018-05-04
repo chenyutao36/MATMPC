@@ -183,30 +183,31 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     /* Compute cc */
     if (nc>0){                    
         for(i=0;i<N;i++){
-            memcpy(lcc+i*nc,lc+i*nc,nc*sizeof(double));
-            dgemv(nTrans,&nc,&nx,&minus_one,Cgx+i*nc*nx,&nc,L+i*nx,&one_i,&one_d,lcc+i*nc,&one_i); 
-
-            memcpy(ucc+i*nc,uc+i*nc,nc*sizeof(double));
-            dgemv(nTrans,&nc,&nx,&minus_one,Cgx+i*nc*nx,&nc,L+i*nx,&one_i,&one_d,ucc+i*nc,&one_i);
+            dgemv(nTrans,&nc,&nx,&minus_one,Cgx+i*nc*nx,&nc,L+i*nx,&one_i,&zero,lcc+i*nc,&one_i); 
+            for(j=0;j<nc;j++){
+                ucc[i*nc+j] = lcc[i*nc+j]+ uc[i*nc+j];
+                lcc[i*nc+j] += lc[i*nc+j];          
+            }
         }        
     }   
     
     /* Compute ccN */
-    if (ncN>0){          
-        memcpy(lcc+N*nc,lc+N*nc,ncN*sizeof(double));
-        dgemv(nTrans,&ncN,&nx,&minus_one,CgN,&ncN,L+N*nx,&one_i,&one_d,lcc+N*nc,&one_i);
-        memcpy(ucc+N*nc,uc+N*nc,ncN*sizeof(double));
-        dgemv(nTrans,&ncN,&nx,&minus_one,CgN,&ncN,L+N*nx,&one_i,&one_d,ucc+N*nc,&one_i);
+    if (ncN>0){    
+        dgemv(nTrans,&ncN,&nx,&minus_one,CgN,&ncN,L+N*nx,&one_i,&zero,lcc+N*nc,&one_i);
+        for(j=0;j<ncN;j++){
+            ucc[N*nc+j] = lcc[N*nc+j]+ uc[N*nc+j];
+            lcc[N*nc+j] += lc[N*nc+j];          
+        }
     }
     
     /* Compute ccx */
     if (nbx>0){                    
         for(i=0;i<=N;i++){
-            memcpy(lxc+i*nbx,lb_dx+i*nbx,nbx*sizeof(double));
-            dgemv(nTrans,&nbx,&nx,&minus_one,Cx,&nbx,L+i*nx,&one_i,&one_d,lxc+i*nbx,&one_i); 
-
-            memcpy(uxc+i*nbx,ub_dx+i*nbx,nbx*sizeof(double));
-            dgemv(nTrans,&nbx,&nx,&minus_one,Cx,&nbx,L+i*nx,&one_i,&one_d,uxc+i*nbx,&one_i);
+            dgemv(nTrans,&nbx,&nx,&minus_one,Cx,&nbx,L+i*nx,&one_i,&zero,lxc+i*nbx,&one_i);
+            for(j=0;j<nbx;j++){
+                uxc[i*nbx+j] = lxc[i*nbx+j]+ ub_dx[i*nbx+j];
+                lxc[i*nbx+j] += lb_dx[i*nbx+j];          
+            }
         }        
     }   
     

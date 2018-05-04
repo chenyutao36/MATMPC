@@ -26,11 +26,10 @@ function [mem] = InitMemory(settings, opt, input)
     
     switch opt.qpsolver
         case 'qpoases'   
-            mem.qpsolver = 0;
             mem.qpoases_opt = qpOASES_options('MPC');
+%             mem.qpoases_opt = qpOASES_options('default');
         case 'qore'
             addpath(genpath('/home/chen/Documents/Packages/QORE/Matlab_dense'));
-            mem.qpsolver = 1;
             mem.qore_id = -1;
         case 'quadprog'
             mem.quadprog_opt.Algorithm = 'interior-point-convex';
@@ -88,7 +87,7 @@ function [mem] = InitMemory(settings, opt, input)
     
     % globalization
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-4;          % tolerance on optimality
+    mem.kkt_lim = 1e-1;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor

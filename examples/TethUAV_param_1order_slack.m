@@ -106,6 +106,5 @@ Ts_st = 0.01; % shooting interval time
 h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
 hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
 
-% build the function for inequality constraints
 path_con_fun=Function('path_con_fun', {states,controls,params}, {general_con},{'states','controls','params'},{'general_con'});
 path_con_N_fun=Function('path_con_N_fun', {states,params}, {general_con_N},{'states','params'},{'general_con_N'});
