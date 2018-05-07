@@ -76,7 +76,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
     if (nc>0)
         dgemv(Trans,&nc,&nx,&minus_one_d,Cgx,&nc,mu,&one_i,&one_d,lambda,&one_i);  
-    if (nc>0)
+    if (nbx>0)
         dgemv(Trans,&nbx,&nx,&minus_one_d,Cx,&nbx,mu_x,&one_i,&one_d,lambda,&one_i);      
       
 }

@@ -48,6 +48,18 @@ elseif OS_WIN
                    ];
 end
 
+%% blasfeo condensing
+
+if OS_LINUX
+    mexfiles_bcond = ['Condensing_Blasfeo.c ', ...
+                ' /opt/blasfeo/lib/libblasfeo.a ',...
+                   ];
+elseif OS_WIN
+    mexfiles_bcond = ['Condensing_Blasfeo.c ', ...
+                   PREFIX,'\opt\blasfeo\lib\libblasfeo.a ',...
+                   ];
+end
+
 %%
        
 mexcmd = 'mex';
@@ -64,6 +76,9 @@ end
 
 mexcmd_sp = [mexcmd, ' ', mexfiles_sp];
 mexcmd_pcond = [mexcmd, ' ', mexfiles_pcond];
+mexcmd_bcond = [mexcmd, ' ', mexfiles_bcond];
+
 
 eval(mexcmd_sp);
 eval(mexcmd_pcond);
+eval(mexcmd_bcond);

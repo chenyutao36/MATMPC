@@ -26,6 +26,10 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 tcond=tic;
                 condensing_hpipm(mem, settings);
                 tCOND=toc(tcond)*1e3;
+            case 'blasfeo_full'
+                tcond=tic;
+                Condensing_Blasfeo(mem, settings);
+                tCOND=toc(tcond)*1e3;
             case 'no'
                 tCOND = 0;
         end
