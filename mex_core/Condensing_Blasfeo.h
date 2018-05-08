@@ -15,7 +15,7 @@ typedef struct
     struct blasfeo_dmat *Hc_dmat;
     struct blasfeo_dmat *Ccg_dmat;
     struct blasfeo_dmat *Ccx_dmat;
-    
+        
     struct blasfeo_dvec *rq;
     struct blasfeo_dvec *a_dvec;
     struct blasfeo_dvec *L;
