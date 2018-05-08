@@ -109,7 +109,7 @@ function [input, data] = InitData(settings)
         case 'ChainofMasses_NLin'
             n=10;
             data.n=n;
-            x0=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
+            input.x0=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
 %             input.x0=[rand(1,n), 0.6*rand(1,n)-1, -0.6*rand(1,n) , zeros(1,3*(n-1))]';
             input.u0=zeros(nu,1);
             para0=0;

@@ -44,7 +44,7 @@ int Condensing_Blasfeo_workspace_calculate_size(int nx, int nu, int N, int nc, i
     int size = sizeof(Condensing_Blasfeo_workspace);
 
     size += 11*sizeof(struct blasfeo_dmat);
-    size += 5*sizeof(struct blasfeo_dvec); 
+    size += 6*sizeof(struct blasfeo_dvec); 
     
     size += blasfeo_memsize_dmat(nu+nx, nx*(N+1));       
     size += blasfeo_memsize_dmat(nu+nx, nx*N);        
@@ -57,7 +57,7 @@ int Condensing_Blasfeo_workspace_calculate_size(int nx, int nu, int N, int nc, i
     size += blasfeo_memsize_dmat(N*nu, nu*N);       
     size += blasfeo_memsize_dmat(N*nc+ncN, nu*N);        
     size += blasfeo_memsize_dmat((N+1)*nbx, nu*N);
-            
+               
     size += blasfeo_memsize_dvec((nx+nu)*(N+1)); 
     size += blasfeo_memsize_dvec(nx*N);       
     size += blasfeo_memsize_dvec(nx*(N+1));       
@@ -100,7 +100,7 @@ Condensing_Blasfeo_workspace* Condensing_Blasfeo_workspace_cast(int nx, int nu, 
     c_ptr += sizeof(struct blasfeo_dmat);
     workspace->Ccx_dmat = (struct blasfeo_dmat *)c_ptr;
     c_ptr += sizeof(struct blasfeo_dmat);
-
+    
     workspace->rq = (struct blasfeo_dvec *)c_ptr;
     c_ptr += sizeof(struct blasfeo_dvec);
     workspace->a_dvec = (struct blasfeo_dvec *)c_ptr;
@@ -118,7 +118,7 @@ Condensing_Blasfeo_workspace* Condensing_Blasfeo_workspace_cast(int nx, int nu, 
     
     assign_blasfeo_dmat_mem(nu+nx, nx*(N+1), workspace->StQ, &c_ptr);       
     assign_blasfeo_dmat_mem(nu+nx, nx*N, workspace->BtAt, &c_ptr);        
-    assign_blasfeo_dmat_mem(nu*(N+1), (nu+nx)*(N+1), workspace->HtWt, &c_ptr);        
+    assign_blasfeo_dmat_mem(nu*(N+1), (nu+nx)*N, workspace->HtWt, &c_ptr);        
     assign_blasfeo_dmat_mem(nu*N, nx*N, workspace->Gt, &c_ptr);        
     assign_blasfeo_dmat_mem(nu, nu*N, workspace->Rt, &c_ptr);         
     assign_blasfeo_dmat_mem(nc, nx*N, workspace->Cgx_dmat, &c_ptr);         
@@ -127,13 +127,32 @@ Condensing_Blasfeo_workspace* Condensing_Blasfeo_workspace_cast(int nx, int nu, 
     assign_blasfeo_dmat_mem(N*nu, nu*N, workspace->Hc_dmat, &c_ptr);       
     assign_blasfeo_dmat_mem(N*nc+ncN, nu*N, workspace->Ccg_dmat, &c_ptr);        
     assign_blasfeo_dmat_mem((N+1)*nbx, nu*N, workspace->Ccx_dmat, &c_ptr);
-            
+                
     assign_blasfeo_dvec_mem((nx+nu)*(N+1), workspace->rq, &c_ptr);
     assign_blasfeo_dvec_mem(nx*N, workspace->a_dvec, &c_ptr);         
     assign_blasfeo_dvec_mem(nx*(N+1), workspace->L, &c_ptr);       
     assign_blasfeo_dvec_mem((nu+nx)*(N+1), workspace->gcw, &c_ptr);       
     assign_blasfeo_dvec_mem(N*nc+ncN, workspace->bg, &c_ptr);       
     assign_blasfeo_dvec_mem((N+1)*nbx, workspace->bx, &c_ptr);
+
+    blasfeo_dgese(nu+nx, nx*(N+1), 0.0, workspace->StQ, 0, 0);       
+    blasfeo_dgese(nu+nx, nx*N, 0.0, workspace->BtAt, 0, 0);        
+    blasfeo_dgese(nu*(N+1), (nu+nx)*N, 0.0, workspace->HtWt, 0, 0);        
+    blasfeo_dgese(nu*N, nx*N, 0.0, workspace->Gt, 0, 0);        
+    blasfeo_dgese(nu, nu*N, 0.0, workspace->Rt, 0, 0);         
+    blasfeo_dgese(nc, nx*N, 0.0, workspace->Cgx_dmat, 0, 0);         
+    blasfeo_dgese(ncN, nx, 0.0, workspace->CgN_dmat, 0, 0);         
+    blasfeo_dgese(nbx, nx, 0.0, workspace->Cx_dmat, 0, 0);           
+    blasfeo_dgese(N*nu, nu*N, 0.0, workspace->Hc_dmat, 0, 0);       
+    blasfeo_dgese(N*nc+ncN, nu*N, 0.0, workspace->Ccg_dmat, 0, 0);        
+    blasfeo_dgese((N+1)*nbx, nu*N, 0.0, workspace->Ccx_dmat, 0, 0);
+                
+    blasfeo_dvecse((nx+nu)*(N+1), 0.0, workspace->rq, 0);
+    blasfeo_dvecse(nx*N, 0.0, workspace->a_dvec, 0);         
+    blasfeo_dvecse(nx*(N+1), 0.0, workspace->L, 0);       
+    blasfeo_dvecse((nu+nx)*(N+1), 0.0, workspace->gcw, 0);       
+    blasfeo_dvecse(N*nc+ncN, 0.0, workspace->bg, 0);       
+    blasfeo_dvecse((N+1)*nbx, 0.0, workspace->bx, 0);
     
 //     mexPrintf("\npointer moved VS. size calculated = %d VS. %d \n", c_ptr- (char*)raw_memory, Condensing_Blasfeo_workspace_calculate_size(nx, nu, N, nc, ncN, nbx));
 
@@ -194,44 +213,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     /*Allocate memory*/
     int i=0,j=0;
-    double *ZEROS;
-         
-    // struct blasfeo_dmat StQ;
-    // blasfeo_allocate_dmat(nu+nx, nx*(N+1), StQ);
-    // struct blasfeo_dmat BtAt;
-    // blasfeo_allocate_dmat(nu+nx, nx*N, BtAt);
-    // struct blasfeo_dmat HtWt;
-    // blasfeo_allocate_dmat(nu*(N+1), (nu+nx)*(N+1), HtWt);
-    // struct blasfeo_dmat Gt;
-    // blasfeo_allocate_dmat(nu*N, nx*N, Gt);
-    // struct blasfeo_dmat Rt;
-    // blasfeo_allocate_dmat(nu, nu*N, Rt); 
-    // struct blasfeo_dmat Cgx_dmat;
-    // blasfeo_allocate_dmat(nc, nx*N, Cgx_dmat); 
-    // struct blasfeo_dmat CgN_dmat;
-    // blasfeo_allocate_dmat(ncN, nx, CgN_dmat); 
-    // struct blasfeo_dmat Cx_dmat;
-    // blasfeo_allocate_dmat(nbx, nx, Cx_dmat);   
-    // struct blasfeo_dmat Hc_dmat;
-    // blasfeo_allocate_dmat(N*nu, nu*N, Hc_dmat);
-    // struct blasfeo_dmat Ccg_dmat;
-    // blasfeo_allocate_dmat(N*nc+ncN, nu*N, Ccg_dmat);
-    // struct blasfeo_dmat Ccx_dmat;
-    // blasfeo_allocate_dmat((N+1)*nbx, nu*N, Ccx_dmat);
-   
-    // struct blasfeo_dvec rq;
-    // blasfeo_allocate_dvec((nx+nu)*(N+1), rq);
-    // struct blasfeo_dvec L;
-    // blasfeo_allocate_dvec(nx*(N+1), L);
-    // struct blasfeo_dvec gcw;
-    // blasfeo_allocate_dvec((nu+nx)*(N+1), gcw);
-    // struct blasfeo_dvec bg;
-    // blasfeo_allocate_dvec(N*nc+ncN, bg);
-    // struct blasfeo_dvec bx;
-    // blasfeo_allocate_dvec((N+1)*nbx, bx);
-
-    if (!mem_alloc){
-    
+        
+    if (!mem_alloc){   
         int size = Condensing_Blasfeo_workspace_calculate_size(nx, nu, N, nc, ncN, nbx);
         mem = mxCalloc(size,1);
         mexMakeMemoryPersistent(mem);
@@ -239,8 +222,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mem_alloc = true;       
         mexAtExit(exitFcn);
     }
-
-//     Condensing_Blasfeo_workspace *workspace = Condensing_Blasfeo_workspace_cast(nx, nu, N, nc, ncN, nbx, mem);
     
     struct blasfeo_dmat *StQ = workspace->StQ;
     struct blasfeo_dmat *BtAt = workspace->BtAt;
@@ -259,25 +240,20 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     struct blasfeo_dvec *gcw = workspace->gcw;   
     struct blasfeo_dvec *bg = workspace->bg;  
     struct blasfeo_dvec *bx = workspace->bx;
-    
-    
+          
     for(i=0;i<N;i++){
         blasfeo_pack_tran_dmat(nx, nu, S+i*nx*nu, nx, StQ, 0, i*nx);
         blasfeo_pack_dmat(nx, nx, Q+i*nx*nx, nx, StQ, nu, i*nx);            
         blasfeo_pack_tran_dmat(nu, nu, R+i*nu*nu, nu, Rt, 0, i*nu);
         blasfeo_pack_tran_dmat(nx, nu, B+i*nx*nu, nx, BtAt, 0, i*nx);
         blasfeo_pack_tran_dmat(nx, nx, A+i*nx*nx, nx, BtAt, nu, i*nx);
-        
-//         if (nc>0)
-        blasfeo_pack_dmat(nc, nx, Cgx+i*nc*nx, nc, Cgx_dmat, 0, i*nx);
-        
+        blasfeo_pack_dmat(nc, nx, Cgx+i*nc*nx, nc, Cgx_dmat, 0, i*nx);        
         blasfeo_pack_dvec(nu, gu+i*nu, rq, i*(nx+nu));
         blasfeo_pack_dvec(nx, gx+i*nx, rq, i*(nx+nu)+nu);       
     }
     blasfeo_pack_dmat(nx, nx, Q+N*nx*nx, nx, StQ, nu, N*nx);
     blasfeo_pack_dmat(ncN, nx, CgN, ncN, CgN_dmat, 0, 0);
-    blasfeo_pack_dmat(nbx, nx, Cx, nbx, Cx_dmat, 0, 0);
-    
+    blasfeo_pack_dmat(nbx, nx, Cx, nbx, Cx_dmat, 0, 0);    
     blasfeo_pack_dvec(nx, gx+N*nx, rq, N*(nx+nu)+nu);
     blasfeo_pack_dvec(nx*N, a, a_dvec, 0);
                
@@ -291,7 +267,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 blasfeo_dgemm_nn(nu, nx, nx, 1.0, Gt, (j-1)*nu, i*nx, BtAt, nu, j*nx, 0.0, Gt, j*nu, i*nx, Gt, j*nu, i*nx);
             }
         }
-            
+                   
         /* Compute Hc */
         for(i=0;i<N;i++){
             blasfeo_dgemm_nt(nu, nx, nx, 1.0, Gt, (N-1)*nu, i*nx, StQ, nu, N*nx, 0.0, HtWt, N*nu, i*(nu+nx)+nu, HtWt, N*nu, i*(nu+nx)+nu);
@@ -300,11 +276,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 blasfeo_dgemm_nt(nu,nu+nx,nx,1.0,HtWt,(j+1)*nu,i*(nx+nu)+nu,BtAt,0,j*nx,1.0,HtWt,j*nu,i*(nu+nx),HtWt,j*nu,i*(nu+nx));
                 
                 blasfeo_dgecp(nu, nu, HtWt, j*nu, i*(nx+nu), Hc_dmat, i*nu, j*nu);
-                blasfeo_dgetr(nu, nu, HtWt, j*nu, i*(nx+nu), Hc_dmat, j*nu, i*nu); 
             }          
             blasfeo_dgemm_nt(nu,nu,nx,1.0,HtWt,(i+1)*nu,i*(nx+nu)+nu,BtAt,0,i*nx,1.0,Rt,0,i*nu,Hc_dmat,i*nu,i*nu);
         }
-    
+        blasfeo_dtrtr_u(N*nu, Hc_dmat, 0, 0, Hc_dmat, 0, 0);
         blasfeo_unpack_dmat(N*nu,N*nu,Hc_dmat,0,0,Hc,N*nu);
                 
         /* Compute Cc */
@@ -327,8 +302,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         /* Compute Ccx */
         if (nbx>0){         
             for(i=0;i<N;i++){
-                d_zeros(&ZEROS, nbx, nu);
-                blasfeo_pack_dmat(nbx, nu, ZEROS, nbx, Ccx_dmat, i*nbx, i*nu);
                 for(j=i+1;j<=N;j++)             
                     blasfeo_dgemm_nt(nbx,nu,nx,1.0,Cx_dmat,0,0,Gt,(j-1)*nu,i*nx,0.0,Ccx_dmat,j*nbx,i*nu,Ccx_dmat,j*nbx,i*nu);                    
             }
@@ -359,7 +332,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             blasfeo_dgemv_n(nc, nx, -1.0, Cgx_dmat, 0, i*nx, L, i*nx, 0.0, bg, i*nc, bg, i*nc);
             blasfeo_unpack_dvec(nc, bg, i*nc, lcc+i*nc);
             for(j=0;j<nc;j++){
-                ucc[i*nc+j] = lcc[i*nc+j]+ uc[i*nc+j];
+                ucc[i*nc+j] = lcc[i*nc+j] + uc[i*nc+j];
                 lcc[i*nc+j] += lc[i*nc+j];          
             }
         }        
@@ -370,7 +343,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         blasfeo_dgemv_n(ncN, nx, -1.0, CgN_dmat, 0, 0, L, N*nx, 0.0, bg, N*nc, bg, N*nc);
         blasfeo_unpack_dvec(ncN, bg, N*nc, lcc+N*nc);
         for(j=0;j<ncN;j++){
-            ucc[N*nc+j] = lcc[N*nc+j]+ uc[N*nc+j];
+            ucc[N*nc+j] = lcc[N*nc+j] + uc[N*nc+j];
             lcc[N*nc+j] += lc[N*nc+j];          
         }
     }
