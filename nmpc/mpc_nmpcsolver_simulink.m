@@ -7,6 +7,8 @@ function [input,mem,cpt] = mpc_nmpcsolver_simulink(input, settings, mem, opt)
     switch opt.condensing
          case 'default_full'           
              Condensing(mem, settings);
+         case 'blasfeo_full'               
+             Condensing_Blasfeo(mem, settings);               
          case 'no'
              
      end
