@@ -1,15 +1,17 @@
 function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
 
-    tic;
 
-    i=0;
-    KKT = 1e8;
+    mem.sqp_it=0;
+    mem.alpha =1;
+    StopCrit = 2*mem.kkt_lim;
     
     CPT.SHOOT=0;
     CPT.COND=0;
     CPT.QP=0;
-   
-    while(i < mem.sqp_maxit  &&  KKT > mem.kkt_lim ) % RTI or multiple call
+
+    tic;
+  
+    while(mem.sqp_it < mem.sqp_maxit  &&  StopCrit > mem.kkt_lim && mem.alpha>1E-4 ) % RTI or multiple call
         
         %% ----------- QP Preparation
        
@@ -37,9 +39,9 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ----------  Solving QP
         switch opt.qpsolver
             case 'qpoases'              
-                [tQP,mem] = mpc_qp_solve_qpoases(settings,mem, opt);
+                [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
             case 'qore'
-                [tQP,mem] = mpc_qp_solve_qore(settings,mem, opt);
+                [tQP,mem] = mpc_qp_solve_qore(settings,mem);
             case 'quadprog'
                 [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);
             case 'hpipm_sparse'               
@@ -61,14 +63,16 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         
         [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
         
+        StopCrit = max([eq_res, ineq_res, KKT]);
+        
         %% ---------- Multiple call management and convergence check
                         
         CPT.SHOOT=CPT.SHOOT+tSHOOT;
         CPT.COND=CPT.COND+tCOND;
         CPT.QP=CPT.QP+tQP;
         
-        i=i+1;
-        
+        mem.sqp_it=mem.sqp_it+1;
+              
     end
 
     output.info.cpuTime=toc*1e3;   % Total CPU time for the current sampling instant
@@ -80,8 +84,9 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
     output.mu_x=input.mu_x;
     output.mu_u=input.mu_u;
 
-    output.info.iteration_num=i;    
+    output.info.iteration_num=mem.sqp_it;      
     output.info.kktValue=KKT;
+    output.info.OptCrit = StopCrit;
     output.info.eq_res=eq_res;
     output.info.ineq_res=ineq_res;
     output.info.shootTime=CPT.SHOOT;

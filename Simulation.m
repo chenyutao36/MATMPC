@@ -37,7 +37,7 @@ settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 mean
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
-opt.condensing='default_full';  %'default_full','no','blasfeo_full'
+opt.condensing='blasfeo_full';  %'default_full','no','blasfeo_full'
 opt.qpsolver='qpoases'; %'qpoases','qore', 'quadprog', 'hpipm_sparse', 'hpipm_pcond'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='yes'; % 'yes','no'
@@ -108,7 +108,7 @@ while time(end) < Tf
     tshooting=output.info.shootTime;
     tcond=output.info.condTime;
     tqp=output.info.qpTime;
-    KKT=output.info.kktValue;
+    OptCrit=output.info.OptCrit;
     
     % Simulate system dynamics
     sim_input.x = state_sim(end,:).';
@@ -130,7 +130,7 @@ while time(end) < Tf
     % go to the next sampling instant
     nextTime = mem.iter*Ts; 
     mem.iter = mem.iter+1;
-    disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  KKT:' num2str(KKT) '  SQP_IT:' num2str(output.info.iteration_num)]);
+    disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  Opt:' num2str(OptCrit) '  SQP_IT:' num2str(output.info.iteration_num)]);
         
     time = [time nextTime];
     
@@ -144,7 +144,7 @@ end
 clear mex;
 
 %% draw pictures (optional)
-disp(['Average CPT: ', num2str(mean(CPT(2:end-1,:),1)) ]);
-disp(['Maximum CPT: ', num2str(max(CPT(2:end-1,:))) ]);
+disp(['Average CPT: ', num2str(mean(CPT(2:end,:),1)) ]);
+disp(['Maximum CPT: ', num2str(max(CPT(2:end,:))) ]);
 
 Draw;

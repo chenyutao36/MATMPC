@@ -175,9 +175,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
         
         daxpy(&nz, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
-        daxpy(&nu, &one_d, mu_u+i*nu, &one_i, casadi_out[0]+nx, &one_i);
-        if (nc>0)
-            daxpy(&nz, &one_d, casadi_out[2], &one_i, casadi_out[0], &one_i);        
+        daxpy(&nz, &one_d, casadi_out[2], &one_i, casadi_out[0], &one_i);        
               
         switch(sim_method){
             case 0:
@@ -243,15 +241,14 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     for (j=0;j<nx;j++)
         casadi_out[0][j] -= lambda[N*nx+j];
     
+    daxpy(&nx, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
+    
     for (j=0;j<nbx;j++){
         idx = (int)nbx_idx[j]-1;
         lx[N*nbx+j] = lbx[N*nbx+j] - x[N*nx+idx];
         ux[N*nbx+j] = ubx[N*nbx+j] - x[N*nx+idx];
     }
-    
-    if (ncN>0)
-        daxpy(&nx, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
-    
+        
     if (ncN>0){
         casadi_out[0] = lc + N*nc;
         path_con_N_Fun(casadi_in, casadi_out); 

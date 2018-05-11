@@ -29,7 +29,6 @@ function [mem] = InitMemory(settings, opt, input)
             mem.qpoases_opt = qpOASES_options('MPC');
 %             mem.qpoases_opt = qpOASES_options('default');
         case 'qore'
-            addpath(genpath('/home/chen/Documents/Packages/QORE/Matlab_dense'));
             mem.qore_id = -1;
         case 'quadprog'
             mem.quadprog_opt.Algorithm = 'interior-point-convex';
@@ -79,7 +78,7 @@ function [mem] = InitMemory(settings, opt, input)
             mem.nu = nu;
             mem.Sx = eye(nx);
             mem.Su = zeros(nx,nu);
-            mem.newton_iter = 8;
+            mem.newton_iter = 5;
             mem.JFK = mem.h*[mem.B_tab(1)*eye(nx,nx), mem.B_tab(2)*eye(nx,nx), mem.B_tab(3)*eye(nx,nx)];
         otherwise 
             error('Please choose a correct integrator');       
@@ -87,12 +86,13 @@ function [mem] = InitMemory(settings, opt, input)
     
     % globalization
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-1;          % tolerance on optimality
+    mem.kkt_lim = 1e-4;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor
     mem.mu_safty=1.1;            % constraint weight update factor (for merit function)
     mem.rho=0.5;                 % merit function parameter
+    mem.alpha=1;                 % default step length
     
     % allocate memory
     mem.A = zeros(nx,nx*N);
@@ -164,5 +164,7 @@ function [mem] = InitMemory(settings, opt, input)
     end
     mem.reg = 1e-8;
               
+    mem.iter=1;
+    
 end
 

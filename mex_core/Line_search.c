@@ -305,11 +305,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double tau = mxGetScalar( mxGetField(prhs[0], 0, "tau") );
     double mu_safty = mxGetScalar( mxGetField(prhs[0], 0, "mu_safty") );
     double *mu_merit = mxGetPr( mxGetField(prhs[0], 0, "mu_merit") );
+    double *alpha = mxGetPr( mxGetField(prhs[0], 0, "alpha") );
     
     int i=0,j=0;
     
     int sim_method = mxGetScalar( mxGetField(prhs[0], 0, "sim_method") );
-    int sqp_maxit = mxGetScalar( mxGetField(prhs[0], 0, "sqp_maxit") );   
+    int sqp_maxit = mxGetScalar( mxGetField(prhs[0], 0, "sqp_maxit") ); 
+    int sqp_it = mxGetScalar( mxGetField(prhs[0], 0, "sqp_it") );   
        
     if (!mem_alloc){       
         eq_res_vec = (double *)mxMalloc( neq * sizeof(double));
@@ -353,9 +355,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     // backtracking
     double cons_res;
     double sigma, pd, grad, mu_lb=0, obj, obj_new, dir_grad;
-    double alpha = 1.0;
     bool newpoint = false;
-    if (sqp_maxit > 1 ){
+    if (sqp_maxit > 1 && sqp_it > 0 ){
         cons_res = eval_cons_res(x, u, od, ds0, lb, ub, lc, uc,
                                  lbx, ubx, lbu, ubu, nx, nu, nc, ncN,
                                  N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
@@ -380,12 +381,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 
         dir_grad = grad - mu_merit[0] * cons_res;
                                 
-        while (!newpoint && alpha > 1E-4){
+        while (!newpoint && alpha[0] > 1E-4){
             memcpy(x_new, x, nx_t*sizeof(double));
             memcpy(u_new, u, nu_t*sizeof(double));
             
-            daxpy(&nx_t, &alpha, dx, &one_i, x_new, &one_i); 
-            daxpy(&nu_t, &alpha, du, &one_i, u_new, &one_i);
+            daxpy(&nx_t, alpha, dx, &one_i, x_new, &one_i); 
+            daxpy(&nu_t, alpha, du, &one_i, u_new, &one_i);
             cons_res = eval_cons_res(x_new, u_new, od, ds0, lb, ub, lc, uc,
                                      lbx, ubx, lbu, ubu, nx, nu, nc, ncN,
                                      N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
@@ -394,38 +395,38 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             obj_new = eval_obj(x_new, u_new, od, y, yN, W, WN,
                                nx, nu, np, ny, N) + mu_merit[0]*cons_res;
                         
-            if (obj_new <= obj + eta*alpha*dir_grad)
+            if (obj_new <= obj + eta*alpha[0]*dir_grad)
                 newpoint = true;
             else
-                alpha *= tau;
+                alpha[0] *= tau;
         }
                 
     }
                
     // update
-    double inc = 1.0 - alpha;
+    double inc = 1.0 - alpha[0];
      
-    daxpy(&nx_t, &alpha, dx, &one_i, x, &one_i); 
-    daxpy(&nu_t, &alpha, du, &one_i, u, &one_i);
+    daxpy(&nx_t, alpha, dx, &one_i, x, &one_i); 
+    daxpy(&nu_t, alpha, du, &one_i, u, &one_i);
     
     for (i=0;i<neq;i++)
         lambda[i] *= inc;
-    daxpy(&neq, &alpha, lambda_new, &one_i, lambda, &one_i);
+    daxpy(&neq, alpha, lambda_new, &one_i, lambda, &one_i);
     
     for (i=0;i<nbu_t;i++)
         mu_u[i] *= inc;
-    daxpy(&nbu_t, &alpha, mu_u_new, &one_i, mu_u, &one_i);
+    daxpy(&nbu_t, alpha, mu_u_new, &one_i, mu_u, &one_i);
     
     if (nbx_t>0){
         for (i=0;i<nbx_t;i++)
             mu_x[i] *= inc;
-        daxpy(&nbx_t, &alpha, mu_x_new, &one_i, mu_x, &one_i);
+        daxpy(&nbx_t, alpha, mu_x_new, &one_i, mu_x, &one_i);
     }
     
     if (nineq>0){        
         for (i=0;i<nineq;i++)
             mu[i] *= inc;
-        daxpy(&nineq, &alpha, mu_new, &one_i, mu, &one_i);                    
+        daxpy(&nineq, alpha, mu_new, &one_i, mu, &one_i);                    
     }
     
 }
