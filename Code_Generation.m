@@ -67,7 +67,6 @@ for j=1:s
        [k4] = f(X + DT * k3, U, P);
        X=X+DT/6*(k1 +2*k2 +2*k3 +k4);
 end
-% z = [states;controls];
 F = Function('F', {states,controls,params}, {X + SX.zeros(nx,1)});
 A = jacobian(X,states) + SX.zeros(nx,nx);
 B = jacobian(X,controls) + SX.zeros(nx,nu);
@@ -81,8 +80,8 @@ Jxi = jacobian(obji_vec, states) + SX.zeros(ny, nx);
 Jui = jacobian(obji_vec, controls) + SX.zeros(ny, nu);
 JxN = jacobian(objN_vec, states) + SX.zeros(nyN, nx);
 
-obji = 0.5*norm_2(obji_vec)^2;
-objN = 0.5*norm_2(objN_vec)^2;
+obji = 0.5*(h_fun(states,controls,params)-refs)'*Q*(h_fun(states,controls,params)-refs);
+objN = 0.5*(hN_fun(states,params)-refN)'*QN*(hN_fun(states,params)-refN);
 gxi = jacobian(obji,states)' + SX.zeros(nx,1);
 gui = jacobian(obji,controls)' + SX.zeros(nu,1);
 gxN = jacobian(objN,states)' + SX.zeros(nx,1);
@@ -115,7 +114,7 @@ end
 
 Jub = zeros(nu,nx+nu);
 for i=1:nu
-    Jub(i,i)=1.0;
+    Jub(i,nx+i)=1.0;
 end
 adj_dB = SX.zeros(nx+nu,1) + Jxb'*mu_x + Jub'*mu_u;
 if nc>0
@@ -154,6 +153,7 @@ if strcmp(generate,'y')
     path_con_N_fun.generate('path_con_N_fun.c',opts);
     Ji_fun.generate('Ji_fun.c',opts);
     JN_fun.generate('JN_fun.c',opts);
+%     intermStates.generate('intermStates',opts);
    
     opts = struct('main',false,'mex',false,'with_header',true);
     cd ../mex_core
@@ -228,6 +228,7 @@ if strcmp(compile,'y')
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Simulate_system.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Ji_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'JN_fun.c');
+%     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'intermStates.c');
        
     cd ../mex_core
     Compile_Mex;

@@ -17,7 +17,7 @@ end
 
 PREFIX = '';
 if OS_WIN
-    PREFIX = 'C:\msys';
+    PREFIX = 'C:\msys64';
 end
 %% hpipm sparse
 

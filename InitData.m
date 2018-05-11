@@ -276,7 +276,30 @@ function [input, data] = InitData(settings)
             lb_g = [fL_min; constr_min; constr_min];
             ub_g = [fL_max; constr_max; constr_max];            
             lb_gN = [fL_min];
-            ub_gN = [fL_max];   
+            ub_gN = [fL_max];  
+            
+        case 'Rider'
+            input.x0=zeros(nx,1);
+            input.u0=zeros(nu,1);
+            para0 = zeros(np,1);
+            
+            % weights
+            Q = zeros(ny,ny)
+            QN = diag(qN);
+            
+            % upper and lower bounds for states (=nbx)
+            lb_x = [0;0];
+            ub_x = [1;1];
+
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [];
+            ub_u = [];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
     end
 
     % prepare the data
@@ -310,7 +333,7 @@ function [input, data] = InitData(settings)
     input.od=para;       % on-line parameters (np by N+1 matrix)
     input.W=Q;           % weights of the first N stages (ny by ny matrix)
     input.WN=QN;         % weights of the terminal stage (nyN by nyN matrix)
-    
+%     
     input.lambda=zeros(nx,N+1);
     input.mu=zeros(N*nc+ncN,1);
     input.mu_u = zeros(N*nu,1);
@@ -347,6 +370,8 @@ function [input, data] = InitData(settings)
                                                     
         case 'TethUAV_param_1order_slack'
         	data.REF = zeros(1, ny);
+        case 'Rider'
+            data = [];
     end
     
 end
