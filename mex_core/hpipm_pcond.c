@@ -207,8 +207,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             hub[ii][jj] = ubu[ii*nu+jj];
         }
         for(jj=0;jj<nbx_v[ii];jj++){
-            hlb[ii][nbu_v[ii]+jj] = lbx[ii*nbx+jj];
-            hub[ii][nbu_v[ii]+jj] = ubx[ii*nbx+jj];
+//             hlb[ii][nbu_v[ii]+jj] = lbx[ii*nbx+jj];
+//             hub[ii][nbu_v[ii]+jj] = ubx[ii*nbx+jj];
+            hlb[ii][nbu_v[ii]+jj] = lbx[(ii-1)*nbx+jj];
+            hub[ii][nbu_v[ii]+jj] = ubx[(ii-1)*nbx+jj];
         }
     }
 
@@ -357,14 +359,16 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for(jj=0;jj<ngN;jj++)
         mu[N*ng+jj] = hlam_ug[N][jj] - hlam_lg[N][jj];
     
-    for(jj=0;jj<nbx;jj++)
-        mu_x[jj] = 0.0;
-    for(ii=1;ii<N;ii++){  
+//     for(jj=0;jj<nbx;jj++)
+//         mu_x[jj] = 0.0;
+    for(ii=0;ii<N;ii++){  
+//     for(ii=1;ii<N;ii++){  
         for(jj=0;jj<nbx;jj++)
-            mu_x[ii*nbx+jj] = hlam_ub[ii][nbu_v[ii]+jj] - hlam_lb[ii][nbu_v[ii]+jj];
+//             mu_x[ii*nbx+jj] = hlam_ub[ii][nbu_v[ii]+jj] - hlam_lb[ii][nbu_v[ii]+jj];
+            mu_x[ii*nbx+jj] = hlam_ub[ii+1][nbu_v[ii+1]+jj] - hlam_lb[ii+1][nbu_v[ii+1]+jj];
     }
-    for(jj=0;jj<nbx;jj++)
-        mu_x[N*nbx+jj] = hlam_ub[N][nbu_v[N]+jj] - hlam_lb[N][nbu_v[N]+jj];
+//     for(jj=0;jj<nbx;jj++)
+//         mu_x[N*nbx+jj] = hlam_ub[N][nbu_v[N]+jj] - hlam_lb[N][nbu_v[N]+jj];
     
     // print stats
     int err = 0;

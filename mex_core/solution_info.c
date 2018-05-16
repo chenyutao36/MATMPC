@@ -113,9 +113,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexMakeMemoryPersistent(lu);
         uu = (double *)mxMalloc( N*nu * sizeof(double));
         mexMakeMemoryPersistent(uu);
-        lx = (double *)mxMalloc( (N+1)*nbx * sizeof(double)); 
+//         lx = (double *)mxMalloc( (N+1)*nbx * sizeof(double)); 
+        lx = (double *)mxMalloc( N*nbx * sizeof(double)); 
         mexMakeMemoryPersistent(lx);
-        ux = (double *)mxMalloc( (N+1)*nbx * sizeof(double));
+//         ux = (double *)mxMalloc( (N+1)*nbx * sizeof(double));
+        ux = (double *)mxMalloc( N*nbx * sizeof(double));
         mexMakeMemoryPersistent(ux);
         
         switch(sim_method){
@@ -159,7 +161,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_in[2] = od+i*np;
         casadi_in[3] = y+i*ny;
         casadi_in[5] = lambda+(i+1)*nx;
-        casadi_in[6] = mu_x+i*nbx;
+        if (i==0)
+            casadi_in[6] = mxCalloc(nbx,sizeof(double));
+        else
+            casadi_in[6] = mu_x+(i-1)*nbx;
         casadi_in[7] = mu_u+i*nu;
         casadi_in[8] = mu+i*nc;
            
@@ -213,8 +218,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
         for (j=0;j<nbx;j++){
             idx = (int)nbx_idx[j]-1;
-            lx[i*nbx+j] = lbx[i*nbx+j] - x[i*nx+idx];
-            ux[i*nbx+j] = ubx[i*nbx+j] - x[i*nx+idx];
+//             lx[i*nbx+j] = lbx[i*nbx+j] - x[i*nx+idx];
+//             ux[i*nbx+j] = ubx[i*nbx+j] - x[i*nx+idx];
+            lx[i*nbx+j] = lbx[i*nbx+j] - x[(i+1)*nx+idx];
+            ux[i*nbx+j] = ubx[i*nbx+j] - x[(i+1)*nx+idx];
         }
         
         if (nc>0){
@@ -233,7 +240,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     casadi_in[1] = od+N*np;
     casadi_in[2] = yN;
     casadi_in[3] = WN;
-    casadi_in[4] = mu_x+N*nbx;
+//     casadi_in[4] = mu_x+N*nbx;
+    casadi_in[4] = mu_x+(N-1)*nbx;
     casadi_in[5] = mu+N*nc;
     
     casadi_out[0] = L+N*nz;
@@ -243,11 +251,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     daxpy(&nx, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
     
-    for (j=0;j<nbx;j++){
-        idx = (int)nbx_idx[j]-1;
-        lx[N*nbx+j] = lbx[N*nbx+j] - x[N*nx+idx];
-        ux[N*nbx+j] = ubx[N*nbx+j] - x[N*nx+idx];
-    }
+//     for (j=0;j<nbx;j++){
+//         idx = (int)nbx_idx[j]-1;
+//         lx[N*nbx+j] = lbx[N*nbx+j] - x[N*nx+idx];
+//         ux[N*nbx+j] = ubx[N*nbx+j] - x[N*nx+idx];
+//     }
         
     if (ncN>0){
         casadi_out[0] = lc + N*nc;
@@ -259,11 +267,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
          
     eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &neq, work);
-    KKT = dlange(Norm, &nw, &one_i, L, &nw, work);
+//     KKT = dlange(Norm, &nw, &one_i, L, &nw, work);
+    KKT = dnrm2(&nw, L, &one_i);
     
     for (i=0;i<N*nu;i++)
         ineq_res += MAX(-1*uu[i],0) + MAX(lu[i],0);
-    for (i=0;i<(N+1)*nbx;i++)
+//     for (i=0;i<(N+1)*nbx;i++)
+    for (i=0;i<N*nbx;i++)
         ineq_res += MAX(-1*ux[i],0) + MAX(lx[i],0);
     for (i=0;i<nineq;i++)
         ineq_res += MAX(-1*uc[i],0) + MAX(lc[i],0);

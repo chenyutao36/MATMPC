@@ -10,6 +10,7 @@ void f_Fun(double **in, double **out){
     double *xn = out[0];
     
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -36,6 +37,7 @@ void vde_Fun(double **in, double **out){
     double *jac_u = out[1];
     
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -63,6 +65,7 @@ void impl_f_Fun(double **in, double **out){
     double *res = out[0];
     
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -88,6 +91,7 @@ void impl_jac_x_Fun(double **in, double **out){
     double *jac_x = out[0];
     
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -113,6 +117,7 @@ void impl_jac_u_Fun(double **in, double **out){
     double *jac_u = out[0];
         
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -138,6 +143,7 @@ void impl_jac_xdot_Fun(double **in, double **out){
     double *jac_xdot = out[0];
     
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -163,6 +169,7 @@ void F_Fun(double **in, double **out) {
     double *x_out = out[0];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -188,6 +195,7 @@ void D_Fun(double **in, double **out) {
     double *B = out[1];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -215,6 +223,7 @@ void Ji_Fun(double **in, double **out) {
     double *Ju = out[1];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -245,6 +254,7 @@ void gi_Fun(double **in, double **out) {
     double *gu = out[1];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -272,6 +282,7 @@ void path_con_Fun(double **in, double **out) {
     double *ci = out[0];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -296,6 +307,7 @@ void Ci_Fun(double **in, double **out) {
     double *Cu = out[1];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -321,6 +333,7 @@ void JN_Fun(double **in, double *out) {
     double *JxN = out;
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -347,6 +360,7 @@ void gN_Fun(double **in, double **out) {
     double *gxN = out[0];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -371,6 +385,7 @@ void path_con_N_Fun(double **in, double **out) {
     double *cN = out[0];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -393,6 +408,7 @@ void CN_Fun(double **in, double **out) {
     double *CxN = out[0];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -424,6 +440,7 @@ void adj_Fun(double **in, double **out) {
     double *adj_dB = out[2];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -460,6 +477,7 @@ void adjN_Fun(double **in, double **out) {
     double *adj_dB = out[1];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -489,6 +507,7 @@ void obji_Fun(double **in, double **out){
     double *obj = out[0];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 
@@ -515,6 +534,7 @@ void objN_Fun(double **in, double **out){
     double *objN = out[0];
 
     void *casadi_mem = NULL;
+//     int casadi_mem = 0;
     int *casadi_iw = NULL;
     double *casadi_w = NULL;
 

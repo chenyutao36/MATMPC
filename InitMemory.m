@@ -26,11 +26,11 @@ function [mem] = InitMemory(settings, opt, input)
     
     switch opt.qpsolver
         case 'qpoases'   
-            mem.qpoases_opt = qpOASES_options('MPC');
-%             mem.qpoases_opt = qpOASES_options('default');
+%             mem.qpoases_opt = qpOASES_options('MPC');
+            mem.qpoases_opt = qpOASES_options('default');
         case 'qore'
             mem.qore_id = -1;
-        case 'quadprog'
+        case 'quadprog_dense'
             mem.quadprog_opt.Algorithm = 'interior-point-convex';
             mem.quadprog_opt.Display = 'off';
             mem.quadprog_opt.OptimalityTolerance = 1e-6;
@@ -46,6 +46,47 @@ function [mem] = InitMemory(settings, opt, input)
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
+        case 'ipopt_dense'
+            ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
+                        'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
+                        'jac_d_constant','yes','mu_strategy','adaptive','adaptive_mu_globalization',...
+                        'never-monotone-mode','accept_every_trial_step','yes');
+    
+            mem.ipopt.options.eq=false(N*nu+N*nc+ncN+N*nbx,1);
+            mem.ipopt.options.ineq=true(N*nu+N*nc+ncN+N*nbx,1);
+            mem.ipopt.x0=zeros(N*nu,1);
+            
+            mem.ipopt.options.nleq=[];
+            mem.ipopt.options.nlineq=[];
+            mem.ipopt.options.ipopt=ipopt_opts;
+            mem.ipopt.options.ipopt.print_level=0;
+            
+        case 'ipopt_sparse'
+            nw = (N+1)*nx+N*nu;
+            neq = (N+1)*nx;
+            nineq = N*nu+N*nbx+N*nc+ncN;
+            
+            ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
+                        'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
+                        'jac_d_constant','yes','mu_strategy','adaptive','adaptive_mu_globalization',...
+                        'never-monotone-mode','accept_every_trial_step','yes');
+    
+            mem.ipopt.options.eq=[false(nineq,1);true(neq,1)];
+            mem.ipopt.options.ineq=[true(nineq,1);false(neq,1)];
+            mem.ipopt.x0=zeros(nw,1);
+            
+            mem.ipopt.options.nleq=[];
+            mem.ipopt.options.nlineq=[];
+            mem.ipopt.options.ipopt=ipopt_opts;
+            mem.ipopt.options.ipopt.print_level=0;
+            
+            mem.ipopt_data.H = zeros(nw,nw);
+            mem.ipopt_data.g = zeros(nw,1);
+            mem.ipopt_data.dG = zeros(neq,nw);  mem.ipopt_data.dG(1:nx,1:nx) = eye(nx);
+            mem.ipopt_data.dBu = [zeros(N*nu,(N+1)*nx),eye(N*nu,N*nu)];
+            mem.ipopt_data.dBx = zeros(N*nbx,nw);
+            mem.ipopt_data.dBg = zeros(N*nc+ncN,nw);
+            mem.ipopt_data.G = zeros(neq,1);
     end
           
     switch opt.integrator
@@ -109,23 +150,23 @@ function [mem] = InitMemory(settings, opt, input)
     mem.uc = zeros(N*nc+ncN,1);
     mem.lb_du = zeros(N*nu,1);
     mem.ub_du = zeros(N*nu,1);
-    mem.lb_dx = zeros((N+1)*nbx,1);
-    mem.ub_dx = zeros((N+1)*nbx,1);
+    mem.lb_dx = zeros(N*nbx,1);
+    mem.ub_dx = zeros(N*nbx,1);
     
     mem.Hc = zeros(N*nu,N*nu);
-    mem.Ccx = zeros((N+1)*nbx,N*nu);
+    mem.Ccx = zeros(N*nbx,N*nu);
     mem.Ccg = zeros(N*nc+ncN,N*nu);
     mem.gc = zeros(N*nu,1);
     mem.lcc = zeros(N*nc+ncN,1);
     mem.ucc = zeros(N*nc+ncN,1);
-    mem.lxc = zeros((N+1)*nbx,1);
-    mem.uxc = zeros((N+1)*nbx,1);
+    mem.lxc = zeros(N*nbx,1);
+    mem.uxc = zeros(N*nbx,1);
     
     mem.dx = zeros(nx,N+1);
     mem.du = zeros(nu,N);
     mem.lambda_new = zeros(nx,N+1);
     mem.mu_new = zeros(N*nc+ncN,1);
-    mem.mu_x_new = zeros((N+1)*nbx,1);
+    mem.mu_x_new = zeros(N*nbx,1);
     mem.mu_u_new = zeros(N*nu,1);
     
     for i=1:nbx
@@ -162,7 +203,7 @@ function [mem] = InitMemory(settings, opt, input)
         mem.S = zeros(nx,nu*N);
         mem.R = zeros(nu,nu*N);
     end
-    mem.reg = 1e-8;
+    mem.reg = 1e-12;
               
     mem.iter=1;
     

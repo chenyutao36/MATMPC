@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='InvertedPendulum'; % see the folder "examples" for details
+settings.model='Rider'; % see the folder "examples" for details
 
 run(settings.model);
 
@@ -20,9 +20,9 @@ mu_g=SX.sym('mu_g',nc,1);                  % the i th multiplier for bounds on c
 muN_g=SX.sym('muN_g',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 2; % No. of integration steps per sample interval
+s  = 4; % No. of integration steps per sample interval
 DT = Ts/s;
-f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
+f  = Function('f', {states,controls,params}, {xy_dot},{'states','controls','params'},{'xdot'});
 X=states;
 U=controls; 
 P=params;
@@ -36,7 +36,7 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-s  = 2; % No. of integration steps per shooting interval
+s  = 4; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
 
@@ -61,10 +61,10 @@ X=states;
 U=controls; 
 P=params;
 for j=1:s
-       [k1] = f(X, U, P);
-       [k2] = f(X + DT/2 * k1, U, P);
-       [k3] = f(X + DT/2 * k2, U, P);
-       [k4] = f(X + DT * k3, U, P);
+       [k1] = f_fun(X, U, P);
+       [k2] = f_fun(X + DT/2 * k1, U, P);
+       [k3] = f_fun(X + DT/2 * k2, U, P);
+       [k4] = f_fun(X + DT * k3, U, P);
        X=X+DT/6*(k1 +2*k2 +2*k3 +k4);
 end
 F = Function('F', {states,controls,params}, {X + SX.zeros(nx,1)});

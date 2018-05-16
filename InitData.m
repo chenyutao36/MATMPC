@@ -284,8 +284,8 @@ function [input, data] = InitData(settings)
             para0 = zeros(np,1);
             
             % weights
-            Q = zeros(ny,ny)
-            QN = diag(qN);
+            Q = zeros(ny,ny);
+            QN = zeros(nyN,nyN);
             
             % upper and lower bounds for states (=nbx)
             lb_x = [0;0];
@@ -319,8 +319,8 @@ function [input, data] = InitData(settings)
     input.lbu = repmat(lbu,1,N);
     input.ubu = repmat(ubu,1,N);
     
-    input.lbx = repmat(lb_x,1,N+1);
-    input.ubx = repmat(ub_x,1,N+1);
+    input.lbx = repmat(lb_x,1,N);
+    input.ubx = repmat(ub_x,1,N);
 
     x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
@@ -337,7 +337,7 @@ function [input, data] = InitData(settings)
     input.lambda=zeros(nx,N+1);
     input.mu=zeros(N*nc+ncN,1);
     input.mu_u = zeros(N*nu,1);
-    input.mu_x = zeros((N+1)*nbx,1);
+    input.mu_x = zeros(N*nbx,1);
     %% Reference generation
 
     switch settings.model

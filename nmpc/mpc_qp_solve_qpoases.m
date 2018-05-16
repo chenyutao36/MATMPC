@@ -25,8 +25,8 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
         
     mem.du = reshape(sol, [nu,N]);
     mem.mu_u_new  = - multiplier(1:N*nu); 
-    mem.mu_x_new = -multiplier(N*nu+1:N*nu+(N+1)*nbx);
-    mem.mu_new   = - multiplier(N*nu+(N+1)*nbx+1:end);
+    mem.mu_x_new = -multiplier(N*nu+1:N*nu+N*nbx);
+    mem.mu_new   = - multiplier(N*nu+N*nbx+1:end);
     cpt_qp   = auxOutput.cpuTime*1e3;
                 
     Recover(mem, sizes);

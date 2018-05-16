@@ -161,8 +161,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         // state bounds
         for (j=0;j<nbx;j++){
             idx = (int)nbx_idx[j]-1;
-            lb_dx[i*nbx+j] = lbx[i*nbx+j]-x[i*nx+idx];
-            ub_dx[i*nbx+j] = ubx[i*nbx+j]-x[i*nx+idx];
+            lb_dx[i*nbx+j] = lbx[i*nbx+j]-x[(i+1)*nx+idx];
+            ub_dx[i*nbx+j] = ubx[i*nbx+j]-x[(i+1)*nx+idx];
         }
         
         // integration                      
@@ -204,9 +204,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         // Hessian
         if (!lin_obj){
             Ji_Fun(casadi_in, Jac);
-            dsyrk(UPLO, Trans, &nx, &ny, &one_d, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
+            dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
             dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
-            dsyrk(UPLO, Trans, &nu, &ny, &one_d, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
+            dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
             
             regularization(nx, Q+i*nx*nx, reg);
             regularization(nu, R+i*nu*nu, reg);
@@ -244,15 +244,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     if (!lin_obj){
         JN_Fun(casadi_in, Jac_N);
-        dsyrk(UPLO, Trans, &nx, &nyN, &one_d, Jac_N, &nyN, &zero, Q+N*nx*nx, &nx);
+        dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, Jac_N, &nyN, Jac_N, &nyN, &zero, Q+N*nx*nx, &nx);
         regularization(nx, Q+N*nx*nx, reg);
     }
     
-    for (j=0;j<nbx;j++){
-        idx = (int)nbx_idx[j]-1;
-        lb_dx[N*nbx+j] = lbx[N*nbx+j]-x[N*nx+idx];
-        ub_dx[N*nbx+j] = ubx[N*nbx+j]-x[N*nx+idx];
-    }
+//     for (j=0;j<nbx;j++){
+//         idx = (int)nbx_idx[j]-1;
+//         lb_dx[N*nbx+j] = lbx[N*nbx+j]-x[N*nx+idx];
+//         ub_dx[N*nbx+j] = ubx[N*nbx+j]-x[N*nx+idx];
+//     }
     
     casadi_out[0] = gx+N*nx;
     gN_Fun(casadi_in, casadi_out);
