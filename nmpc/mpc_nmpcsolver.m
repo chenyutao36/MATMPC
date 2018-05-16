@@ -42,7 +42,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
             case 'qore'
                 [tQP,mem] = mpc_qp_solve_qore(settings,mem);
-            case 'quadprog'
+            case 'quadprog_dense'
                 [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);
             case 'hpipm_sparse'               
                 tqp=tic;
@@ -52,6 +52,11 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 tqp=tic;
                 hpipm_pcond(mem,settings);
                 tQP = toc(tqp)*1e3;
+            case 'ipopt_dense'               
+                [tQP,mem] = mpc_qp_solve_ipopt_dense(settings,mem);
+            case 'ipopt_sparse'               
+                [tQP,mem] = mpc_qp_solve_ipopt_sparse(settings,mem);
+                
         end
         
 

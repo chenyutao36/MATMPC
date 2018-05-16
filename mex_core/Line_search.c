@@ -45,7 +45,7 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
                    size_t N, size_t np, size_t nbx, double *nbx_idx, double *eq_res_vec, int sim_method, sim_opts *opts, sim_in *in, sim_out *out,
                    sim_erk_workspace *erk_workspace, sim_irk_workspace *irk_workspace)
 {
-    mwIndex i=0,j=0;
+    int i=0,j=0;
     
     size_t neq = (N+1)*nx;
     size_t nineq = N*nc+ncN;
@@ -57,13 +57,15 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
     
     char *nTrans = "N", *Trans="T", *Norm="O";
     double one_d = 1.0, zero = 0.0;
-    mwSignedIndex one_i = 1;
+    size_t one_i = 1;
     int idx;
     
     double *lu = (double *)mxMalloc( N*nu * sizeof(double));        
     double *uu = (double *)mxMalloc( N*nu * sizeof(double));
-    double *lx = (double *)mxMalloc( (N+1)*nbx * sizeof(double));        
-    double *ux = (double *)mxMalloc( (N+1)*nbx * sizeof(double));
+//     double *lx = (double *)mxMalloc( (N+1)*nbx * sizeof(double));        
+//     double *ux = (double *)mxMalloc( (N+1)*nbx * sizeof(double));
+    double *lx = (double *)mxMalloc( N*nbx * sizeof(double));        
+    double *ux = (double *)mxMalloc( N*nbx * sizeof(double));
     
     memcpy(eq_res_vec, ds0, nx*sizeof(double));
            
@@ -101,8 +103,10 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
         
         for (j=0;j<nbx;j++){
             idx = (int)nbx_idx[j]-1;
-            lx[i*nbx+j] = lbx[i*nbx+j] - x[i*nx+idx];
-            ux[i*nbx+j] = ubx[i*nbx+j] - x[i*nx+idx];
+//             lx[i*nbx+j] = lbx[i*nbx+j] - x[i*nx+idx];
+//             ux[i*nbx+j] = ubx[i*nbx+j] - x[i*nx+idx];
+            lx[i*nbx+j] = lbx[i*nbx+j] - x[(i+1)*nx+idx];
+            ux[i*nbx+j] = ubx[i*nbx+j] - x[(i+1)*nx+idx];
         }
         
         for (j=0;j<nu;j++){
@@ -123,11 +127,11 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
         }          
     }
     
-    for (j=0;j<nbx;j++){
-        idx = (int)nbx_idx[j]-1;
-        lx[N*nbx+j] = lbx[N*nbx+j] - x[N*nx+idx];
-        ux[N*nbx+j] = ubx[N*nbx+j] - x[N*nx+idx];
-    }
+//     for (j=0;j<nbx;j++){
+//         idx = (int)nbx_idx[j]-1;
+//         lx[N*nbx+j] = lbx[N*nbx+j] - x[N*nx+idx];
+//         ux[N*nbx+j] = ubx[N*nbx+j] - x[N*nx+idx];
+//     }
         
     if (ncN>0){
         casadi_in[0] = x+N*nx;
@@ -144,7 +148,8 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
             
     for (i=0;i<N*nu;i++)
         ineq_res += MAX(-1*uu[i],0) + MAX(lu[i],0);
-    for (i=0;i<(N+1)*nbx;i++)
+//     for (i=0;i<(N+1)*nbx;i++)
+    for (i=0;i<N*nbx;i++)
         ineq_res += MAX(-1*ux[i],0) + MAX(lx[i],0);
     for (i=0;i<nineq;i++)
         ineq_res += MAX(-1*uc[i],0) + MAX(lc[i],0);
@@ -279,7 +284,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t nx_t = nx*(N+1);
     size_t nu_t = nu*N;
     size_t nbu_t = N*nu;
-    size_t nbx_t = (N+1)*nbx;
+//     size_t nbx_t = (N+1)*nbx;
+    size_t nbx_t = N*nbx;
     
     double one_d = 1.0;
     size_t one_i = 1;
@@ -311,7 +317,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int sim_method = mxGetScalar( mxGetField(prhs[0], 0, "sim_method") );
     int sqp_maxit = mxGetScalar( mxGetField(prhs[0], 0, "sqp_maxit") ); 
-    int sqp_it = mxGetScalar( mxGetField(prhs[0], 0, "sqp_it") );   
        
     if (!mem_alloc){       
         eq_res_vec = (double *)mxMalloc( neq * sizeof(double));
@@ -354,9 +359,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     // backtracking
     double cons_res;
-    double sigma, pd, grad, mu_lb=0, obj, obj_new, dir_grad;
-    bool newpoint = false;
-    if (sqp_maxit > 1 && sqp_it > 0 ){
+    double sigma, pd, grad, mu_lb=0, obj, obj_new, dir_grad, obj_tmp;
+    int newpoint = 0;
+    if (sqp_maxit > 1){
         cons_res = eval_cons_res(x, u, od, ds0, lb, ub, lc, uc,
                                  lbx, ubx, lbu, ubu, nx, nu, nc, ncN,
                                  N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
@@ -370,18 +375,20 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         else
             sigma = 0.0;
         
-        if (cons_res>0)
-            mu_lb=(grad+sigma*pd)/(1-rho)/cons_res;
+//         if (cons_res>0)
+        mu_lb=(grad+sigma*pd)/(1-rho)/cons_res;
                 
         if (mu_merit[0]<mu_lb)
             mu_merit[0]=mu_lb*mu_safty;
         
-        obj = eval_obj(x, u, od, y, yN, W, WN,
-                       nx, nu, np, ny, N) + mu_merit[0]*cons_res;
+        obj = eval_obj(x, u, od, y, yN, W, WN, nx, nu, np, ny, N);
+        obj += mu_merit[0]*cons_res;
                 
         dir_grad = grad - mu_merit[0] * cons_res;
+        
+//         mexPrintf("\nl:%f  pd:%f  mu_lb:%f  phi:%f  D:%f\n",cons_res,pd,mu_lb,obj,dir_grad);
                                 
-        while (!newpoint && alpha[0] > 1E-4){
+        while (newpoint!=1 && alpha[0] > 1E-4){
             memcpy(x_new, x, nx_t*sizeof(double));
             memcpy(u_new, u, nu_t*sizeof(double));
             
@@ -392,11 +399,17 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                                      N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
                                      erk_workspace, irk_workspace);
                         
-            obj_new = eval_obj(x_new, u_new, od, y, yN, W, WN,
-                               nx, nu, np, ny, N) + mu_merit[0]*cons_res;
+            obj_new = eval_obj(x_new, u_new, od, y, yN, W, WN, nx, nu, np, ny, N);
+            obj_new += mu_merit[0]*cons_res;
+            
+            dir_grad = grad - mu_merit[0] * cons_res;
+            
+            obj_tmp = obj + eta*alpha[0]*dir_grad;
+            
+//             mexPrintf("l:%f  phi:%f  phi_rhs:%f\n",cons_res,obj_new,obj_tmp);
                         
-            if (obj_new <= obj + eta*alpha[0]*dir_grad)
-                newpoint = true;
+            if (obj_new <= obj_tmp)
+                newpoint = 1;
             else
                 alpha[0] *= tau;
         }

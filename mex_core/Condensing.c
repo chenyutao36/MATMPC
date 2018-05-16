@@ -151,7 +151,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             for(i=0;i<N;i++){
                 for(j=i+1;j<=N;j++){   
                     dgemm(nTrans, nTrans, &nbx, &nu, &nx, &one_d, Cx, &nbx, G+(i*N+j-1)*nx*nu, &nx, &zero, Ccxi, &nbx);
-                    Block_Fill(nbx, nu, Ccxi, Ccx, j*nbx, i*nu, (N+1)*nbx);
+//                     Block_Fill(nbx, nu, Ccxi, Ccx, j*nbx, i*nu, (N+1)*nbx);
+                    Block_Fill(nbx, nu, Ccxi, Ccx, (j-1)*nbx, i*nu, N*nbx);
                 }    
             }  
         }
@@ -202,8 +203,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     /* Compute ccx */
     if (nbx>0){                    
-        for(i=0;i<=N;i++){
-            dgemv(nTrans,&nbx,&nx,&minus_one,Cx,&nbx,L+i*nx,&one_i,&zero,lxc+i*nbx,&one_i);
+//         for(i=0;i<=N;i++){
+        for(i=0;i<N;i++){
+//             dgemv(nTrans,&nbx,&nx,&minus_one,Cx,&nbx,L+i*nx,&one_i,&zero,lxc+i*nbx,&one_i);
+            dgemv(nTrans,&nbx,&nx,&minus_one,Cx,&nbx,L+(i+1)*nx,&one_i,&zero,lxc+i*nbx,&one_i);
             for(j=0;j<nbx;j++){
                 uxc[i*nbx+j] = lxc[i*nbx+j]+ ub_dx[i*nbx+j];
                 lxc[i*nbx+j] += lb_dx[i*nbx+j];          

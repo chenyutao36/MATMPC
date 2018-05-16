@@ -7,7 +7,7 @@ function [cpt_qp, mem] = mpc_qp_solve_qore(sizes,mem)
     N=sizes.N; 
                
     if mem.qore_id==-1            
-        [err, mem.qore_id] = QPDenseNew(N*nu, (N+1)*nbx+N*nc+ncN);
+        [err, mem.qore_id] = QPDenseNew(N*nu, N*nbx+N*nc+ncN);
         QPDenseSetInt(mem.qore_id, 'prtfreq', -1);
         QPDenseSetData(mem.qore_id, [mem.Ccx;mem.Ccg]', mem.Hc);
         
@@ -27,8 +27,8 @@ function [cpt_qp, mem] = mpc_qp_solve_qore(sizes,mem)
     
     mem.du = reshape(pri_sol(1:N*nu),[nu N]);
     mem.mu_u_new = -dual_sol(1:N*nu);
-    mem.mu_x_new = -dual_sol(N*nu+1:N*nu+(N+1)*nbx);
-    mem.mu_new = -dual_sol(N*nu+(N+1)*nbx+1:end);
+    mem.mu_x_new = -dual_sol(N*nu+1:N*nu+N*nbx);
+    mem.mu_new = -dual_sol(N*nu+N*nbx+1:end);
                 
     Recover(mem, sizes);
 end
