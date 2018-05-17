@@ -52,8 +52,8 @@ function [mem] = InitMemory(settings, opt, input)
                         'jac_d_constant','yes','mu_strategy','adaptive','adaptive_mu_globalization',...
                         'never-monotone-mode','accept_every_trial_step','yes');
     
-            mem.ipopt.options.eq=false(N*nu+N*nc+ncN+N*nbx,1);
-            mem.ipopt.options.ineq=true(N*nu+N*nc+ncN+N*nbx,1);
+            mem.ipopt.options.eq=false(N*nc+ncN+N*nbx,1);
+            mem.ipopt.options.ineq=true(N*nc+ncN+N*nbx,1);
             mem.ipopt.x0=zeros(N*nu,1);
             
             mem.ipopt.options.nleq=[];
@@ -64,7 +64,7 @@ function [mem] = InitMemory(settings, opt, input)
         case 'ipopt_sparse'
             nw = (N+1)*nx+N*nu;
             neq = (N+1)*nx;
-            nineq = N*nu+N*nbx+N*nc+ncN;
+            nineq = N*nc+ncN;
             
             ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
                         'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
@@ -83,10 +83,10 @@ function [mem] = InitMemory(settings, opt, input)
             mem.ipopt_data.H = zeros(nw,nw);
             mem.ipopt_data.g = zeros(nw,1);
             mem.ipopt_data.dG = zeros(neq,nw);  mem.ipopt_data.dG(1:nx,1:nx) = eye(nx);
-            mem.ipopt_data.dBu = [zeros(N*nu,(N+1)*nx),eye(N*nu,N*nu)];
-            mem.ipopt_data.dBx = zeros(N*nbx,nw);
-            mem.ipopt_data.dBg = zeros(N*nc+ncN,nw);
+            mem.ipopt_data.dBg = zeros(nineq,nw);
             mem.ipopt_data.G = zeros(neq,1);
+            mem.ipopt.options.ub = inf(nw,1);
+            mem.ipopt.options.lb = -inf(nw,1);
     end
           
     switch opt.integrator
