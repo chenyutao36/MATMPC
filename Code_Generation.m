@@ -22,7 +22,7 @@ muN_g=SX.sym('muN_g',ncN,1);                 % the N th multiplier for inequalit
 %% Explicit Runge-Kutta 4 Integrator for simulation
 s  = 4; % No. of integration steps per sample interval
 DT = Ts/s;
-f  = Function('f', {states,controls,params}, {xy_dot},{'states','controls','params'},{'xdot'});
+f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
 U=controls; 
 P=params;
