@@ -32,12 +32,12 @@ nbx = settings.nbx;
 N  = 40;             % No. of shooting points
 settings.N = N;
 
-N2 = 6;
+N2 = 8;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
-opt.condensing='blasfeo_full';  %'default_full','no','blasfeo_full','partial_condensing'
+opt.condensing='default_full';  %'default_full','no','blasfeo_full','partial_condensing'
 opt.qpsolver='qpoases'; %'qpoases','qore', 'quadprog_dense', 'hpipm_sparse', 'hpipm_pcond'
                         %'ipopt_dense','ipopt_sparse','ipopt_partial_sparse','qpdunes'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
