@@ -16,7 +16,9 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ----------- QP Preparation
        
         tshoot = tic;
-        qp_generation(input, settings, mem);
+%         qp_generation(input, settings, mem);
+        qp_generation_tac(input, settings, mem);
+%         qp_generation_aim(input, settings, mem);
         tSHOOT = toc(tshoot)*1e3; 
         
         switch opt.condensing
@@ -66,32 +68,24 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 
             case 'qpdunes'
                 [tQP, mem] = mpc_qp_solve_qpdunes(settings,mem);
-                
-%                 mem2.iter=mem.iter;
-%                 mem2.dunes.qpOptions=mem.dunes.qpOptions;
-%                 nw = (settings2.N+1)*settings2.nx+settings2.N*settings2.nu;
-%                 mem2.dunes.H=zeros(settings2.nx+settings2.nu,(settings2.nx+settings2.nu)*settings2.N);
-%                 mem2.dunes.P=zeros(settings2.nx,settings2.nx);
-%                 mem2.dunes.C=zeros(settings2.nx,(settings2.nx+settings2.nu)*settings2.N);
-%                 mem2.dunes.c=zeros(settings2.nx, settings2.N);
-%                 mem2.dunes.g=zeros(nw,1);
-%                 mem2.dunes.zLow = -inf(nw,1);
-%                 mem2.dunes.zUpp = inf(nw,1);
-%                 mem2.dunes.D = zeros(settings2.nc,(settings2.nx+settings2.nu)*settings2.N+settings2.nx);
-%                 mem2.dunes.dLow = zeros(settings2.nc*(settings2.N+1));
-%                 mem2.dunes.dUpp = zeros(settings2.nc*(settings2.N+1));
-%                 [tQP, mem2] = mpc_qp_solve_qpdunes(settings2,mem2);
         end
         
 
         %% ---------- Line search
 
         Line_search(mem, input, settings);
+        
+        %% for CMON-RTI
+        
+        if mem.iter==1 && mem.sqp_it==0
+            [mem.rho_cmon, mem.gamma] = CMoN_Init(settings, mem, input);                                   
+        end  
+        adaptive_eta(mem,settings);
                 
         %% ---------- KKT calculation 
         
         [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
-        
+                
         StopCrit = max([eq_res, ineq_res, KKT]);
         
         %% ---------- Multiple call management and convergence check

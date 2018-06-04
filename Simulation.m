@@ -32,16 +32,17 @@ nbx = settings.nbx;
 N  = 40;             % No. of shooting points
 settings.N = N;
 
-N2 = 5;
+N2 = 6;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
-opt.condensing='default_full';  %'default_full','no','blasfeo_full'
-opt.qpsolver='qpoases'; %'qpoases','qore', 'quadprog_dense', 'hpipm_sparse', 'hpipm_pcond','ipopt_dense','ipopt_sparse'
+opt.condensing='blasfeo_full';  %'default_full','no','blasfeo_full','partial_condensing'
+opt.qpsolver='qpoases'; %'qpoases','qore', 'quadprog_dense', 'hpipm_sparse', 'hpipm_pcond'
+                        %'ipopt_dense','ipopt_sparse','ipopt_partial_sparse','qpdunes'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
-opt.shifting='no'; % 'yes','no'
-opt.lin_obj='no'; % 'yes','no' % if objective function is linear least square
+opt.shifting='yes'; % 'yes','no'
+opt.lin_obj='yes'; % 'yes','no' % if objective function is linear least square
 opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 
 %% Initialize Data (all users have to do this)
@@ -55,7 +56,7 @@ mem = InitMemory(settings, opt, input);
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
-Tf = 1.2;  % simulation time
+Tf = 4;  % simulation time
 state_sim= [input.x0]';
 controls_MPC = [input.u0]';
 y_sim = [];
@@ -94,6 +95,12 @@ while time(end) < Tf
             input.mu=[output.mu(nc+1:end);output.mu(end-nc+1:end)];
             input.mu_x=[output.mu_x(nbx+1:end);output.mu_x(end-nbx+1:end)];
             input.mu_u=[output.mu_u(nu+1:end);output.mu_u(end-nu+1:end)];
+            mem.A=[mem.A(:,nx+1:end),mem.A(:,end-nx+1:end)];
+            mem.B=[mem.B(:,nu+1:end),mem.B(:,end-nu+1:end)];
+            mem.F_old = [mem.F_old(:,2:end),mem.F_old(:,end)];
+            mem.V_pri = [mem.V_pri(:,2:end),mem.V_pri(:,end)];
+            mem.V_dual = [mem.V_dual(:,2:end),mem.V_dual(:,end)];
+            mem.q_dual = [mem.q_dual(:,2:end),mem.q_dual(:,end)];
         case 'no'
             input.x=output.x;
             input.u=output.u;
@@ -130,7 +137,7 @@ while time(end) < Tf
     % go to the next sampling instant
     nextTime = mem.iter*Ts; 
     mem.iter = mem.iter+1;
-    disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  MULTIPLE SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  Opt:' num2str(OptCrit) '  SQP_IT:' num2str(output.info.iteration_num)]);
+    disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  Opt:' num2str(OptCrit) '  SQP_IT:' num2str(output.info.iteration_num) '  Perc:' num2str(mem.perc)]);
         
     time = [time nextTime];
     

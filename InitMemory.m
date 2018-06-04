@@ -331,7 +331,7 @@ function [mem] = InitMemory(settings, opt, input)
     mem.tol_ref=1e-1;  	       
     mem.alpha = 1;      
     mem.beta = 1;        
-    mem.c1 = 0.6;
+    mem.c1 = 0.1;
     mem.gamma = 0;	
     mem.rho_cmon = 0;
           
@@ -344,6 +344,8 @@ function [mem] = InitMemory(settings, opt, input)
     
     mem.shift_x = zeros(nx,N+1);
     mem.shift_u = zeros(nu,N);
+    
+    mem.Ns=20;
     
 end
 
