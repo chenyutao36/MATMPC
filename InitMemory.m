@@ -111,8 +111,7 @@ function [mem] = InitMemory(settings, opt, input)
             mem.ipopt.options.lb = -inf(nw,1);
             
         case 'ipopt_partial_sparse'
-            
-                     
+                                
             nw = (N2+1)*mem.settings2.nx+N2*mem.settings2.nu;
             neq = (N2+1)*mem.settings2.nx;
             nineq = N2*mem.settings2.nc+mem.settings2.ncN;
@@ -155,33 +154,6 @@ function [mem] = InitMemory(settings, opt, input)
             
             mem.dunes.qpOptions = qpDUNES_options( 'default', ...
                              'maxIter', 100, ...
-                             'printLevel', 2, ...
-                             'logLevel', 0, ...     % log all data
-                             'lsType', 4, ...       % Accelerated gradient biscection LS
-                             'stationarityTolerance', 1.e-6, ...
-                             'regType', 2, ...       % regularize only singular directions; 1 is normalized Levenberg Marquardt
-                             'newtonHessDiagRegTolerance', 1.e-8, ...
-                             'maxNumLineSearchIterations',			19, ...			% 0.3^19 = 1e-10
-                             'maxNumLineSearchRefinementIterations',	49, ...			% 0.62^49 = 1e-10
-                             'lineSearchReductionFactor',		0.3, ...		% needs to be between 0 and 1
-                             'lineSearchIncreaseFactor',			1.5 ...		% needs to be greater than 1
-                             );
-                         
-        case 'qpdunes_partial'
-            nw = (mem.settings2.N+1)*mem.settings2.nx+mem.settings2.N*mem.settings2.nu;
-            mem.mem2.dunes.H=zeros(mem.settings2.nx+mem.settings2.nu,(mem.settings2.nx+mem.settings2.nu)*mem.settings2.N);
-            mem.mem2.dunes.P=zeros(mem.settings2.nx,mem.settings2.nx);
-            mem.mem2.dunes.C=zeros(mem.settings2.nx,(mem.settings2.nx+mem.settings2.nu)*mem.settings2.N);
-            mem.mem2.dunes.c=zeros(mem.settings2.nx, mem.settings2.N);
-            mem.mem2.dunes.D=zeros(mem.settings2.nc,(mem.settings2.nx+mem.settings2.nu)*mem.settings2.N+mem.settings2.nx);
-            mem.mem2.dunes.g=zeros(nw,1);
-            mem.mem2.dunes.zLow = -inf(nw,1);
-            mem.mem2.dunes.zUpp = inf(nw,1);
-            mem.mem2.dunes.dLow = -inf((mem.settings2.N+1)*mem.settings2.nc,1);
-            mem.mem2.dunes.dUpp = inf((mem.settings2.N+1)*mem.settings2.nc,1);
-            
-            mem.dunes.qpOptions = qpDUNES_options( 'default', ...
-                             'maxIter', 100, ...
                              'printLevel', 0, ...
                              'logLevel', 0, ...     % log all data
                              'lsType', 4, ...       % Accelerated gradient biscection LS
@@ -193,7 +165,7 @@ function [mem] = InitMemory(settings, opt, input)
                              'lineSearchReductionFactor',		0.3, ...		% needs to be between 0 and 1
                              'lineSearchIncreaseFactor',			1.5 ...		% needs to be greater than 1
                              );
-            
+                                     
     end
           
     switch opt.integrator
