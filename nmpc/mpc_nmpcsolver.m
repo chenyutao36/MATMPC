@@ -16,9 +16,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ----------- QP Preparation
        
         tshoot = tic;
-%         qp_generation(input, settings, mem);
-        qp_generation_tac(input, settings, mem);
-%         qp_generation_aim(input, settings, mem);
+        qp_generation(input, settings, mem);
         tSHOOT = toc(tshoot)*1e3; 
         
         switch opt.condensing
@@ -74,13 +72,6 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ---------- Line search
 
         Line_search(mem, input, settings);
-        
-        %% for CMON-RTI
-        
-        if mem.iter==1 && mem.sqp_it==0
-            [mem.rho_cmon, mem.gamma] = CMoN_Init(settings, mem, input);                                   
-        end  
-        adaptive_eta(mem,settings);
                 
         %% ---------- KKT calculation 
         
