@@ -248,6 +248,9 @@ function [mem] = InitMemory(settings, opt, input)
     mem.mu_x_new = zeros(N*nbx,1);
     mem.mu_u_new = zeros(N*nu,1);
     
+    mem.q_dual = zeros(nx,N+1);
+    mem.dmu = zeros(N*nu+N*nbx+N*nc+ncN,1);
+    
     for i=1:nbx
         mem.Cx(i,nbx_idx(i)) = 1.0;
     end
@@ -285,39 +288,6 @@ function [mem] = InitMemory(settings, opt, input)
     mem.reg = 1e-8;
               
     mem.iter=1;
-    
-     %% for CMON-RTI	
-    mem.F_old = zeros(nx,N);	
-    mem.CMON_pri = zeros(N,1);	
-    mem.CMON_dual = zeros(N,1);	
-    mem.q_dual = zeros(nx,N+1);	
-    mem.V_pri = zeros(nx,N);
-    mem.V_dual = zeros(nx+nu,N);
-    mem.dmu = zeros(N*nu+N*nbx+N*nc+ncN,1);
-    mem.threshold_pri = 0;	
-    mem.threshold_dual = 0;	
-    mem.tol=0;	
-    mem.perc=100;
-    
-    mem.tol_abs=1e-1;
-    mem.tol_ref=1e-1;  	       
-    mem.alpha = 1;      
-    mem.beta = 1;        
-    mem.c1 = 0.1;
-    mem.gamma = 0;	
-    mem.rho_cmon = 0;
-          
-    mem.local = 0;
-    
-    mem.rho_ratio=[];
-    mem.gamma_ratio=[];
-    
-    mem.r_ratio=[];
-    
-    mem.shift_x = zeros(nx,N+1);
-    mem.shift_u = zeros(nu,N);
-    
-    mem.Ns=20;
-    
+       
 end
 
