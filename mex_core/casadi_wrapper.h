@@ -19,6 +19,7 @@ void path_con_N_Fun(double **in, double **out);
 void CN_Fun(double **in, double **out);
 void adj_Fun(double **in, double **out);
 void adjN_Fun(double **in, double **out);
+void adj_dG_Fun(double **in, double **out);
 void obji_Fun(double **in, double **out);
 void objN_Fun(double **in, double **out);
 

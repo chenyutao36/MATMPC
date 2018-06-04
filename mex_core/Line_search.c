@@ -62,8 +62,6 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
     
     double *lu = (double *)mxMalloc( N*nu * sizeof(double));        
     double *uu = (double *)mxMalloc( N*nu * sizeof(double));
-//     double *lx = (double *)mxMalloc( (N+1)*nbx * sizeof(double));        
-//     double *ux = (double *)mxMalloc( (N+1)*nbx * sizeof(double));
     double *lx = (double *)mxMalloc( N*nbx * sizeof(double));        
     double *ux = (double *)mxMalloc( N*nbx * sizeof(double));
     
@@ -284,7 +282,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t nx_t = nx*(N+1);
     size_t nu_t = nu*N;
     size_t nbu_t = N*nu;
-//     size_t nbx_t = (N+1)*nbx;
     size_t nbx_t = N*nbx;
     
     double one_d = 1.0;
@@ -312,6 +309,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double mu_safty = mxGetScalar( mxGetField(prhs[0], 0, "mu_safty") );
     double *mu_merit = mxGetPr( mxGetField(prhs[0], 0, "mu_merit") );
     double *alpha = mxGetPr( mxGetField(prhs[0], 0, "alpha") );
+    
+    double *q_dual = mxGetPr( mxGetField(prhs[0], 0, "q_dual") );          
+    double *dmu = mxGetPr( mxGetField(prhs[0], 0, "dmu") );
+    
     
     int i=0,j=0;
     
@@ -416,30 +417,29 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 
     }
                
-    // update
-    double inc = 1.0 - alpha[0];
-     
+    // update     
     daxpy(&nx_t, alpha, dx, &one_i, x, &one_i); 
     daxpy(&nu_t, alpha, du, &one_i, u, &one_i);
     
-    for (i=0;i<neq;i++)
-        lambda[i] *= inc;
-    daxpy(&neq, alpha, lambda_new, &one_i, lambda, &one_i);
+    for (i=0;i<neq;i++){
+        q_dual[i] = alpha[0]*(lambda_new[i] - lambda[i]);
+    }
+    daxpy(&neq, &one_d, q_dual, &one_i, lambda, &one_i);
     
     for (i=0;i<nbu_t;i++)
-        mu_u[i] *= inc;
-    daxpy(&nbu_t, alpha, mu_u_new, &one_i, mu_u, &one_i);
+        dmu[i] = alpha[0]*(mu_u_new[i] - mu_u[i]);
+    daxpy(&nbu_t, &one_d, dmu, &one_i, mu_u, &one_i);
     
     if (nbx_t>0){
         for (i=0;i<nbx_t;i++)
-            mu_x[i] *= inc;
-        daxpy(&nbx_t, alpha, mu_x_new, &one_i, mu_x, &one_i);
+            dmu[nbu_t+i] = alpha[0]*(mu_x_new[i] - mu_x[i]);
+        daxpy(&nbx_t, &one_d, dmu+nbu_t, &one_i, mu_x, &one_i);
     }
     
     if (nineq>0){        
         for (i=0;i<nineq;i++)
-            mu[i] *= inc;
-        daxpy(&nineq, alpha, mu_new, &one_i, mu, &one_i);                    
+            dmu[nbu_t+nbx_t+i] = alpha[0]*(mu_new[i] - mu[i]);
+        daxpy(&nineq, &one_d, dmu+nbu_t+nbx_t, &one_i, mu, &one_i);                    
     }
     
 }

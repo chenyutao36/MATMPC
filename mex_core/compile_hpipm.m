@@ -37,12 +37,12 @@ end
 %% hpipm pcond
 
 if OS_LINUX
-    mexfiles_pcond = ['hpipm_pcond.c ', ...
+    mexfiles_pcondsol = ['hpipm_pcond.c ', ...
                 ' /opt/hpipm/lib/libhpipm.a ', ...
                 ' /opt/blasfeo/lib/libblasfeo.a ',...
                    ];
 elseif OS_WIN
-    mexfiles_pcond = ['hpipm_pcond.c ', ...
+    mexfiles_pcondsol = ['hpipm_pcond.c ', ...
                    PREFIX,'\opt\hpipm\lib\libhpipm.a ', ...
                    PREFIX,'\opt\blasfeo\lib\libblasfeo.a ',...
                    ];
@@ -60,6 +60,19 @@ elseif OS_WIN
                    ];
 end
 
+%% partial condensing
+
+if OS_LINUX
+    mexfiles_pcond = ['Partial_Condensing.c ', ...
+                ' /opt/hpipm/lib/libhpipm.a ', ...
+                ' /opt/blasfeo/lib/libblasfeo.a ',...
+                   ];
+elseif OS_WIN
+    mexfiles_pcond = ['Partial_Condensing.c ', ...
+                   PREFIX,'\opt\hpipm\lib\libhpipm.a ', ...
+                   PREFIX,'\opt\blasfeo\lib\libblasfeo.a ',...
+                   ];
+end
 %%
        
 mexcmd = 'mex';
@@ -75,10 +88,11 @@ end
 %%
 
 mexcmd_sp = [mexcmd, ' ', mexfiles_sp];
-mexcmd_pcond = [mexcmd, ' ', mexfiles_pcond];
+mexcmd_pcondsol = [mexcmd, ' ', mexfiles_pcondsol];
 mexcmd_bcond = [mexcmd, ' ', mexfiles_bcond];
+mexcmd_pcond = [mexcmd, ' ', mexfiles_pcond];
 
-
-eval(mexcmd_sp);
+% eval(mexcmd_sp);
+% eval(mexcmd_pcondsol);
+% eval(mexcmd_bcond);
 eval(mexcmd_pcond);
-eval(mexcmd_bcond);

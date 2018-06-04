@@ -15,6 +15,7 @@ function [mem] = InitMemory(settings, opt, input)
     nc = settings.nc;    % No. of general constraints
     ncN = settings.ncN;  % No. of general constraints at terminal stage
     N     = settings.N;             % No. of shooting points
+    N2  = settings.N2;
 
     %% memory
     mem = struct;
@@ -24,10 +25,27 @@ function [mem] = InitMemory(settings, opt, input)
         mem.hot_start=1;
     end
     
+    if strcmp(opt.condensing,'partial_condensing')
+        mem.settings2.N = N2;
+        mem.settings2.nx = nx;
+        mem.settings2.Nc = N/N2;
+        mem.settings2.nu = mem.settings2.Nc*nu;
+        mem.settings2.nbx = nbx;
+        mem.settings2.nbx_idx = nbx_idx;
+        
+        mem.settings2.nbu_idx=[];
+        for i=1:mem.settings2.Nc        
+           mem.settings2.nbu_idx = [mem.settings2.nbu_idx,nbu_idx+(i-1)*nu];
+        end
+        
+        mem.settings2.nc = nc*mem.settings2.Nc+(mem.settings2.Nc-1)*nbx;
+        mem.settings2.ncN = ncN;
+    end
+    
     switch opt.qpsolver
         case 'qpoases'   
-%             mem.qpoases_opt = qpOASES_options('MPC');
-            mem.qpoases_opt = qpOASES_options('default');
+            mem.qpoases_opt = qpOASES_options('MPC');
+%             mem.qpoases_opt = qpOASES_options('default');
         case 'qore'
             mem.qore_id = -1;
         case 'quadprog_dense'
@@ -61,15 +79,19 @@ function [mem] = InitMemory(settings, opt, input)
             mem.ipopt.options.ipopt=ipopt_opts;
             mem.ipopt.options.ipopt.print_level=0;
             
+            
         case 'ipopt_sparse'
             nw = (N+1)*nx+N*nu;
             neq = (N+1)*nx;
             nineq = N*nc+ncN;
             
-            ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
-                        'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
-                        'jac_d_constant','yes','mu_strategy','adaptive','adaptive_mu_globalization',...
-                        'never-monotone-mode','accept_every_trial_step','yes');
+            ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,...
+                        'hessian_constant','yes','jac_c_constant','yes','jac_d_constant','yes',...
+                        'mehrotra_algorithm','yes',...
+                        'mu_oracle','probing',...
+                        'mu_strategy','adaptive',...
+                        'adaptive_mu_globalization','never-monotone-mode',...
+                        'accept_every_trial_step','yes');
     
             mem.ipopt.options.eq=[false(nineq,1);true(neq,1)];
             mem.ipopt.options.ineq=[true(nineq,1);false(neq,1)];
@@ -87,6 +109,91 @@ function [mem] = InitMemory(settings, opt, input)
             mem.ipopt_data.G = zeros(neq,1);
             mem.ipopt.options.ub = inf(nw,1);
             mem.ipopt.options.lb = -inf(nw,1);
+            
+        case 'ipopt_partial_sparse'
+            
+                     
+            nw = (N2+1)*mem.settings2.nx+N2*mem.settings2.nu;
+            neq = (N2+1)*mem.settings2.nx;
+            nineq = N2*mem.settings2.nc+mem.settings2.ncN;
+
+            ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
+                                'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
+                                'jac_d_constant','yes','mu_strategy','adaptive','adaptive_mu_globalization',...
+                                'never-monotone-mode','accept_every_trial_step','yes');
+
+            mem.mem2.ipopt.options.eq=[false(nineq,1);true(neq,1)];
+            mem.mem2.ipopt.options.ineq=[true(nineq,1);false(neq,1)];
+            mem.mem2.ipopt.x0=zeros(nw,1);
+
+            mem.mem2.ipopt.options.nleq=[];
+            mem.mem2.ipopt.options.nlineq=[];
+            mem.mem2.ipopt.options.ipopt=ipopt_opts;
+            mem.mem2.ipopt.options.ipopt.print_level=0;
+
+            mem.mem2.ipopt_data.H = zeros(nw,nw);
+            mem.mem2.ipopt_data.g = zeros(nw,1);
+            mem.mem2.ipopt_data.dG = zeros(neq,nw);  mem.mem2.ipopt_data.dG(1:mem.settings2.nx,1:mem.settings2.nx) = eye(mem.settings2.nx);
+            mem.mem2.ipopt_data.dBg = zeros(nineq,nw);
+            mem.mem2.ipopt_data.G = zeros(neq,1);
+            mem.mem2.ipopt.options.ub = inf(nw,1);
+            mem.mem2.ipopt.options.lb = -inf(nw,1);
+
+            
+        case 'qpdunes'
+            nw = (N+1)*nx+N*nu;
+            mem.dunes.H=zeros(nx+nu,(nx+nu)*N);
+            mem.dunes.P=zeros(nx,nx);
+            mem.dunes.C=zeros(nx,(nx+nu)*N);
+            mem.dunes.c=zeros(nx, N);
+            mem.dunes.D=zeros(nc,(nx+nu)*N+nx);
+            mem.dunes.g=zeros(nw,1);
+            mem.dunes.zLow = -inf(nw,1);
+            mem.dunes.zUpp = inf(nw,1);
+            mem.dunes.dLow = -inf((N+1)*nc,1);
+            mem.dunes.dUpp = inf((N+1)*nc,1);
+            
+            mem.dunes.qpOptions = qpDUNES_options( 'default', ...
+                             'maxIter', 100, ...
+                             'printLevel', 2, ...
+                             'logLevel', 0, ...     % log all data
+                             'lsType', 4, ...       % Accelerated gradient biscection LS
+                             'stationarityTolerance', 1.e-6, ...
+                             'regType', 2, ...       % regularize only singular directions; 1 is normalized Levenberg Marquardt
+                             'newtonHessDiagRegTolerance', 1.e-8, ...
+                             'maxNumLineSearchIterations',			19, ...			% 0.3^19 = 1e-10
+                             'maxNumLineSearchRefinementIterations',	49, ...			% 0.62^49 = 1e-10
+                             'lineSearchReductionFactor',		0.3, ...		% needs to be between 0 and 1
+                             'lineSearchIncreaseFactor',			1.5 ...		% needs to be greater than 1
+                             );
+                         
+        case 'qpdunes_partial'
+            nw = (mem.settings2.N+1)*mem.settings2.nx+mem.settings2.N*mem.settings2.nu;
+            mem.mem2.dunes.H=zeros(mem.settings2.nx+mem.settings2.nu,(mem.settings2.nx+mem.settings2.nu)*mem.settings2.N);
+            mem.mem2.dunes.P=zeros(mem.settings2.nx,mem.settings2.nx);
+            mem.mem2.dunes.C=zeros(mem.settings2.nx,(mem.settings2.nx+mem.settings2.nu)*mem.settings2.N);
+            mem.mem2.dunes.c=zeros(mem.settings2.nx, mem.settings2.N);
+            mem.mem2.dunes.D=zeros(mem.settings2.nc,(mem.settings2.nx+mem.settings2.nu)*mem.settings2.N+mem.settings2.nx);
+            mem.mem2.dunes.g=zeros(nw,1);
+            mem.mem2.dunes.zLow = -inf(nw,1);
+            mem.mem2.dunes.zUpp = inf(nw,1);
+            mem.mem2.dunes.dLow = -inf((mem.settings2.N+1)*mem.settings2.nc,1);
+            mem.mem2.dunes.dUpp = inf((mem.settings2.N+1)*mem.settings2.nc,1);
+            
+            mem.dunes.qpOptions = qpDUNES_options( 'default', ...
+                             'maxIter', 100, ...
+                             'printLevel', 0, ...
+                             'logLevel', 0, ...     % log all data
+                             'lsType', 4, ...       % Accelerated gradient biscection LS
+                             'stationarityTolerance', 1.e-6, ...
+                             'regType', 2, ...       % regularize only singular directions; 1 is normalized Levenberg Marquardt
+                             'newtonHessDiagRegTolerance', 1.e-8, ...
+                             'maxNumLineSearchIterations',			19, ...			% 0.3^19 = 1e-10
+                             'maxNumLineSearchRefinementIterations',	49, ...			% 0.62^49 = 1e-10
+                             'lineSearchReductionFactor',		0.3, ...		% needs to be between 0 and 1
+                             'lineSearchIncreaseFactor',			1.5 ...		% needs to be greater than 1
+                             );
+            
     end
           
     switch opt.integrator
@@ -203,9 +310,40 @@ function [mem] = InitMemory(settings, opt, input)
         mem.S = zeros(nx,nu*N);
         mem.R = zeros(nu,nu*N);
     end
-    mem.reg = 1e-12;
+    mem.reg = 1e-8;
               
     mem.iter=1;
+    
+     %% for CMON-RTI	
+    mem.F_old = zeros(nx,N);	
+    mem.CMON_pri = zeros(N,1);	
+    mem.CMON_dual = zeros(N,1);	
+    mem.q_dual = zeros(nx,N+1);	
+    mem.V_pri = zeros(nx,N);
+    mem.V_dual = zeros(nx+nu,N);
+    mem.dmu = zeros(N*nu+N*nbx+N*nc+ncN,1);
+    mem.threshold_pri = 0;	
+    mem.threshold_dual = 0;	
+    mem.tol=0;	
+    mem.perc=100;
+    
+    mem.tol_abs=1e-1;
+    mem.tol_ref=1e-1;  	       
+    mem.alpha = 1;      
+    mem.beta = 1;        
+    mem.c1 = 0.6;
+    mem.gamma = 0;	
+    mem.rho_cmon = 0;
+          
+    mem.local = 0;
+    
+    mem.rho_ratio=[];
+    mem.gamma_ratio=[];
+    
+    mem.r_ratio=[];
+    
+    mem.shift_x = zeros(nx,N+1);
+    mem.shift_u = zeros(nu,N);
     
 end
 
