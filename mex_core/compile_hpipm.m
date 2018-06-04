@@ -92,7 +92,7 @@ mexcmd_pcondsol = [mexcmd, ' ', mexfiles_pcondsol];
 mexcmd_bcond = [mexcmd, ' ', mexfiles_bcond];
 mexcmd_pcond = [mexcmd, ' ', mexfiles_pcond];
 
-% eval(mexcmd_sp);
-% eval(mexcmd_pcondsol);
-% eval(mexcmd_bcond);
+eval(mexcmd_sp);
+eval(mexcmd_pcondsol);
+eval(mexcmd_bcond);
 eval(mexcmd_pcond);
