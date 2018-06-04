@@ -54,7 +54,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         dgemv(Trans,&ncN,&nx,&one_d,CgN,&ncN,mu+N*nc,&one_i,&one_d,lambda+N*nx,&one_i);
     if (nbx>0)
         dgemv(Trans,&nbx,&nx,&one_d,Cx,&nbx,mu_x+(N-1)*nbx,&one_i,&one_d,lambda+N*nx,&one_i);
-    //         dgemv(Trans,&nbx,&nx,&one_d,Cx,&nbx,mu_x+N*nbx,&one_i,&one_d,lambda+N*nx,&one_i);
     
     for (i=N-1;i>0;i--){
         memcpy(lambda+i*nx,gx+i*nx, nx*sizeof(double));
@@ -66,7 +65,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             dgemv(Trans,&nc,&nx,&one_d,Cgx+i*nc*nx,&nc,mu+i*nc,&one_i,&one_d,lambda+i*nx,&one_i);
         if (nbx>0)
             dgemv(Trans,&nbx,&nx,&one_d,Cx,&nbx,mu_x+(i-1)*nbx,&one_i,&one_d,lambda+i*nx,&one_i);
-//             dgemv(Trans,&nbx,&nx,&one_d,Cx,&nbx,mu_x+i*nbx,&one_i,&one_d,lambda+i*nx,&one_i);
     }
     
     // lambda_0 has a different sign
@@ -78,7 +76,5 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
     if (nc>0)
         dgemv(Trans,&nc,&nx,&minus_one_d,Cgx,&nc,mu,&one_i,&one_d,lambda,&one_i);  
-//     if (nbx>0)
-//         dgemv(Trans,&nbx,&nx,&minus_one_d,Cx,&nbx,mu_x,&one_i,&one_d,lambda,&one_i);      
       
 }

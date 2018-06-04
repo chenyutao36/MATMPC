@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='Rider'; % see the folder "examples" for details
+settings.model='Rider_wFriction'; % see the folder "examples" for details
 
 run(settings.model);
 
@@ -20,7 +20,7 @@ mu_g=SX.sym('mu_g',nc,1);                  % the i th multiplier for bounds on c
 muN_g=SX.sym('muN_g',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 4; % No. of integration steps per sample interval
+s  = 1; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;

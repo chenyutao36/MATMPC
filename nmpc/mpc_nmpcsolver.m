@@ -32,6 +32,10 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 tcond=tic;
                 Condensing_Blasfeo(mem, settings);
                 tCOND=toc(tcond)*1e3;
+            case 'partial_condensing'
+                tcond=tic;
+                mem.mem2 = Pcond(mem, settings, mem.mem2, mem.settings2);
+                tCOND=toc(tcond)*1e3;                
             case 'no'
                 tCOND = 0;
         end
@@ -57,6 +61,26 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
             case 'ipopt_sparse'               
                 [tQP,mem] = mpc_qp_solve_ipopt_sparse(settings,mem);
                 
+            case 'ipopt_partial_sparse'
+                [tQP, mem] = mpc_qp_solve_ipopt_partial_sparse(settings,mem.settings2,mem, mem.mem2);               
+                
+            case 'qpdunes'
+                [tQP, mem] = mpc_qp_solve_qpdunes(settings,mem);
+                
+%                 mem2.iter=mem.iter;
+%                 mem2.dunes.qpOptions=mem.dunes.qpOptions;
+%                 nw = (settings2.N+1)*settings2.nx+settings2.N*settings2.nu;
+%                 mem2.dunes.H=zeros(settings2.nx+settings2.nu,(settings2.nx+settings2.nu)*settings2.N);
+%                 mem2.dunes.P=zeros(settings2.nx,settings2.nx);
+%                 mem2.dunes.C=zeros(settings2.nx,(settings2.nx+settings2.nu)*settings2.N);
+%                 mem2.dunes.c=zeros(settings2.nx, settings2.N);
+%                 mem2.dunes.g=zeros(nw,1);
+%                 mem2.dunes.zLow = -inf(nw,1);
+%                 mem2.dunes.zUpp = inf(nw,1);
+%                 mem2.dunes.D = zeros(settings2.nc,(settings2.nx+settings2.nu)*settings2.N+settings2.nx);
+%                 mem2.dunes.dLow = zeros(settings2.nc*(settings2.N+1));
+%                 mem2.dunes.dUpp = zeros(settings2.nc*(settings2.N+1));
+%                 [tQP, mem2] = mpc_qp_solve_qpdunes(settings2,mem2);
         end
         
 
