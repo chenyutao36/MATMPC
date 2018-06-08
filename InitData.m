@@ -323,6 +323,29 @@ function [input, data] = InitData(settings)
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
+            
+        case 'Rider_wFriction_redMod'
+            input.x0=zeros(nx,1);
+            input.u0=zeros(nu,1);
+            para0 = zeros(np,1);
+            
+            % weights
+            Q = zeros(ny,ny);
+            QN = zeros(nyN,nyN);
+            
+            % upper and lower bounds for states (=nbx)
+            lb_x = [0;0];
+            ub_x = [1;1];
+
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [];
+            ub_u = [];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [];
+            ub_g = [];            
+            lb_gN = [];
+            ub_gN = [];
     end
 
     % prepare the data
@@ -396,6 +419,8 @@ function [input, data] = InitData(settings)
         case 'Rider'
             data = [];
         case 'Rider_wFriction'
+            data = [];
+        case 'Rider_wFriction_redMod'
             data = [];
     end
     

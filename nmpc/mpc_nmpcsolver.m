@@ -34,6 +34,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 tCOND=toc(tcond)*1e3;
             case 'partial_condensing'
                 tcond=tic;
+%                 mem.mem2 = Pcond_hpipm(mem, settings, mem.mem2, mem.settings2);
                 mem.mem2 = Pcond(mem, settings, mem.mem2, mem.settings2);
                 tCOND=toc(tcond)*1e3;                
             case 'no'

@@ -27,6 +27,19 @@ void Block_Fill_Trans(size_t m, size_t n, double *Gi, double *G, size_t idm, siz
        
 }
 
+void Block_Get(size_t m, size_t n, double *Gi, double *G, size_t idm, size_t idn, size_t ldG){
+       
+    size_t i,j;
+    size_t s;
+    for (j=0;j<n;j++){
+        s = idn*ldG + idm + j*ldG;
+        for (i=0;i<m;i++){
+            Gi[j*m+i] = G[s+i];
+        }
+    }
+       
+}
+
 void set_zeros(size_t dim, double *A){
     size_t i;
     for (i=0;i<dim;i++)
@@ -53,6 +66,7 @@ void print_vector(double *x, size_t m){
 void regularization(size_t n, double *A, double reg){
     int i;
     for (i=0;i<n;i++)
+//         A[i*n+i] += reg;
         if (A[i*n+i]<reg)
             A[i*n+i] = reg;
 }
