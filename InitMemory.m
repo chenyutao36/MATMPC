@@ -301,8 +301,8 @@ function [mem] = InitMemory(settings, opt, input)
     
     mem.tol_abs=1e-1;
     mem.tol_ref=1e-1;  	       
-    mem.alpha = 1;      
-    mem.beta = 1;        
+    mem.alpha_cmon = 1;      
+    mem.beta_cmon = 1;        
     mem.c1 = 0.1;
     mem.gamma = 0;	
     mem.rho_cmon = 0;

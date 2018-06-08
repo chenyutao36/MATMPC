@@ -28,8 +28,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *threshold_dual = mxGetPr( mxGetField(prhs[0], 0, "threshold_dual") );	
     double *tol = mxGetPr( mxGetField(prhs[0], 0, "tol") );	
     	
-    double alpha = mxGetScalar( mxGetField(prhs[0], 0, "alpha") );	
-    double beta = mxGetScalar( mxGetField(prhs[0], 0, "beta") );	
+    double alpha = mxGetScalar( mxGetField(prhs[0], 0, "alpha_cmon") );	
+    double beta = mxGetScalar( mxGetField(prhs[0], 0, "beta_cmon") );	
     double c1 = mxGetScalar( mxGetField(prhs[0], 0, "c1") );	
     double rho_cmon = mxGetScalar( mxGetField(prhs[0], 0, "rho_cmon") );
     double gamma = mxGetScalar( mxGetField(prhs[0], 0, "gamma") );
