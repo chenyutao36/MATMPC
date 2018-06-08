@@ -101,8 +101,6 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
         
         for (j=0;j<nbx;j++){
             idx = (int)nbx_idx[j]-1;
-//             lx[i*nbx+j] = lbx[i*nbx+j] - x[i*nx+idx];
-//             ux[i*nbx+j] = ubx[i*nbx+j] - x[i*nx+idx];
             lx[i*nbx+j] = lbx[i*nbx+j] - x[(i+1)*nx+idx];
             ux[i*nbx+j] = ubx[i*nbx+j] - x[(i+1)*nx+idx];
         }
@@ -124,13 +122,7 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
             }
         }          
     }
-    
-//     for (j=0;j<nbx;j++){
-//         idx = (int)nbx_idx[j]-1;
-//         lx[N*nbx+j] = lbx[N*nbx+j] - x[N*nx+idx];
-//         ux[N*nbx+j] = ubx[N*nbx+j] - x[N*nx+idx];
-//     }
-        
+           
     if (ncN>0){
         casadi_in[0] = x+N*nx;
         casadi_in[1] = od+N*np;
@@ -146,7 +138,6 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
             
     for (i=0;i<N*nu;i++)
         ineq_res += MAX(-1*uu[i],0) + MAX(lu[i],0);
-//     for (i=0;i<(N+1)*nbx;i++)
     for (i=0;i<N*nbx;i++)
         ineq_res += MAX(-1*ux[i],0) + MAX(lx[i],0);
     for (i=0;i<nineq;i++)
@@ -421,9 +412,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     daxpy(&nx_t, alpha, dx, &one_i, x, &one_i); 
     daxpy(&nu_t, alpha, du, &one_i, u, &one_i);
     
-    for (i=0;i<neq;i++){
+    for (i=0;i<neq;i++)
         q_dual[i] = alpha[0]*(lambda_new[i] - lambda[i]);
-    }
     daxpy(&neq, &one_d, q_dual, &one_i, lambda, &one_i);
     
     for (i=0;i<nbu_t;i++)

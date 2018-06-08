@@ -40,6 +40,18 @@ function [mem] = InitMemory(settings, opt, input)
         
         mem.settings2.nc = nc*mem.settings2.Nc+(mem.settings2.Nc-1)*nbx;
         mem.settings2.ncN = ncN;
+        
+%         mem.mem2.dx = zeros(mem.settings2.nx, mem.settings2.N+1);
+%         mem.mem2.du = zeros(mem.settings2.nu, mem.settings2.N);
+%         mem.mem2.lambda_new = zeros(mem.settings2.nx, mem.settings2.N+1);
+%         mem.mem2.mu_new = zeros(mem.settings2.nc*mem.settings2.N+mem.settings2.ncN, 1);
+%         mem.mem2.mu_x_new = zeros(mem.settings2.nbx*mem.settings2.N, 1);
+%         mem.mem2.mu_u_new = zeros(mem.settings2.nu*mem.settings2.N, 1);
+%         
+%         mem.mem2.mu0=1e2;
+%         mem.mem2.max_qp_it = 100;
+%         mem.mem2.pred_corr = 1;
+%         mem.mem2.cond_pred_corr = 1;
     end
     
     switch opt.qpsolver
@@ -285,7 +297,7 @@ function [mem] = InitMemory(settings, opt, input)
         mem.S = zeros(nx,nu*N);
         mem.R = zeros(nu,nu*N);
     end
-    mem.reg = 1e-8;
+    mem.reg = 1e-12;
               
     mem.iter=1;
        
