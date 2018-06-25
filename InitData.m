@@ -338,14 +338,17 @@ function [input, data] = InitData(settings)
             ub_x = [1;1];
 
             % upper and lower bounds for controls (=nbu)           
-            lb_u = [];
-            ub_u = [];
+%             lb_u = [];
+%             ub_u = [];
+            lb_u = [-5; -10; -10];
+            ub_u = [+5; +10;  +5];
                        
             % upper and lower bounds for general constraints (=nc)
             lb_g = [];
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
+            
     end
 
     % prepare the data
@@ -422,6 +425,7 @@ function [input, data] = InitData(settings)
             data = [];
         case 'Rider_wFriction_redMod'
             data = [];
+   
     end
     
 end
