@@ -309,6 +309,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int sim_method = mxGetScalar( mxGetField(prhs[0], 0, "sim_method") );
     int sqp_maxit = mxGetScalar( mxGetField(prhs[0], 0, "sqp_maxit") ); 
+    int sqp_it = mxGetScalar( mxGetField(prhs[0], 0, "sqp_it") ); 
        
     if (!mem_alloc){       
         eq_res_vec = (double *)mxMalloc( neq * sizeof(double));
@@ -353,6 +354,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double cons_res;
     double sigma, pd, grad, mu_lb=0, obj, obj_new, dir_grad, obj_tmp;
     int newpoint = 0;
+    alpha[0] = 1;
     if (sqp_maxit > 1){
         cons_res = eval_cons_res(x, u, od, ds0, lb, ub, lc, uc,
                                  lbx, ubx, lbu, ubu, nx, nu, nc, ncN,
@@ -409,7 +411,14 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
                
     // update     
-    daxpy(&nx_t, alpha, dx, &one_i, x, &one_i); 
+//     for (i=0;i<nx_t;i++)
+//         dx[i] *= alpha[0];
+//     daxpy(&nx_t, &one_d, dx, &one_i, x, &one_i);
+    daxpy(&nx_t, alpha, dx, &one_i, x, &one_i);
+    
+//     for (i=0;i<nu_t;i++)
+//         du[i] *= alpha[0];
+//     daxpy(&nu_t, &one_d, du, &one_i, u, &one_i);
     daxpy(&nu_t, alpha, du, &one_i, u, &one_i);
     
     for (i=0;i<neq;i++)
