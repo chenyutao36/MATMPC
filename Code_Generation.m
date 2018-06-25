@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='InvertedPendulum'; % see the folder "examples" for details
+settings.model='Rider_wFriction_redMod'; % see the folder "examples" for details
 
 run(settings.model);
 
@@ -20,7 +20,7 @@ mu_g=SX.sym('mu_g',nc,1);                  % the i th multiplier for bounds on c
 muN_g=SX.sym('muN_g',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 2; % No. of integration steps per sample interval
+s  = 1; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
@@ -36,7 +36,7 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-s  = 2; % No. of integration steps per shooting interval
+s  = 1; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
 
@@ -148,12 +148,14 @@ if strcmp(generate,'y')
       
     opts = struct( 'main', false, 'mex' , true ) ; 
     Simulate_system.generate('Simulate_system.c',opts);
+%     D.generate('D.c',opts);
     h_fun.generate('h_fun.c',opts);
     path_con_fun.generate('path_con_fun.c',opts);
     path_con_N_fun.generate('path_con_N_fun.c',opts);
     Ji_fun.generate('Ji_fun.c',opts);
     JN_fun.generate('JN_fun.c',opts);
 %     intermStates.generate('intermStates',opts);
+%     costFun.generate('costFun',opts);
    
     opts = struct('main',false,'mex',false,'with_header',true);
     cd ../mex_core
@@ -223,12 +225,14 @@ if strcmp(compile,'y')
     
     cd model_src
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_fun.c');
+%     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'D.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_N_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'h_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Simulate_system.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Ji_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'JN_fun.c');
 %     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'intermStates.c');
+%     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'costFun.c');
        
     cd ../mex_core
     Compile_Mex;

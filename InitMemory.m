@@ -41,17 +41,6 @@ function [mem] = InitMemory(settings, opt, input)
         mem.settings2.nc = nc*mem.settings2.Nc+(mem.settings2.Nc-1)*nbx;
         mem.settings2.ncN = ncN;
         
-%         mem.mem2.dx = zeros(mem.settings2.nx, mem.settings2.N+1);
-%         mem.mem2.du = zeros(mem.settings2.nu, mem.settings2.N);
-%         mem.mem2.lambda_new = zeros(mem.settings2.nx, mem.settings2.N+1);
-%         mem.mem2.mu_new = zeros(mem.settings2.nc*mem.settings2.N+mem.settings2.ncN, 1);
-%         mem.mem2.mu_x_new = zeros(mem.settings2.nbx*mem.settings2.N, 1);
-%         mem.mem2.mu_u_new = zeros(mem.settings2.nu*mem.settings2.N, 1);
-%         
-%         mem.mem2.mu0=1e2;
-%         mem.mem2.max_qp_it = 100;
-%         mem.mem2.pred_corr = 1;
-%         mem.mem2.cond_pred_corr = 1;
     end
     
     switch opt.qpsolver
@@ -273,8 +262,8 @@ function [mem] = InitMemory(settings, opt, input)
         [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W);
         Qi = full(Jx'*Jx);
         for i=1:nx
-            if Qi(i,i)<1e-8
-                Qi(i,i)=1e-8;
+            if Qi(i,i)<1e-12
+                Qi(i,i)=1e-12;
             end
         end
         Si = full(Jx'*Ju);
@@ -286,8 +275,8 @@ function [mem] = InitMemory(settings, opt, input)
         JN = JN_fun('JN_fun',zeros(nx,1),zeros(np,1),zeros(nyN,1), input.WN);
         Qf = full(JN'*JN);
         for i=1:nx
-            if Qf(i,i)<1e-8
-                Qf(i,i)=1e-8;
+            if Qf(i,i)<1e-12
+                Qf(i,i)=1e-12;
             end
         end
         mem.Q(:,N*nx+1:end) = Qf;
@@ -300,6 +289,40 @@ function [mem] = InitMemory(settings, opt, input)
     mem.reg = 1e-12;
               
     mem.iter=1;
+    
+     %% for CMON-RTI	
+    mem.F_old = zeros(nx,N);	
+    mem.CMON_pri = zeros(N,1);	
+    mem.CMON_dual = zeros(N,1);	
+    mem.q_dual = zeros(nx,N+1);	
+    mem.V_pri = zeros(nx,N);
+    mem.V_dual = zeros(nx+nu,N);
+    mem.dmu = zeros(N*nu+N*nbx+N*nc+ncN,1);
+    mem.threshold_pri = 0;	
+    mem.threshold_dual = 0;	
+    mem.tol=0;	
+    mem.perc=100;
+    mem.idxc=zeros(N,1);
+    
+    mem.tol_abs=5e-1;
+    mem.tol_ref=5e-1;  	       
+    mem.alpha_cmon = 1;      
+    mem.beta_cmon = 1;        
+    mem.c1 = 0.1;
+    mem.gamma = 0;	
+    mem.rho_cmon = 0;
+          
+    mem.local = 0;
+    
+    mem.rho_ratio=[];
+    mem.gamma_ratio=[];
+    
+    mem.r_ratio=[];
+    
+    mem.shift_x = zeros(nx,N+1);
+    mem.shift_u = zeros(nu,N);
+    
+    mem.Ns=25;
        
 end
 
