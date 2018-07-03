@@ -166,6 +166,37 @@ function [mem] = InitMemory(settings, opt, input)
                              'lineSearchReductionFactor',		0.3, ...		% needs to be between 0 and 1
                              'lineSearchIncreaseFactor',			1.5 ...		% needs to be greater than 1
                              );
+                         
+        case 'osqp'
+            nw = (N+1)*nx+N*nu;
+            neq = (N+1)*nx;
+            nineq = N*nc+ncN;
+            
+            mem.qp_obj = osqp;
+            mem.osqp_options = mem.qp_obj.default_settings();
+%             mem.osqp_options.eps_abs=1e-4;
+%             mem.osqp_options.eps_rel=1e-4;
+%             mem.osqp_options.polish = true;
+            mem.osqp_options.verbose = false;
+%             mem.osqp_options.linsys_solver = 'mkl pardiso';
+            
+            mem.osqp_data.H = zeros(nw,nw);
+            mem.osqp_data.g = zeros(nw,1);
+            mem.osqp_data.dG = zeros(neq,nw);  
+            mem.osqp_data.dG(1:nx,1:nx) = eye(nx);
+            mem.osqp_data.dBg = zeros(nineq,nw);
+            mem.osqp_data.dBx = zeros(N*nbx,nw);
+            mem.osqp_data.dBu = zeros(N*nu,nw);
+            mem.osqp_data.G = zeros(neq,1);
+            mem.osqp_data.ub = inf(nineq+N*nbx+N*nu,1);
+            mem.osqp_data.lb = -inf(nineq+N*nbx+N*nu,1);
+            
+            for i=0:N-1
+                for j=1:nbx
+                    mem.osqp_data.dBx(i*nbx+1:(i+1)*nbx, (i+1)*nx+nbx_idx(j)) = 1;
+                end
+            end
+            mem.osqp_data.dBu(:,neq+1:end) = eye(N*nu,N*nu);
                                      
     end
           

@@ -67,20 +67,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexAtExit(exitFcn);
     }
     
-    int i,j;
-    double flag=0;
+    int i;
     
-    for(i=0;i<N2;i++){
-        
-        for(j=i*Npc;j<(i+1)*Npc;j++)
-            flag += idxc[j];
-        
-        compute_G(work, Ap+i*nx*nx, Bp+i*nx*Npc*nu, A+i*Npc*nx*nx, B+i*Npc*nx*nu, nx, nu, Npc);
-        if (flag>0){   
-                  
-            compute_H(Hp+i*(nx+Npc*nu)*(nx+Npc*nu), Q+i*Npc*nx*nx, S+i*Npc*nx*nu, R+i*Npc*nu*nu, A+i*Npc*nx*nx, B+i*Npc*nx*nu, work, nx, nu, Npc);       
-            compute_Ccx(Ccx+i*(Npc-1)*nbx*(nx+Npc*nu), Cx, work, nx, nu, nbx, Npc);
-        }       
+    for(i=0;i<N2;i++){        
+        compute_G(work, Ap+i*nx*nx, Bp+i*nx*Npc*nu, A+i*Npc*nx*nx, B+i*Npc*nx*nu, nx, nu, Npc);              
+        compute_H(Hp+i*(nx+Npc*nu)*(nx+Npc*nu), Q+i*Npc*nx*nx, S+i*Npc*nx*nu, R+i*Npc*nu*nu, A+i*Npc*nx*nx, B+i*Npc*nx*nu, work, nx, nu, Npc);       
+        compute_Ccx(Ccx+i*(Npc-1)*nbx*(nx+Npc*nu), Cx, work, nx, nu, nbx, Npc);       
         compute_L(work, ap+i*nx, A+i*Npc*nx*nx, a+i*Npc*nx, nx, Npc);    
         compute_g(gp+i*(nx+Npc*nu), Q+i*Npc*nx*nx, S+i*Npc*nx*nu, A+i*Npc*nx*nx, B+i*Npc*nx*nu, work, gx+i*Npc*nx, gu+i*Npc*nu, nx, nu, Npc);            
         compute_ccx(lxc+i*(Npc-1)*nbx, uxc+i*(Npc-1)*nbx, lb_dx+i*Npc*nbx, ub_dx+i*Npc*nbx, Cx, work, nx, nu, nbx, Npc);

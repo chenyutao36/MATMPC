@@ -6,7 +6,7 @@ disp('---------------------------------------------');
 %% Insert Model here
 addpath([pwd,'/examples']);
 
-settings.model='Rider_wFriction_redMod'; % see the folder "examples" for details
+settings.model='InvertedPendulum'; % see the folder "examples" for details
 
 run(settings.model);
 

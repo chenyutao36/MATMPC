@@ -67,6 +67,9 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 
             case 'qpdunes'
                 [tQP, mem] = mpc_qp_solve_qpdunes(settings,mem);
+                
+            case 'osqp'
+                [tQP, mem] = mpc_qp_solve_osqp(settings,mem);
         end
         
 

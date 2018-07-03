@@ -44,13 +44,6 @@ function [cpt_qp, mem] = mpc_qp_solve_ipopt_sparse(sizes,mem)
     
     H = sparse(mem.ipopt_data.H);
     
-%     quadprog_opt.Display = 'off';
-%     qp=tic;
-%     [sol,fval,exitflag,output,info_ipopt.Lambda] = quadprog(H,mem.ipopt_data.g, [mem.ipopt_data.dBg;-mem.ipopt_data.dBg],...
-%                                                [mem.uc;-mem.lc], mem.ipopt_data.dG, mem.ipopt_data.G,...
-%                                                ipopt.options.lb, ipopt.options.ub, zeros(nw,1),quadprog_opt);
-%     info_ipopt.Time  = toc(qp);
-
     ipopt.funcs.hessian = @(x,sigma,lambda) tril(sigma*H);
     ipopt.funcs.hessianstructure = @() tril(H);
     ipopt.funcs.objective=@(x) 0.5*x'*H*x + (mem.ipopt_data.g)'*x;

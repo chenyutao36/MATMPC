@@ -43,10 +43,6 @@ function [cpt_qp, mem] = mpc_qp_solve_ipopt_partial_sparse(settings,settings2,me
     ipopt.options.ub(neq+1:end) = mem2.ub_du;
     ipopt.options.lb(neq+1:end) = mem2.lb_du;
      
-%     Htmp = mem2.ipopt_data.H + mem2.ipopt_data.H';
-%     Htmp(1:nw+1:end) = diag(mem2.ipopt_data.H);
-%     H = sparse(Htmp);
-
     H = sparse(mem2.ipopt_data.H);
         
     ipopt.funcs.hessian = @(x,sigma,lambda) tril(sigma*H);
@@ -75,38 +71,6 @@ function [cpt_qp, mem] = mpc_qp_solve_ipopt_partial_sparse(settings,settings2,me
         mem.mu_x_new(i*Nc*settings.nbx+1:(i+1)*Nc*settings.nbx-settings.nbx) = mu(i*nc+1:i*nc+(Nc-1)*nbx);
         mem.mu_x_new((i+1)*Nc*settings.nbx-settings.nbx+1:(i+1)*Nc*settings.nbx) = mu_x(i*settings.nbx+1:(i+1)*settings.nbx);                   
     end
-    
-%     for i=0:N-1        
-%         mem.mu_x_new(i*Nc*settings.nbx+1:(i+1)*Nc*settings.nbx-settings.nbx) = mu(i*nc+1:i*nc+(Nc-1)*nbx);
-%         mem.mu_x_new((i+1)*Nc*settings.nbx-settings.nbx+1:(i+1)*Nc*settings.nbx) = mu_x(i*settings.nbx+1:(i+1)*settings.nbx);                   
-%         
-%         mem.mu_new(i*Nc*settings.nc+1:(i+1)*Nc*settings.nc) = mu(i*nc+(Nc-1)*nbx+1:(i+1)*nc);
-%     end
-%      
-
-%     du=reshape(sol(neq+1:nw,1),[nu,N]);
-%             
-%     mu_u   = info_ipopt.Lambda.upper((N+1)*nx+1:end) - info_ipopt.Lambda.lower((N+1)*nx+1:end); 
-%     mu_x   = zeros(N*nbx,1);
-%     mu_x_p = info_ipopt.Lambda.upper(1:(N+1)*nx) - info_ipopt.Lambda.lower(1:(N+1)*nx);
-%     for i=0:N-1
-%         for j=1:nbx
-%             mu_x(i*nbx+j,1)  = mu_x_p((i+1)*nx+nbx_idx(j));
-%         end
-%     end
-%     mu     = info_ipopt.Lambda.ineqlin;
-% 
-%     mem.du = reshape(flipud(du),[settings.nu,settings.N]);
-%     for i=0:N-1
-%         mem.mu_u_new(i*nu+1:(i+1)*nu) = flipud(mu_u(i*nu+1:(i+1)*nu));
-%         
-%         mem.mu_x_new(i*Nc*settings.nbx+1:(i+1)*Nc*settings.nbx-settings.nbx) = mu(i*nc+1:i*nc+(Nc-1)*nbx);
-%         mem.mu_x_new((i+1)*Nc*settings.nbx-settings.nbx+1:(i+1)*Nc*settings.nbx) = mu_x(i*settings.nbx+1:(i+1)*settings.nbx);                   
-%         
-%         mem.mu_new(i*Nc*settings.nc+1:(i+1)*Nc*settings.nc) = mu(i*nc+(Nc-1)*nbx+1:(i+1)*nc);
-%     end
-%      
-%     mem.mu_new(N*Nc*settings.nc+1:end) = mu(N*nc+(Nc-1)*nbx+1:end);
     
     Recover(mem, settings);
 end

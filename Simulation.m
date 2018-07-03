@@ -37,9 +37,10 @@ settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 mean
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
-opt.condensing='partial_condensing';  %'default_full','no','blasfeo_full','partial_condensing'
-opt.qpsolver='ipopt_partial_sparse'; %'qpoases','qore', 'quadprog_dense', 'hpipm_sparse', 'hpipm_pcond'
-                        %'ipopt_dense','ipopt_sparse','ipopt_partial_sparse','qpdunes'
+opt.condensing='default_full';  %'default_full','no','blasfeo_full','partial_condensing'
+opt.qpsolver='qpoases'; %'qpoases','qore', 'quadprog_dense', 'hpipm_sparse', 'hpipm_pcond'
+                        %'ipopt_dense','ipopt_sparse','ipopt_partial_sparse'(only for state and control bounded problems)
+                        %'qpdunes',%'osqp'
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='yes'; % 'yes','no'
 opt.lin_obj='yes'; % 'yes','no' % if objective function is linear least square
