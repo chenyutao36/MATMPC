@@ -135,30 +135,6 @@ function [input, data] = InitData(settings)
             ub_g = [];            
             lb_gN = [];
             ub_gN = [];
-
-        case 'Hexacopter'
-            input.x0=zeros(nx,1);
-            input.u0=zeros(nu,1);
-            para0=0;
-            
-            q = [5e0, 5e0, 5e0, 0.1, 0.1, 0.1];
-            qN = q(1:nyN);
-            Q = diag(q);
-            QN = diag(qN);
-
-            % upper and lower bounds for states (=nbx)
-            lb_x = [];
-            ub_x = [];
-
-            % upper and lower bounds for controls (=nbu)           
-            lb_u = -inf*ones(nbu,1);
-            ub_u = inf*ones(nbu,1);
-                       
-            % upper and lower bounds for general constraints (=nc)
-            lb_g = [];
-            ub_g = [];            
-            lb_gN = [];
-            ub_gN = [];
             
         case 'ActiveSeat'
             
@@ -277,53 +253,7 @@ function [input, data] = InitData(settings)
             ub_g = [fL_max; constr_max; constr_max];            
             lb_gN = [fL_min];
             ub_gN = [fL_max];  
-            
-        case 'Rider'
-            input.x0=zeros(nx,1);
-            input.u0=zeros(nu,1);
-            para0 = zeros(np,1);
-            
-            % weights
-            Q = zeros(ny,ny);
-            QN = zeros(nyN,nyN);
-            
-            % upper and lower bounds for states (=nbx)
-            lb_x = [0;0];
-            ub_x = [1;1];
-
-            % upper and lower bounds for controls (=nbu)           
-            lb_u = [];
-            ub_u = [];
-                       
-            % upper and lower bounds for general constraints (=nc)
-            lb_g = [];
-            ub_g = [];            
-            lb_gN = [];
-            ub_gN = [];
-            
-        case 'Rider_wFriction'
-            input.x0=zeros(nx,1);
-            input.u0=zeros(nu,1);
-            para0 = zeros(np,1);
-            
-            % weights
-            Q = zeros(ny,ny);
-            QN = zeros(nyN,nyN);
-            
-            % upper and lower bounds for states (=nbx)
-            lb_x = [0;0];
-            ub_x = [1;1];
-
-            % upper and lower bounds for controls (=nbu)           
-            lb_u = [];
-            ub_u = [];
-                       
-            % upper and lower bounds for general constraints (=nc)
-            lb_g = [];
-            ub_g = [];            
-            lb_gN = [];
-            ub_gN = [];
-            
+                                    
         case 'Rider_wFriction_redMod'
             input.x0=zeros(nx,1);
             input.u0=zeros(nu,1);
@@ -409,20 +339,13 @@ function [input, data] = InitData(settings)
         case 'ChainofMasses_NLin'
 
             data.REF=[1,0,0,zeros(1,3*(n-1)),zeros(1,nu)];
-
-        case 'Hexacopter'
-
-            data.REF = [1 1 1 0 0 0];
             
         case 'ActiveSeat'
             data.REF = AS_REF(25,Ts);
                                                     
         case 'TethUAV_param_1order_slack'
         	data.REF = zeros(1, ny);
-        case 'Rider'
-            data = [];
-        case 'Rider_wFriction'
-            data = [];
+      
         case 'Rider_wFriction_redMod'
             data = [];
    

@@ -174,11 +174,10 @@ function [mem] = InitMemory(settings, opt, input)
             
             mem.qp_obj = osqp;
             mem.osqp_options = mem.qp_obj.default_settings();
-%             mem.osqp_options.eps_abs=1e-4;
-%             mem.osqp_options.eps_rel=1e-4;
-%             mem.osqp_options.polish = true;
+            mem.osqp_options.eps_abs=1e-4;
+            mem.osqp_options.eps_rel=1e-4;
+            mem.osqp_options.polish = true;
             mem.osqp_options.verbose = false;
-%             mem.osqp_options.linsys_solver = 'mkl pardiso';
             
             mem.osqp_data.H = zeros(nw,nw);
             mem.osqp_data.g = zeros(nw,1);
