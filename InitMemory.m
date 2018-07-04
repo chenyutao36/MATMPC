@@ -102,14 +102,21 @@ function [mem] = InitMemory(settings, opt, input)
             mem.ipopt.options.nlineq=[];
             mem.ipopt.options.ipopt=ipopt_opts;
             mem.ipopt.options.ipopt.print_level=0;
-            
-            mem.ipopt_data.H = zeros(nw,nw);
-            mem.ipopt_data.g = zeros(nw,1);
-            mem.ipopt_data.dG = zeros(neq,nw);  mem.ipopt_data.dG(1:nx,1:nx) = eye(nx);
-            mem.ipopt_data.dBg = zeros(nineq,nw);
-            mem.ipopt_data.G = zeros(neq,1);
+           
             mem.ipopt.options.ub = inf(nw,1);
             mem.ipopt.options.lb = -inf(nw,1);
+
+            mem.sparse_H = zeros(nw,nw);
+            mem.sparse_g = zeros(nw,1);
+            mem.sparse_dG = zeros(neq,nw);  
+            mem.sparse_dG(1:nx,1:nx) = eye(nx);
+            mem.sparse_minus_eye = -eye(nx);
+            mem.sparse_dB = zeros(nineq,nw);
+            mem.sparse_dBx = zeros(N*nbx,nw);
+            mem.sparse_dBu = zeros(N*nu,nw);
+            mem.sparse_G = zeros(neq,1);
+            mem.sparse_ub = inf(nineq+N*nbx+N*nu,1);
+            mem.sparse_lb = -inf(nineq+N*nbx+N*nu,1);
             
         case 'ipopt_partial_sparse'
                                 
@@ -131,43 +138,22 @@ function [mem] = InitMemory(settings, opt, input)
             mem.mem2.ipopt.options.ipopt=ipopt_opts;
             mem.mem2.ipopt.options.ipopt.print_level=0;
 
-            mem.mem2.ipopt_data.H = zeros(nw,nw);
-            mem.mem2.ipopt_data.g = zeros(nw,1);
-            mem.mem2.ipopt_data.dG = zeros(neq,nw);  mem.mem2.ipopt_data.dG(1:mem.settings2.nx,1:mem.settings2.nx) = eye(mem.settings2.nx);
-            mem.mem2.ipopt_data.dBg = zeros(nineq,nw);
-            mem.mem2.ipopt_data.G = zeros(neq,1);
+            mem.mem2.sparse_H = zeros(nw,nw);
+            mem.mem2.sparse_g = zeros(nw,1);
+            mem.mem2.sparse_dG = zeros(neq,nw);  
+            mem.mem2.sparse_dG(1:nx,1:nx) = eye(nx);
+            mem.mem2.sparse_minus_eye = -eye(nx);
+            mem.mem2.sparse_dB = zeros(nineq,nw);
+            mem.mem2.sparse_dBx = zeros(N2*nbx,nw);
+            mem.mem2.sparse_dBu = zeros(N2*mem.settings2.nu,nw);
+            mem.mem2.sparse_G = zeros(neq,1);
+            mem.mem2.sparse_ub = inf(nineq+N2*nbx+N2*mem.settings2.nu,1);
+            mem.mem2.sparse_lb = -inf(nineq+N2*nbx+N2*mem.settings2.nu,1);
+
             mem.mem2.ipopt.options.ub = inf(nw,1);
             mem.mem2.ipopt.options.lb = -inf(nw,1);
-
-            
-        case 'qpdunes'
-            nw = (N+1)*nx+N*nu;
-            mem.dunes.H=zeros(nx+nu,(nx+nu)*N);
-            mem.dunes.P=zeros(nx,nx);
-            mem.dunes.C=zeros(nx,(nx+nu)*N);
-            mem.dunes.c=zeros(nx, N);
-            mem.dunes.D=zeros(nc,(nx+nu)*N+nx);
-            mem.dunes.g=zeros(nw,1);
-            mem.dunes.zLow = -inf(nw,1);
-            mem.dunes.zUpp = inf(nw,1);
-            mem.dunes.dLow = -inf((N+1)*nc,1);
-            mem.dunes.dUpp = inf((N+1)*nc,1);
-            
-            mem.dunes.qpOptions = qpDUNES_options( 'default', ...
-                             'maxIter', 100, ...
-                             'printLevel', 0, ...
-                             'logLevel', 0, ...     % log all data
-                             'lsType', 4, ...       % Accelerated gradient biscection LS
-                             'stationarityTolerance', 1.e-6, ...
-                             'regType', 2, ...       % regularize only singular directions; 1 is normalized Levenberg Marquardt
-                             'newtonHessDiagRegTolerance', 1.e-8, ...
-                             'maxNumLineSearchIterations',			19, ...			% 0.3^19 = 1e-10
-                             'maxNumLineSearchRefinementIterations',	49, ...			% 0.62^49 = 1e-10
-                             'lineSearchReductionFactor',		0.3, ...		% needs to be between 0 and 1
-                             'lineSearchIncreaseFactor',			1.5 ...		% needs to be greater than 1
-                             );
                          
-        case 'osqp'
+        case 'osqp_sparse'
             nw = (N+1)*nx+N*nu;
             neq = (N+1)*nx;
             nineq = N*nc+ncN;
@@ -179,24 +165,74 @@ function [mem] = InitMemory(settings, opt, input)
             mem.osqp_options.polish = true;
             mem.osqp_options.verbose = false;
             
-            mem.osqp_data.H = zeros(nw,nw);
-            mem.osqp_data.g = zeros(nw,1);
-            mem.osqp_data.dG = zeros(neq,nw);  
-            mem.osqp_data.dG(1:nx,1:nx) = eye(nx);
-            mem.osqp_data.dBg = zeros(nineq,nw);
-            mem.osqp_data.dBx = zeros(N*nbx,nw);
-            mem.osqp_data.dBu = zeros(N*nu,nw);
-            mem.osqp_data.G = zeros(neq,1);
-            mem.osqp_data.ub = inf(nineq+N*nbx+N*nu,1);
-            mem.osqp_data.lb = -inf(nineq+N*nbx+N*nu,1);
+            mem.sparse_H = zeros(nw,nw);
+            mem.sparse_g = zeros(nw,1);
+            mem.sparse_dG = zeros(neq,nw);  
+            mem.sparse_dG(1:nx,1:nx) = eye(nx);
+            mem.sparse_minus_eye = -eye(nx);
+            mem.sparse_dB = zeros(nineq,nw);
+            mem.sparse_dBx = zeros(N*nbx,nw);
+            mem.sparse_dBu = zeros(N*nu,nw);
+            mem.sparse_G = zeros(neq,1);
+            mem.sparse_ub = inf(nineq+N*nbx+N*nu,1);
+            mem.sparse_lb = -inf(nineq+N*nbx+N*nu,1);
             
             for i=0:N-1
                 for j=1:nbx
-                    mem.osqp_data.dBx(i*nbx+1:(i+1)*nbx, (i+1)*nx+nbx_idx(j)) = 1;
+                    mem.sparse_dBx(i*nbx+1:(i+1)*nbx, (i+1)*nx+nbx_idx(j)) = 1;
                 end
             end
-            mem.osqp_data.dBu(:,neq+1:end) = eye(N*nu,N*nu);
-                                     
+            mem.sparse_dBu(:,neq+1:end) = eye(N*nu,N*nu);
+            
+%             mem.osqp_H_pattern = zeros(nw,nw); 
+%             mem.osqp_dG_pattern = zeros(neq,nw); mem.osqp_dG_pattern(1:nx,1:nx) = eye(nx);
+%             mem.osqp_dB_pattern = zeros(nineq,nw);
+%             for i=0:N-1
+%                 mem.osqp_H_pattern(i*nx+1:(i+1)*nx, i*nx+1:(i+1)*nx) = ones(nx,nx);
+%                 mem.osqp_H_pattern(i*nx+1:(i+1)*nx, neq+i*nu+1:neq+(i+1)*nu) = ones(nx,nu);
+%                 mem.osqp_H_pattern(neq+i*nu+1:neq+(i+1)*nu, i*nx+1:(i+1)*nx) = ones(nu,nx);
+%                 mem.osqp_H_pattern(neq+i*nu+1:neq+(i+1)*nu, neq+i*nu+1:neq+(i+1)*nu) = ones(nu,nu);
+%                 
+%                 mem.osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, i*nx+1:(i+2)*nx) = [ones(nx,nx),-eye(nx,nx)];
+%                 mem.osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, neq+i*nu+1:neq+(i+1)*nu) = ones(nx,nu);
+%                 
+%                 mem.osqp_dB_pattern(i*nc+1:(i+1)*nc, i*nx+1:(i+1)*nx) = ones(nc,nx);
+%                 mem.osqp_dB_pattern(i*nc+1:(i+1)*nc, neq+i*nu+1:neq+(i+1)*nu) = ones(nc,nu);
+%             end
+%             mem.osqp_H_pattern(N*nx+1:(N+1)*nx, N*nx+1:(N+1)*nx) = ones(nx,nx);
+%             mem.osqp_dB_pattern(N*nc+1:N*nc+ncN, N*nx+1:(N+1)*nx) = ones(ncN,nx);
+    
+        case 'osqp_partial_sparse'
+            nw = (N2+1)*mem.settings2.nx+N2*mem.settings2.nu;
+            neq = (N2+1)*mem.settings2.nx;
+            nineq = N2*mem.settings2.nc+mem.settings2.ncN;
+            
+            mem.mem2.qp_obj = osqp;
+            mem.mem2.osqp_options =mem.mem2.qp_obj.default_settings();
+            mem.mem2.osqp_options.eps_abs=1e-4;
+            mem.mem2.osqp_options.eps_rel=1e-4;
+            mem.mem2.osqp_options.polish = true;
+            mem.mem2.osqp_options.verbose = false;
+            
+            mem.mem2.sparse_H = zeros(nw,nw);
+            mem.mem2.sparse_g = zeros(nw,1);
+            mem.mem2.sparse_dG = zeros(neq,nw);  
+            mem.mem2.sparse_dG(1:nx,1:nx) = eye(nx);
+            mem.mem2.sparse_minus_eye = -eye(nx);
+            mem.mem2.sparse_dB = zeros(nineq,nw);
+            mem.mem2.sparse_dBx = zeros(N2*nbx,nw);
+            mem.mem2.sparse_dBu = zeros(N2*mem.settings2.nu,nw);
+            mem.mem2.sparse_G = zeros(neq,1);
+            mem.mem2.sparse_ub = inf(nineq+N2*nbx+N2*mem.settings2.nu,1);
+            mem.mem2.sparse_lb = -inf(nineq+N2*nbx+N2*mem.settings2.nu,1);
+            
+            for i=0:N2-1
+                for j=1:nbx
+                    mem.mem2.sparse_dBx(i*nbx+1:(i+1)*nbx, (i+1)*nx+nbx_idx(j)) = 1;
+                end
+            end
+            mem.mem2.sparse_dBu(:,neq+1:end) = eye(N2*mem.settings2.nu,N2*mem.settings2.nu);
+           
     end
           
     switch opt.integrator

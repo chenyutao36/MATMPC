@@ -34,7 +34,6 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 tCOND=toc(tcond)*1e3;
             case 'partial_condensing'
                 tcond=tic;
-%                 mem.mem2 = Pcond_hpipm(mem, settings, mem.mem2, mem.settings2);
                 mem.mem2 = Pcond(mem, settings, mem.mem2, mem.settings2);
                 tCOND=toc(tcond)*1e3;                
             case 'no'
@@ -45,31 +44,37 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         switch opt.qpsolver
             case 'qpoases'              
                 [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
+                
             case 'qore'
                 [tQP,mem] = mpc_qp_solve_qore(settings,mem);
+                
             case 'quadprog_dense'
                 [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);
+                
             case 'hpipm_sparse'               
                 tqp=tic;
                 hpipm_sparse(mem,settings);
                 tQP = toc(tqp)*1e3;
+                
             case 'hpipm_pcond'               
                 tqp=tic;
                 hpipm_pcond(mem,settings);
                 tQP = toc(tqp)*1e3;
+                
             case 'ipopt_dense'               
                 [tQP,mem] = mpc_qp_solve_ipopt_dense(settings,mem);
+                
             case 'ipopt_sparse'               
                 [tQP,mem] = mpc_qp_solve_ipopt_sparse(settings,mem);
                 
             case 'ipopt_partial_sparse'
                 [tQP, mem] = mpc_qp_solve_ipopt_partial_sparse(settings,mem.settings2,mem, mem.mem2);               
-                
-            case 'qpdunes'
-                [tQP, mem] = mpc_qp_solve_qpdunes(settings,mem);
-                
-            case 'osqp'
+                                
+            case 'osqp_sparse'
                 [tQP, mem] = mpc_qp_solve_osqp(settings,mem);
+                
+            case 'osqp_partial_sparse'
+                [tQP, mem] = mpc_qp_solve_osqp_partial(settings,mem.settings2,mem, mem.mem2);
         end
         
 

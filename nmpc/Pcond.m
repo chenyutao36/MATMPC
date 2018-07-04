@@ -20,6 +20,7 @@ function [mem2] = Pcond(mem, settings, mem2, settings2)
     mem2.uc=uxc;
     mem2.ds0=mem.ds0;
     mem2.CgN=mem.CgN;
+    mem2.Cx=mem.Cx;
                                 
     for i=0:N2-1
         mem2.Q(:,i*nx+1:(i+1)*nx) = Hp(1:nx,i*(nx+nu)+1:i*(nx+nu)+nx);       

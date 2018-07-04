@@ -38,13 +38,22 @@ settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 mean
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
 opt.condensing='default_full';  %'default_full','no','blasfeo_full','partial_condensing'
-opt.qpsolver='qpoases'; %'qpoases','qore', 'quadprog_dense', 'hpipm_sparse', 'hpipm_pcond'
-                        %'ipopt_dense','ipopt_sparse','ipopt_partial_sparse'(only for state and control bounded problems)
-                        %'qpdunes',%'osqp'
+opt.qpsolver='qpoases'; 
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='yes'; % 'yes','no'
 opt.lin_obj='yes'; % 'yes','no' % if objective function is linear least square
 opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
+
+%% available qpsolver
+%'qpoases' (for full condensing)
+%'quadprog_dense' (for full condensing)
+%'hpipm_sparse' (set opt.condensing='no')
+%'hpipm_pcond' (set opt.condensing='no')
+%'ipopt_dense' (for full condensing)
+%'ipopt_sparse' (set opt.condensing='no')
+%'ipopt_partial_sparse'(set opt.condensing='partial_condensing'; only for state and control bounded problems)
+%'osqp_sparse' (set opt.condensing='no')
+%'osqp_partial_sparse' (set opt.condensing='partial_condensing'; only for state and control bounded problems)
 
 %% Initialize Data (all users have to do this)
 
