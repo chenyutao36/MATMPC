@@ -41,6 +41,15 @@ function [mem] = InitMemory(settings, opt, input)
         mem.settings2.nc = nc*mem.settings2.Nc+(mem.settings2.Nc-1)*nbx;
         mem.settings2.ncN = ncN;
         
+        mem.mem2.Q = zeros(nx, (N2+1)*nx);
+        mem.mem2.S = zeros(nx, N2*mem.settings2.nu);
+        mem.mem2.R = zeros(mem.settings2.nu, N2*mem.settings2.nu);
+        mem.mem2.Cgx = zeros(mem.settings2.nc, N2*nx);
+        mem.mem2.Cgu = zeros(mem.settings2.nc, N2*mem.settings2.nu);
+        mem.mem2.gx = zeros(nx,N2+1);
+        mem.mem2.gu = zeros(mem.settings2.nu,N2);
+        mem.mem2.lb_dx = zeros(N2*nbx,1);
+        mem.mem2.ub_dx = zeros(N2*nbx,1);
     end
     
     switch opt.qpsolver
