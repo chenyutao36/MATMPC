@@ -66,7 +66,6 @@ void print_vector(double *x, size_t m){
 void regularization(size_t n, double *A, double reg){
     int i;
     for (i=0;i<n;i++)
-//         A[i*n+i] += reg;
         if (A[i*n+i]<reg)
             A[i*n+i] = reg;
 }

@@ -46,6 +46,7 @@ opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 
 %% available qpsolver
 %'qpoases' (for full condensing)
+%'qpoases_mb' (for full condensing+moving block)
 %'quadprog_dense' (for full condensing)
 %'hpipm_sparse' (set opt.condensing='no')
 %'hpipm_pcond' (set opt.condensing='no')

@@ -45,6 +45,8 @@ mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generat
 
 mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
 
+mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'moving_block.c', LIB1);
+
 mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'full2sparse.c','mpc_common.c');
 
 mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'sparse2full.c','mpc_common.c');

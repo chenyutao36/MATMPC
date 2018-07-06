@@ -45,8 +45,8 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
             case 'qpoases'              
                 [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
                 
-            case 'qore'
-                [tQP,mem] = mpc_qp_solve_qore(settings,mem);
+            case 'qpoases_mb'              
+                [tQP,mem] = mpc_qp_solve_qpoases_mb(settings,mem);
                 
             case 'quadprog_dense'
                 [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);

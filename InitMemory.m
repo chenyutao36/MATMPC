@@ -56,8 +56,8 @@ function [mem] = InitMemory(settings, opt, input)
         case 'qpoases'   
             mem.qpoases_opt = qpOASES_options('MPC');
 %             mem.qpoases_opt = qpOASES_options('default');
-        case 'qore'
-            mem.qore_id = -1;
+        case 'qpoases_mb'   
+            mem.qpoases_opt = qpOASES_options('MPC');
         case 'quadprog_dense'
             mem.quadprog_opt.Algorithm = 'interior-point-convex';
             mem.quadprog_opt.Display = 'off';
@@ -69,11 +69,13 @@ function [mem] = InitMemory(settings, opt, input)
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
+            mem.solver_mode = 2;
         case 'hpipm_pcond'
-            mem.mu0=1e2;
+            mem.mu0=1e3;
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
+            mem.solver_mode = 2;
         case 'ipopt_dense'
             ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
                         'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
@@ -316,6 +318,20 @@ function [mem] = InitMemory(settings, opt, input)
     mem.ucc = zeros(N*nc+ncN,1);
     mem.lxc = zeros(N*nbx,1);
     mem.uxc = zeros(N*nbx,1);
+    
+    if strcmp(opt.qpsolver,'qpoases_mb')
+        mem.r = 9;
+        mem.T = zeros(N*nu,mem.r*nu);
+        index = [0,1,2,3,8,13,18,30,45,N]; % starts from 0, of length r+1
+        for i=1:mem.r
+            mem.T(index(i)*nu+1:index(i+1)*nu,(i-1)*nu+1:i*nu)=repmat(eye(nu),index(i+1)-index(i),1);
+        end
+
+        mem.Hc_r = zeros(mem.r*nu,mem.r*nu);
+        mem.Ccx_r = zeros(N*nbx,mem.r*nu);
+        mem.Ccg_r = zeros(N*nc+ncN,mem.r*nu);
+        mem.gc_r = zeros(mem.r*nu,1);
+    end
     
     mem.dx = zeros(nx,N+1);
     mem.du = zeros(nu,N);
