@@ -78,6 +78,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int max_qp_it = mxGetScalar( mxGetField(prhs[0], 0, "max_qp_it") );
     int pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "pred_corr") );
     int cond_pred_corr = mxGetScalar( mxGetField(prhs[0], 0, "cond_pred_corr") );
+    int solver_mode = mxGetScalar( mxGetField(prhs[0], 0, "solver_mode") );
                	
 	int ii, jj;
     int idx;
@@ -121,6 +122,16 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	int ns_v[N+1];
 	for(ii=0; ii<=N; ii++)
 		ns_v[ii] = 0;
+    
+    int nsbx_v[N+1];
+    int nsbu_v[N+1];
+    int nsbg_v[N+1];
+	for(ii=0; ii<=N; ii++){
+		nsbx_v[ii] = 0;
+        nsbu_v[ii] = 0;
+        nsbg_v[ii] = 0;
+    }
+    
 
 	int *hidxb[N+1];
     for(ii=0; ii<=N; ii++)
@@ -204,8 +215,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             hub[ii][jj] = ubu[ii*nu+jj];
         }
         for(jj=0;jj<nbx_v[ii];jj++){
-//             hlb[ii][nbu_v[ii]+jj] = lbx[ii*nbx+jj];
-//             hub[ii][nbu_v[ii]+jj] = ubx[ii*nbx+jj];
             hlb[ii][nbu_v[ii]+jj] = lbx[(ii-1)*nbx+jj];
             hub[ii][nbu_v[ii]+jj] = ubx[(ii-1)*nbx+jj];
         }
@@ -246,7 +255,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	struct d_ocp_qp_dim dim;
 	d_create_ocp_qp_dim(N, &dim, dim_mem);
-	d_cvt_int_to_ocp_qp_dim(N, nx_v, nu_v, nbx_v, nbu_v, ng_v, ns_v, &dim);
+	d_cvt_int_to_ocp_qp_dim(N, nx_v, nu_v, nbx_v, nbu_v, ng_v, nsbx_v, nsbu_v, nsbg_v, &dim);
     
 	// qp
 	int qp_size = d_memsize_ocp_qp(&dim);
@@ -266,19 +275,38 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	// ipm arg
 	int ipm_arg_size = d_memsize_ocp_qp_ipm_arg(&dim);
     void *ipm_arg_mem = mxCalloc(ipm_arg_size,1);
-
 	struct d_ocp_qp_ipm_arg arg;
 	d_create_ocp_qp_ipm_arg(&dim, &arg, ipm_arg_mem);
-	d_set_default_ocp_qp_ipm_arg(&arg);
+    
+    // select the mode
+    enum hpipm_mode mode;
+    switch (solver_mode)
+    {
+        case 0: 
+            mode = SPEED_ABS; 
+            break;
+        case 1:
+            mode = SPEED; 
+            break;
+        case 2:
+            mode = BALANCE; 
+            break;
+        case 3:
+            mode = ROBUST; 
+            break;
+        default:
+            mode = SPEED; 
+    }   
+	d_set_default_ocp_qp_ipm_arg(mode, &arg);
 
-// 	arg.alpha_min = 1e-12;
+	arg.alpha_min = 1e-8;
 	arg.res_g_max = 1e-4;
 	arg.res_b_max = 1e-6;
 	arg.res_d_max = 1e-6;
 	arg.res_m_max = 1e-6;
 	arg.mu0 = mu0;
 	arg.iter_max = max_qp_it;
-	arg.stat_max = 10;
+	arg.stat_max = max_qp_it;
 	arg.pred_corr = pred_corr;
 	arg.cond_pred_corr = cond_pred_corr;
 
@@ -292,6 +320,30 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	// call solver
 	int hpipm_return = d_solve_ocp_qp_ipm(&qp, &qp_sol, &arg, &workspace);
+        
+    // print stats
+    int err = 0;
+    if (workspace.qp_res[0]>arg.res_g_max){
+        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[0], arg.res_g_max);
+        err++;
+    }
+    if (workspace.qp_res[1]>arg.res_b_max){
+        mexPrintf("res_b:%5.3e   res_b_max:%5.3e\n", workspace.qp_res[1], arg.res_b_max);
+        err++;
+    }
+    if (workspace.qp_res[2]>arg.res_d_max){
+        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[2], arg.res_d_max);
+        err++;
+    }
+    if (workspace.qp_res[3]>arg.res_m_max){
+        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[3], arg.res_m_max);
+        err++;
+    }   
+    if (err > 0)
+        mexErrMsgTxt("QP solver does not converge!");
+    
+    if (hpipm_return==1)
+        mexErrMsgTxt("QP solver reaches maximum number of iterations!");
 
 	// convert back solution
 	d_cvt_ocp_qp_sol_to_colmaj(&qp_sol, hu, hx, NULL, NULL, hpi, hlam_lb, hlam_ub, hlam_lg, hlam_ug, NULL, NULL);
@@ -310,40 +362,11 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for(jj=0;jj<ngN;jj++)
         mu[N*ng+jj] = hlam_ug[N][jj] - hlam_lg[N][jj];
     
-//     for(jj=0;jj<nbx;jj++)
-//         mu_x[jj] = 0.0;
-//     for(ii=1;ii<N;ii++){
     for(ii=0;ii<N;ii++){  
         for(jj=0;jj<nbx;jj++)
-//             mu_x[ii*nbx+jj] = hlam_ub[ii][nbu_v[ii]+jj] - hlam_lb[ii][nbu_v[ii]+jj];
             mu_x[ii*nbx+jj] = hlam_ub[ii+1][nbu_v[ii+1]+jj] - hlam_lb[ii+1][nbu_v[ii+1]+jj];
-    }
-//     for(jj=0;jj<nbx;jj++)
-//         mu_x[N*nbx+jj] = hlam_ub[N][nbu_v[N]+jj] - hlam_lb[N][nbu_v[N]+jj];
-        
-              
-    // print stats
-    int err = 0;
-    if (workspace.qp_res[0]>arg.res_g_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[0], arg.res_g_max);
-        err++;
-    }
-    if (workspace.qp_res[1]>arg.res_b_max){
-        mexPrintf("res_b:%5.3e   res_b_max:%5.3e\n", workspace.qp_res[1], arg.res_b_max);
-        err++;
-    }
-    if (workspace.qp_res[2]>arg.res_d_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[2], arg.res_d_max);
-        err++;
-    }
-    if (workspace.qp_res[3]>arg.res_m_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[3], arg.res_m_max);
-        err++;
-    }
-    
-    if (err > 0)
-        mexErrMsgTxt("QP solver does not converge!");
-      
+    }       
+                     
     // Free memory
 	for(ii=0;ii<=N;ii++){
         mxFree(hidxb[ii]);
