@@ -320,12 +320,13 @@ function [mem] = InitMemory(settings, opt, input)
     mem.uxc = zeros(N*nbx,1);
     
     if strcmp(opt.qpsolver,'qpoases_mb')
-        mem.r = 9;
-        mem.T = zeros(N*nu,mem.r*nu);
-        index = [0,1,2,3,8,13,18,30,45,N]; % starts from 0, of length r+1
+        mem.r = 5;
+        T = zeros(N,mem.r);
+        index = [0,1,2,8,18,N]; % starts from 0, of length r+1
         for i=1:mem.r
-            mem.T(index(i)*nu+1:index(i+1)*nu,(i-1)*nu+1:i*nu)=repmat(eye(nu),index(i+1)-index(i),1);
+            T(index(i)+1:index(i+1),i)=1;
         end
+        mem.T = kron(T, eye(nu));
 
         mem.Hc_r = zeros(mem.r*nu,mem.r*nu);
         mem.Ccx_r = zeros(N*nbx,mem.r*nu);
