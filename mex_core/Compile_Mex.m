@@ -10,8 +10,10 @@ if ismac
     OS_MAC = 1;
 elseif isunix
     OS_LINUX = 1;
+    addpath(genpath('../solver/linux'));
 elseif ispc
     OS_WIN = 1;
+    addpath(genpath('../solver/win64'));
 else
     disp('Platform not supported')
 end
