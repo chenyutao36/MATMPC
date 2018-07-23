@@ -5,7 +5,8 @@
 #include "partial_condensing_routines.h"
 #include "mpc_common.h"
 
-partial_condensing_workspace* partial_condensing_workspace_allocate(size_t Npc, size_t nx, size_t nu, size_t nbx)
+partial_condensing_workspace* partial_condensing_workspace_allocate(size_t Npc, size_t nx, size_t nu, size_t nbx,
+        size_t nc)
 {
     partial_condensing_workspace* work = mxMalloc(sizeof(partial_condensing_workspace));
     
@@ -23,6 +24,8 @@ partial_condensing_workspace* partial_condensing_workspace_allocate(size_t Npc, 
     work->block42 = mxCalloc(nbx*nu, sizeof(double));
     work->block51 = mxCalloc(nx*nx, sizeof(double));
     work->block52 = mxCalloc(nx*nu, sizeof(double));
+    work->block61 = mxCalloc(nc*nx, sizeof(double));
+    work->block62 = mxCalloc(nc*nu, sizeof(double));
     work->vec1 = mxCalloc(nx, sizeof(double));
     work->vec2 = mxCalloc(nx, sizeof(double));
     
@@ -39,6 +42,8 @@ partial_condensing_workspace* partial_condensing_workspace_allocate(size_t Npc, 
     mexMakeMemoryPersistent(work->block42);
     mexMakeMemoryPersistent(work->block51);
     mexMakeMemoryPersistent(work->block52);
+    mexMakeMemoryPersistent(work->block61);
+    mexMakeMemoryPersistent(work->block62);
     mexMakeMemoryPersistent(work->vec1);
     mexMakeMemoryPersistent(work->vec2);
     
@@ -61,6 +66,8 @@ void partial_condensing_workspace_free(partial_condensing_workspace *work)
     mxFree(work->block42);
     mxFree(work->block51);
     mxFree(work->block52);
+    mxFree(work->block61);
+    mxFree(work->block62);
     mxFree(work->vec1);
     mxFree(work->vec2);
     
@@ -108,10 +115,6 @@ void compute_G(partial_condensing_workspace* work, double *Ap, double *Bp, doubl
     Block_Get(nx, nx, G_tmp_in1, G, Npc*nx, 0, (Npc+1)*nx);
     memcpy(Ap, G_tmp_in1, nx*nx*sizeof(double));
     
-//     for(i=0;i<Npc;i++){
-//         Block_Get(nx, nu, G_tmp_in2, G, Npc*nx, nx+i*nu, (Npc+1)*nx);
-//         memcpy(Bp+i*nx*nu, G_tmp_in2, nx*nu*sizeof(double));
-//     }
     Block_Get(nx, Npc*nu, Bp, G, Npc*nx, nx, (Npc+1)*nx);
        
 
@@ -282,6 +285,56 @@ void compute_ccx(double *lxc, double *uxc, double *lb_dx, double *ub_dx, double 
         for(j=0;j<nbx;j++){
             uxc[i*nbx+j] = lxc[i*nbx+j]+ ub_dx[i*nbx+j];
             lxc[i*nbx+j] += lb_dx[i*nbx+j];          
+        }
+    }
+}
+
+void compute_Ccg(double *Ccg, double *Cgx, double *Cgu, partial_condensing_workspace* work,
+        size_t nx, size_t nu, size_t nc, size_t Npc)
+{
+    int i,j;
+    
+    char *nTrans = "N", *Trans="T";
+    double one_d = 1.0, zero = 0.0, minus_one = -1.0;
+    size_t one_i = 1; 
+       
+    double *G = work->G;
+    double *C_tmp1 = work->block61;
+    double *C_tmp2 = work->block62;
+    double *G_tmp1 = work->block11;
+    double *G_tmp2 = work->block12;
+    
+    for(i=0;i<Npc;i++){
+        Block_Get(nx, nx, G_tmp1, G, i*nx, 0, (Npc+1)*nx);
+        dgemm(nTrans, nTrans, &nc, &nx, &nx, &one_d, Cgx+i*nc*nx, &nc, G_tmp1, &nx, &zero, C_tmp1, &nc);
+        Block_Fill(nc, nx, C_tmp1, Ccg, i*nc, 0, Npc*nc);
+        for(j=i+1;j<Npc;j++){
+            Block_Get(nx, nu, G_tmp2, G, j*nx, nx+i*nu, (Npc+1)*nx);
+            dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, Cgx+j*nc*nx, &nc, G_tmp2, &nx, &zero, C_tmp2, &nc);
+            Block_Fill(nc, nu, C_tmp2, Ccg, j*nc, nx+i*nu, Npc*nc);
+        }
+        
+        Block_Fill(nc, nu, Cgu+i*nc*nu, Ccg, i*nc, nx+i*nu, Npc*nc);
+    }
+    
+}
+
+void compute_ccg(double *lgc, double *ugc, double *lc, double *uc, double *Cgx, partial_condensing_workspace* work, 
+        size_t nx, size_t nu, size_t nc, size_t Npc)
+{
+    int i,j;
+    
+    char *nTrans = "N", *Trans="T";
+    double one_d = 1.0, zero = 0.0, minus_one = -1.0;
+    size_t one_i = 1; 
+    
+    double *L = work->L;
+    
+    for (i=0;i<Npc;i++){
+        dgemv(nTrans,&nc,&nx,&minus_one,Cgx+i*nc*nx,&nc,L+i*nx,&one_i,&zero,lgc+i*nc,&one_i);
+        for(j=0;j<nc;j++){
+            ugc[i*nc+j] = lgc[i*nc+j]+ uc[i*nc+j];
+            lgc[i*nc+j] += lc[i*nc+j];          
         }
     }
 }

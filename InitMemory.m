@@ -33,9 +33,13 @@ function [mem] = InitMemory(settings, opt, input)
         mem.settings2.nbx = nbx;
         mem.settings2.nbx_idx = nbx_idx;
         
-        mem.settings2.nbu_idx=[];
-        for i=1:mem.settings2.Nc        
-           mem.settings2.nbu_idx = [mem.settings2.nbu_idx,nbu_idx+(i-1)*nu];
+        if nbu>0
+            mem.settings2.nbu_idx=[];
+            for i=1:mem.settings2.Nc        
+               mem.settings2.nbu_idx = [mem.settings2.nbu_idx,nbu_idx+(i-1)*nu];
+            end
+        else
+            mem.settings2.nbu_idx=[];
         end
         
         mem.settings2.nc = nc*mem.settings2.Nc+(mem.settings2.Nc-1)*nbx;
@@ -50,6 +54,23 @@ function [mem] = InitMemory(settings, opt, input)
         mem.mem2.gu = zeros(mem.settings2.nu,N2);
         mem.mem2.lb_dx = zeros(N2*nbx,1);
         mem.mem2.ub_dx = zeros(N2*nbx,1);
+        mem.mem2.lc = zeros(mem.settings2.nc*N2+ncN,1);
+        mem.mem2.uc = zeros(mem.settings2.nc*N2+ncN,1);
+        
+%         if strcmp(opt.qpsolver,'hpipm_sparse')
+%             mem.mem2.dx = zeros(nx, N2+1);
+%             mem.mem2.du = zeros(mem.settings2.nu, N2);
+%             mem.mem2.lambda_new = zeros(nx, N2+1);
+%             mem.mem2.mu_u_new = zeros(mem.settings2.nu*N2, 1);
+%             mem.mem2.mu_x_new = zeros(nbx*N2, 1);
+%             mem.mem2.mu_new = zeros(mem.settings2.nc*N2+ncN, 1);
+% 
+%             mem.mem2.mu0=1e2;
+%             mem.mem2.max_qp_it = 100;
+%             mem.mem2.pred_corr = 1;
+%             mem.mem2.cond_pred_corr = 1;
+%             mem.mem2.solver_mode = 1;
+%         end
     end
     
     switch opt.qpsolver
@@ -69,13 +90,13 @@ function [mem] = InitMemory(settings, opt, input)
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
-            mem.solver_mode = 2;
+            mem.solver_mode = 1;
         case 'hpipm_pcond'
-            mem.mu0=1e3;
+            mem.mu0=1e2;
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
-            mem.solver_mode = 2;
+            mem.solver_mode = 1;
         case 'ipopt_dense'
             ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
                         'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
@@ -194,25 +215,7 @@ function [mem] = InitMemory(settings, opt, input)
                 end
             end
             mem.sparse_dBu(:,neq+1:end) = eye(N*nu,N*nu);
-            
-%             mem.osqp_H_pattern = zeros(nw,nw); 
-%             mem.osqp_dG_pattern = zeros(neq,nw); mem.osqp_dG_pattern(1:nx,1:nx) = eye(nx);
-%             mem.osqp_dB_pattern = zeros(nineq,nw);
-%             for i=0:N-1
-%                 mem.osqp_H_pattern(i*nx+1:(i+1)*nx, i*nx+1:(i+1)*nx) = ones(nx,nx);
-%                 mem.osqp_H_pattern(i*nx+1:(i+1)*nx, neq+i*nu+1:neq+(i+1)*nu) = ones(nx,nu);
-%                 mem.osqp_H_pattern(neq+i*nu+1:neq+(i+1)*nu, i*nx+1:(i+1)*nx) = ones(nu,nx);
-%                 mem.osqp_H_pattern(neq+i*nu+1:neq+(i+1)*nu, neq+i*nu+1:neq+(i+1)*nu) = ones(nu,nu);
-%                 
-%                 mem.osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, i*nx+1:(i+2)*nx) = [ones(nx,nx),-eye(nx,nx)];
-%                 mem.osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, neq+i*nu+1:neq+(i+1)*nu) = ones(nx,nu);
-%                 
-%                 mem.osqp_dB_pattern(i*nc+1:(i+1)*nc, i*nx+1:(i+1)*nx) = ones(nc,nx);
-%                 mem.osqp_dB_pattern(i*nc+1:(i+1)*nc, neq+i*nu+1:neq+(i+1)*nu) = ones(nc,nu);
-%             end
-%             mem.osqp_H_pattern(N*nx+1:(N+1)*nx, N*nx+1:(N+1)*nx) = ones(nx,nx);
-%             mem.osqp_dB_pattern(N*nc+1:N*nc+ncN, N*nx+1:(N+1)*nx) = ones(ncN,nx);
-    
+                
         case 'osqp_partial_sparse'
             nw = (N2+1)*mem.settings2.nx+N2*mem.settings2.nu;
             neq = (N2+1)*mem.settings2.nx;

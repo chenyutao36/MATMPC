@@ -54,7 +54,7 @@ opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 %'ipopt_sparse' (set opt.condensing='no')
 %'ipopt_partial_sparse'(set opt.condensing='partial_condensing'; only for state and control bounded problems)
 %'osqp_sparse' (set opt.condensing='no')
-%'osqp_partial_sparse' (set opt.condensing='partial_condensing'; only for state and control bounded problems)
+%'osqp_partial_sparse' (set opt.condensing='partial_condensing')
 
 %% Initialize Data (all users have to do this)
 

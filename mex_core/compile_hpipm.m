@@ -11,14 +11,11 @@ elseif isunix
     OS_LINUX = 1;
 elseif ispc
     OS_WIN = 1;
+    PREFIX = 'C:\msys64';
 else
     disp('Platform not supported')
 end
 
-PREFIX = '';
-if OS_WIN
-    PREFIX = 'C:\msys64';
-end
 %% hpipm sparse
 
 if OS_LINUX
@@ -60,20 +57,7 @@ elseif OS_WIN
                    ];
 end
 
-%% partial condensing
-
-if OS_LINUX
-    mexfiles_pcond = ['Partial_Condensing.c ', ...
-                ' /opt/hpipm/lib/libhpipm.a ', ...
-                ' /opt/blasfeo/lib/libblasfeo.a ',...
-                   ];
-elseif OS_WIN
-    mexfiles_pcond = ['Partial_Condensing.c ', ...
-                   PREFIX,'\opt\hpipm\lib\libhpipm.a ', ...
-                   PREFIX,'\opt\blasfeo\lib\libblasfeo.a ',...
-                   ];
-end
-%%
+%% Build mex command
        
 mexcmd = 'mex';
 
@@ -95,4 +79,3 @@ mexcmd_pcond = [mexcmd, ' ', mexfiles_pcond];
 eval(mexcmd_sp);
 eval(mexcmd_pcondsol);
 eval(mexcmd_bcond);
-eval(mexcmd_pcond);

@@ -53,7 +53,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 
             case 'hpipm_sparse'               
                 tqp=tic;
-                hpipm_sparse(mem,settings);
+                hpipm_sparse(mem, settings);
                 tQP = toc(tqp)*1e3;
                 
             case 'hpipm_pcond'               
@@ -74,7 +74,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 [tQP, mem] = mpc_qp_solve_osqp(settings,mem);
                 
             case 'osqp_partial_sparse'
-                [tQP, mem] = mpc_qp_solve_osqp_partial(settings,mem.settings2,mem, mem.mem2);
+                [tQP, mem] = mpc_qp_solve_osqp_partial(settings,mem.settings2,mem,mem.mem2);
         end
         
 

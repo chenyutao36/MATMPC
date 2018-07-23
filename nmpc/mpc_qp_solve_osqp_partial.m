@@ -28,8 +28,9 @@ function [cpt_qp, mem] = mpc_qp_solve_osqp_partial(settings,settings2,mem, mem2)
         
     for i=0:N-1        
         mem.mu_x_new(i*Nc*settings.nbx+1:(i+1)*Nc*settings.nbx-settings.nbx) = mu(i*nc+1:i*nc+(Nc-1)*nbx);
-        mem.mu_x_new((i+1)*Nc*settings.nbx-settings.nbx+1:(i+1)*Nc*settings.nbx) = mu_x(i*settings.nbx+1:(i+1)*settings.nbx);                   
-    end
+        mem.mu_x_new((i+1)*Nc*settings.nbx-settings.nbx+1:(i+1)*Nc*settings.nbx) = mu_x(i*settings.nbx+1:(i+1)*settings.nbx);                           
+        mem.mu_new(i*Nc*settings.nc+1:(i+1)*Nc*settings.nc) = mu(i*nc+(Nc-1)*nbx+1:(i+1)*nc);
+    end    
     
     cpt_qp   = sol.info.run_time*1e3;
                
