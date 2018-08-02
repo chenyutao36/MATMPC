@@ -16,9 +16,12 @@ function [cpt_qp, mem] = mpc_qp_solve_osqp_partial(settings,settings2,mem, mem2)
     l = [-mem2.sparse_G; mem2.sparse_lb];
     u = [-mem2.sparse_G; mem2.sparse_ub];
         
-    qp_obj = osqp;
-    qp_obj.setup(mem2.sparse_H, mem2.sparse_g, A, l, u, mem.mem2.osqp_options);
-    sol = qp_obj.solve();       
+    v_H = mem.mem2.sparse_H(mem.mem2.sparse_H_idx);
+    v_A = A(mem.mem2.sparse_A_idx);
+    mem.mem2.qp_obj.update('Px',v_H,'Ax',v_A,'q',mem.mem2.sparse_g,'l',l,'u',u);    
+    sol = mem.mem2.qp_obj.solve();
+    
+    assert(strcmp(sol.info.status,'solved'), ['QP Error: QP is ' sol.info.status]);
 
     mem.du(:) = reshape(sol.x(neq+1:nw,1),[settings.nu,settings.N]);
         

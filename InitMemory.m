@@ -78,7 +78,8 @@ function [mem] = InitMemory(settings, opt, input)
             mem.qpoases_opt = qpOASES_options('MPC');
 %             mem.qpoases_opt = qpOASES_options('default');
         case 'qpoases_mb'   
-            mem.qpoases_opt = qpOASES_options('MPC');
+%             mem.qpoases_opt = qpOASES_options('MPC');
+            mem.qpoases_opt = qpOASES_options('default');
         case 'quadprog_dense'
             mem.quadprog_opt.Algorithm = 'interior-point-convex';
             mem.quadprog_opt.Display = 'off';
@@ -92,7 +93,7 @@ function [mem] = InitMemory(settings, opt, input)
             mem.cond_pred_corr = 1;
             mem.solver_mode = 1;
         case 'hpipm_pcond'
-            mem.mu0=1e2;
+            mem.mu0=1e3;
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
@@ -196,6 +197,7 @@ function [mem] = InitMemory(settings, opt, input)
             mem.osqp_options.eps_rel=1e-4;
             mem.osqp_options.polish = true;
             mem.osqp_options.verbose = false;
+%             mem.osqp_options.warm_start = false;
             
             mem.sparse_H = zeros(nw,nw);
             mem.sparse_g = zeros(nw,1);
@@ -215,7 +217,33 @@ function [mem] = InitMemory(settings, opt, input)
                 end
             end
             mem.sparse_dBu(:,neq+1:end) = eye(N*nu,N*nu);
-                
+            
+            osqp_H_pattern = zeros(nw,nw); 
+            osqp_dG_pattern = zeros(neq,nw);  osqp_dG_pattern(1:nx,1:nx) = eye(nx);
+            osqp_dB_pattern = zeros(nineq,nw);
+            
+            for i=0:N-1	
+                osqp_H_pattern(i*nx+1:(i+1)*nx, i*nx+1:(i+1)*nx) = ones(nx,nx);	
+                osqp_H_pattern(i*nx+1:(i+1)*nx, neq+i*nu+1:neq+(i+1)*nu) = ones(nx,nu);	
+                osqp_H_pattern(neq+i*nu+1:neq+(i+1)*nu, i*nx+1:(i+1)*nx) = ones(nu,nx);	
+                osqp_H_pattern(neq+i*nu+1:neq+(i+1)*nu, neq+i*nu+1:neq+(i+1)*nu) = ones(nu,nu);	
+                	
+                osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, i*nx+1:(i+2)*nx) = [ones(nx,nx),-eye(nx,nx)];	
+                osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, neq+i*nu+1:neq+(i+1)*nu) = ones(nx,nu);	
+                	
+                osqp_dB_pattern(i*nc+1:(i+1)*nc, i*nx+1:(i+1)*nx) = ones(nc,nx);	
+                osqp_dB_pattern(i*nc+1:(i+1)*nc, neq+i*nu+1:neq+(i+1)*nu) = ones(nc,nu);	
+            end	
+            osqp_H_pattern(N*nx+1:(N+1)*nx, N*nx+1:(N+1)*nx) = ones(nx,nx);	
+            osqp_dB_pattern(N*nc+1:N*nc+ncN, N*nx+1:(N+1)*nx) = ones(ncN,nx);
+            
+            osqp_A_pattern = [osqp_dG_pattern; mem.sparse_dBu; mem.sparse_dBx; osqp_dB_pattern];
+            
+            mem.sparse_H_idx = triu(osqp_H_pattern)~=0;
+            mem.sparse_A_idx = osqp_A_pattern~=0;
+
+            mem.qp_obj.setup(osqp_H_pattern, [], osqp_A_pattern, -inf(size(osqp_A_pattern,1),1), inf(size(osqp_A_pattern,1),1), mem.osqp_options);
+            
         case 'osqp_partial_sparse'
             nw = (N2+1)*mem.settings2.nx+N2*mem.settings2.nu;
             neq = (N2+1)*mem.settings2.nx;
@@ -225,6 +253,7 @@ function [mem] = InitMemory(settings, opt, input)
             mem.mem2.osqp_options =mem.mem2.qp_obj.default_settings();
             mem.mem2.osqp_options.eps_abs=1e-4;
             mem.mem2.osqp_options.eps_rel=1e-4;
+            mem.mem2.osqp_options.max_iter = 1e4;
             mem.mem2.osqp_options.polish = true;
             mem.mem2.osqp_options.verbose = false;
             
@@ -246,7 +275,32 @@ function [mem] = InitMemory(settings, opt, input)
                 end
             end
             mem.mem2.sparse_dBu(:,neq+1:end) = eye(N2*mem.settings2.nu,N2*mem.settings2.nu);
-           
+            
+            osqp_H_pattern = zeros(nw,nw); 
+            osqp_dG_pattern = zeros(neq,nw);  osqp_dG_pattern(1:nx,1:nx) = eye(nx);
+            osqp_dB_pattern = zeros(nineq,nw);
+            
+            for i=0:N2-1	
+                osqp_H_pattern(i*nx+1:(i+1)*nx, i*nx+1:(i+1)*nx) = ones(nx,nx);	
+                osqp_H_pattern(i*nx+1:(i+1)*nx, neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu) = ones(nx,mem.settings2.nu);	
+                osqp_H_pattern(neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu, i*nx+1:(i+1)*nx) = ones(mem.settings2.nu,nx);	
+                osqp_H_pattern(neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu, neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu) = ones(mem.settings2.nu,mem.settings2.nu);	
+                	
+                osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, i*nx+1:(i+2)*nx) = [ones(nx,nx),-eye(nx,nx)];	
+                osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu) = ones(nx,mem.settings2.nu);	
+                	
+                osqp_dB_pattern(i*mem.settings2.nc+1:(i+1)*mem.settings2.nc, i*nx+1:(i+1)*nx) = ones(mem.settings2.nc,nx);	
+                osqp_dB_pattern(i*mem.settings2.nc+1:(i+1)*mem.settings2.nc, neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu) = ones(mem.settings2.nc,mem.settings2.nu);	
+            end	
+            osqp_H_pattern(N2*nx+1:(N2+1)*nx, N2*nx+1:(N2+1)*nx) = ones(nx,nx);	
+            osqp_dB_pattern(N2*mem.settings2.nc+1:N2*mem.settings2.nc+ncN, N2*nx+1:(N2+1)*nx) = ones(ncN,nx);
+            
+            osqp_A_pattern = [osqp_dG_pattern; mem.mem2.sparse_dBu; mem.mem2.sparse_dBx; osqp_dB_pattern];
+            
+            mem.mem2.sparse_H_idx = triu(osqp_H_pattern)~=0;
+            mem.mem2.sparse_A_idx = osqp_A_pattern~=0;
+
+            mem.mem2.qp_obj.setup(osqp_H_pattern, [], osqp_A_pattern, -inf(size(osqp_A_pattern,1),1), inf(size(osqp_A_pattern,1),1), mem.mem2.osqp_options);
     end
           
     switch opt.integrator
@@ -323,9 +377,9 @@ function [mem] = InitMemory(settings, opt, input)
     mem.uxc = zeros(N*nbx,1);
     
     if strcmp(opt.qpsolver,'qpoases_mb')
-        mem.r = 5;
+        mem.r = 6;
         T = zeros(N,mem.r);
-        index = [0,1,2,8,18,N]; % starts from 0, of length r+1
+        index = [0,1,2,10,30,50,N]; % starts from 0, of length r+1
         for i=1:mem.r
             T(index(i)+1:index(i+1),i)=1;
         end
