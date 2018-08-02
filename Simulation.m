@@ -1,5 +1,19 @@
 clear mex; close all;clc;
 
+disp( ' ' );
+disp( 'MATMPC -- A (MAT)LAB based Model(M) Predictive(P) Control(C) Package.' );
+disp( 'Copyright (C) 2016-2018 by Yutao Chen, University of Padova' );
+disp( 'All rights reserved.' );
+disp( ' ' );
+disp( 'MATMPC is distributed under the terms of the' );
+disp( 'GNU General Public License 3.0 in the hope that it will be' );
+disp( 'useful, but WITHOUT ANY WARRANTY; without even the implied warranty' );
+disp( 'of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.' );
+disp( 'See the GNU General Public License for more details.' );
+disp( ' ' );
+disp( ' ' );
+disp('---------------------------------------------------------------------------------');
+
 %% Configuration (complete your configuration here...)
 addpath([pwd,'/nmpc']);
 addpath([pwd,'/model_src']);
@@ -32,7 +46,7 @@ nbx = settings.nbx;
 N  = 40;             % No. of shooting points
 settings.N = N;
 
-N2 = 8;
+N2 = N/5;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
 opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
