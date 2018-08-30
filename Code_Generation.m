@@ -227,7 +227,7 @@ if strcmp(compile,'y')
        CC_FLAGS='CXXFLAGS="$CXXFLAGS -Wall"'; % use MinGW not VS studio
     end
     if OS_LINUX 
-       CC_FLAGS = 'GCC="/usr/bin/gcc-4.9"';
+       CC_FLAGS = 'GCC="/usr/bin/gcc"';
     end
     
     OP_FLAGS='-O';

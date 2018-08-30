@@ -15,9 +15,7 @@ function [input,mem,cpt] = mpc_nmpcsolver_simulink(input, settings, mem, opt)
            
     switch opt.qpsolver
         case 'qpoases'              
-            [~,mem] = mpc_qp_solve_qpoases(settings,mem, opt);
-        case 'qore'
-            [~,mem] = mpc_qp_solve_qore(settings,mem, opt);
+            [~,mem] = mpc_qp_solve_qpoases(settings,mem);
         case 'hpipm_sparse'               
             hpipm_sparse(mem,settings);
         case 'hpipm_pcond'                             
