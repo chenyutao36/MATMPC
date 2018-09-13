@@ -43,20 +43,24 @@ nbx = settings.nbx;
 
 %% solver configurations
 
-N  = 40;             % No. of shooting points
+N  = 80;             % No. of shooting points
 settings.N = N;
 
 N2 = N/5;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
-opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
+r = 10;
+settings.r = r;
+
+opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
 opt.condensing='default_full';  %'default_full','no','blasfeo_full','partial_condensing'
 opt.qpsolver='qpoases'; 
 opt.hotstart='no'; %'yes','no' (only for qpoases)
-opt.shifting='yes'; % 'yes','no'
-opt.lin_obj='yes'; % 'yes','no' % if objective function is linear least square
+opt.shifting='no'; % 'yes','no'
+opt.lin_obj='no'; % 'yes','no' % if objective function is linear least square
 opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
+opt.nonuniform_grid=1;
 
 %% available qpsolver
 %'qpoases' (for full condensing)
@@ -71,8 +75,12 @@ opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (
 %'osqp_partial_sparse' (set opt.condensing='partial_condensing')
 
 %% Initialize Data (all users have to do this)
-
-[input, data] = InitData(settings);
+if opt.nonuniform_grid
+    [input, data] = InitData_ngrid(settings);
+    settings.N = r;
+else
+    [input, data] = InitData(settings);
+end
 
 %% Initialize Solvers (only for advanced users)
 

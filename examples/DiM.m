@@ -44,10 +44,6 @@ import casadi.*
 states   = SX.sym('states',nx,1);   % state variables
 controls = SX.sym('controls',nu,1); % control inputs
 params   = SX.sym('paras',np,1);    % parameters
-refs     = SX.sym('refs',ny,1);     % references of the first N stages
-refN     = SX.sym('refs',nyN,1);    % reference of the last stage
-Q        = SX.sym('Q',ny,ny);       % weighting matrix of the first N stages
-QN       = SX.sym('QN',nyN,nyN);    % weighting matrix of the last stage
 
 %% Vestibular model
 

@@ -60,3 +60,6 @@ mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c',
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c','casadi_wrapper.c','casadi_src.c','sim.c','erk.c','irk.c','mpc_common.c', LIB1, LIB2);
 
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_info.c','casadi_wrapper.c','casadi_src.c','sim.c','erk.c','irk.c','mpc_common.c', LIB1, LIB2);
+
+%%
+mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_ngrid.c','casadi_wrapper.c','sim.c','erk.c','irk.c','casadi_src.c','mpc_common.c',LIB1, LIB2);

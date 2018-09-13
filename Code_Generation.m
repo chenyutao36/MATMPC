@@ -83,15 +83,19 @@ B = jacobian(X,controls) + SX.zeros(nx,nu);
 D = Function('D', {states,controls,params}, {A, B});
 
 %% objective and constraints
+refs     = SX.sym('refs',ny,1);     % references of the first N stages
+refN     = SX.sym('refs',nyN,1);    % reference of the last stage
+Q        = SX.sym('Q',ny,1);        % weighting matrix of the first N stages
+QN       = SX.sym('QN',nyN,1);      % weighting matrix of the last stage
 
-obji_vec=sqrt(Q)*(h_fun(states,controls,params)-refs);
-objN_vec=sqrt(QN)*(hN_fun(states,params)-refN);
+obji_vec=sqrt(diag(Q))*(h_fun(states,controls,params)-refs);
+objN_vec=sqrt(diag(QN))*(hN_fun(states,params)-refN);
 Jxi = jacobian(obji_vec, states) + SX.zeros(ny, nx);
 Jui = jacobian(obji_vec, controls) + SX.zeros(ny, nu);
 JxN = jacobian(objN_vec, states) + SX.zeros(nyN, nx);
 
-obji = 0.5*(h_fun(states,controls,params)-refs)'*Q*(h_fun(states,controls,params)-refs);
-objN = 0.5*(hN_fun(states,params)-refN)'*QN*(hN_fun(states,params)-refN);
+obji = 0.5*(h_fun(states,controls,params)-refs)'*diag(Q)*(h_fun(states,controls,params)-refs);
+objN = 0.5*(hN_fun(states,params)-refN)'*diag(QN)*(hN_fun(states,params)-refN);
 gxi = jacobian(obji,states)' + SX.zeros(nx,1);
 gui = jacobian(obji,controls)' + SX.zeros(nu,1);
 gxN = jacobian(objN,states)' + SX.zeros(nx,1);

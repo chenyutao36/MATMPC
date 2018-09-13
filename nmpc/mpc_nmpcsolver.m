@@ -14,9 +14,13 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
     while(mem.sqp_it < mem.sqp_maxit  &&  StopCrit > mem.kkt_lim && mem.alpha>1E-4 ) % RTI or multiple call
         
         %% ----------- QP Preparation
-       
+        
         tshoot = tic;
-        qp_generation(input, settings, mem);
+        if opt.nonuniform_grid
+            qp_generation_ngrid(input, settings, mem);
+        else
+            qp_generation(input, settings, mem);
+        end
         tSHOOT = toc(tshoot)*1e3; 
         
         switch opt.condensing

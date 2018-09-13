@@ -129,11 +129,6 @@ import casadi.*
 states   = SX.sym('states',nx,1);
 controls = SX.sym('controls',nu,1);
 params   = SX.sym('paras',np,1);
-refs     = SX.sym('refs',ny,1);
-refN     = SX.sym('refs',nyN,1);
-Q        = SX.sym('Q',ny,ny);
-QN       = SX.sym('QN',nyN,nyN);
-
 
 %% Dynamics
 

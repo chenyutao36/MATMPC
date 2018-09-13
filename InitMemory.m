@@ -408,7 +408,7 @@ function [mem] = InitMemory(settings, opt, input)
     if strcmp(opt.lin_obj,'yes')
         mem.lin_obj = 1;
         
-        [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W);
+        [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W(:,1));
         Qi = full(Jx'*Jx);
         for i=1:nx
             if Qi(i,i)<1e-12

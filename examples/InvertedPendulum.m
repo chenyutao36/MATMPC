@@ -30,10 +30,6 @@ import casadi.*
 states   = SX.sym('states',nx,1);
 controls = SX.sym('controls',nu,1);
 params   = SX.sym('paras',np,1);
-refs     = SX.sym('refs',ny,1);
-refN     = SX.sym('refs',nyN,1);
-Q        = SX.sym('Q',ny,ny);
-QN       = SX.sym('QN',nyN,nyN);
 
 %% Dynamics
 
@@ -69,8 +65,8 @@ general_con_N = [];
 
 %% NMPC sampling time [s]
 
-Ts = 0.05; % simulation sample time
-Ts_st = 0.05; % shooting interval time
+Ts = 0.025; % simulation sample time
+Ts_st = 0.025; % shooting interval time
 
 %% build casadi function (don't touch)
 h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});

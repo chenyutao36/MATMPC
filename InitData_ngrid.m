@@ -1,5 +1,5 @@
 %% Initialization
-function [input, data] = InitData(settings)
+function [input, data] = InitData_ngrid(settings)
 
     Ts  = settings.Ts;       % Sampling time
     Ts_st = settings.Ts_st;  % Shooting interval
@@ -16,6 +16,12 @@ function [input, data] = InitData(settings)
     nbx = settings.nbx;
     nbu = settings.nbu;
     nbu_idx = settings.nbu_idx;
+    
+    T_idx = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
+    input.T_idx = T_idx;
+    if length(T_idx)~=r+1
+        error('The index for non-uniform grid should be compatible with the length of horizon');
+    end
 
     switch settings.model
         case 'DiM'
@@ -59,8 +65,14 @@ function [input, data] = InitData(settings)
             input.u0 = zeros(nu,1);    
             para0 = 0;  
 
-            Q=repmat([10 10 0.1 0.1 0.01]',1,N);
-            QN=[10 10 0.1 0.1]';
+%             Q=repmat([10 10 0.1 0.1 0.01]',1,N);
+%             QN=[10 10 0.1 0.1]';
+            q = [10 10 0.1 0.1 0.01]';
+            Q = zeros(ny,r);
+            for i=1:r
+                Q(:,i) = (T_idx(i+1)-T_idx(i))*q;
+            end
+            QN= q(1:nyN);
 
             % upper and lower bounds for states (=nbx)
             lb_x = -2;
@@ -299,8 +311,8 @@ function [input, data] = InitData(settings)
 
     % prepare the data
     
-    input.lb = repmat(lb_g,N,1);
-    input.ub = repmat(ub_g,N,1);
+    input.lb = repmat(lb_g,r,1);
+    input.ub = repmat(ub_g,r,1);
     input.lb = [input.lb;lb_gN];
     input.ub = [input.ub;ub_gN];
             
@@ -311,15 +323,15 @@ function [input, data] = InitData(settings)
         ubu(nbu_idx(i)) = ub_u(i);
     end
                 
-    input.lbu = repmat(lbu,1,N);
-    input.ubu = repmat(ubu,1,N);
+    input.lbu = repmat(lbu,1,r);
+    input.ubu = repmat(ubu,1,r);
     
-    input.lbx = repmat(lb_x,1,N);
-    input.ubx = repmat(ub_x,1,N);
+    input.lbx = repmat(lb_x,1,r);
+    input.ubx = repmat(ub_x,1,r);
 
-    x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
-    u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
-    para = repmat(para0,1,N+1);  % initialize all parameters with the same initial para
+    x = repmat(input.x0,1,r+1);  % initialize all shooting points with the same initial state 
+    u = repmat(input.u0,1,r);    % initialize all controls with the same initial control
+    para = repmat(para0,1,r+1);  % initialize all parameters with the same initial para
     
 %     load init_data;    % if you want to use your own initiliazation data
     
@@ -329,10 +341,10 @@ function [input, data] = InitData(settings)
     input.W=Q;           % weights of the first N stages (ny by ny matrix)
     input.WN=QN;         % weights of the terminal stage (nyN by nyN matrix)
 %     
-    input.lambda=zeros(nx,N+1);
-    input.mu=zeros(N*nc+ncN,1);
-    input.mu_u = zeros(N*nu,1);
-    input.mu_x = zeros(N*nbx,1);
+    input.lambda=zeros(nx,r+1);
+    input.mu=zeros(r*nc+ncN,1);
+    input.mu_u = zeros(r*nu,1);
+    input.mu_x = zeros(r*nbx,1);
     %% Reference generation
 
     switch settings.model

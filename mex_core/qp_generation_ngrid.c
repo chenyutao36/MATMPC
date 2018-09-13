@@ -57,6 +57,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lbx = mxGetPr( mxGetField(prhs[0], 0, "lbx") );
     double *ubx = mxGetPr( mxGetField(prhs[0], 0, "ubx") );
     
+    double *T_idx = mxGetPr( mxGetField(prhs[0], 0, "T_idx") );
+    
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
     size_t np = mxGetScalar( mxGetField(prhs[1], 0, "np") ); if(np==0) np++;
@@ -68,6 +70,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *nbx_idx = mxGetPr( mxGetField(prhs[1], 0, "nbx_idx") );
     size_t N = mxGetScalar( mxGetField(prhs[1], 0, "N") );    
     int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
+    size_t r = mxGetScalar( mxGetField(prhs[1], 0, "r") );
+    double Ts_st = mxGetScalar( mxGetField(prhs[1], 0, "Ts_st") );
     
     int i=0,j=0;
     char *nTrans = "N", *Trans="T", *UPLO="L";
@@ -97,6 +101,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
+    size_t ns = mxGetScalar( mxGetField(prhs[2], 0, "num_steps") );
+    
     
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - x[i];
@@ -107,14 +113,14 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
       
     double *casadi_in[5];
     double *casadi_out[2];    
-          
+           
     if (!mem_alloc){
         switch(sim_method){
             case 0:
                 break;
             case 1:
                 opts = sim_opts_create(prhs[2]);
-                opts->forw_sens = true;
+                opts->forw_sens = true;                
                 in = sim_in_create(opts);              
                 out = sim_out_create(opts);                
                 erk_workspace = sim_erk_workspace_create(opts);               
@@ -143,9 +149,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mem_alloc=true;
         mexAtExit(exitFcn);
     }
-    
+        
     // start loop
-    for(i=0;i<N;i++){
+    for(i=0;i<r;i++){
         casadi_in[0] = x+i*nx;
         casadi_in[1] = u+i*nu;
         casadi_in[2] = od+i*np;
@@ -178,6 +184,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 in->x = x+i*nx;
                 in->u = u+i*nu;
                 in->p = od+i*np;
+                opts->num_steps = (size_t)(T_idx[i+1]-T_idx[i])*ns;
+                opts->h = (T_idx[i+1]-T_idx[i])*Ts_st/opts->num_steps; 
                 out->xn = a+i*nx;
                 out->Sx = A + i*nx*nx;
                 out->Su = B + i*nx*nu;
