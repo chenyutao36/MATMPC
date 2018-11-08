@@ -1,6 +1,7 @@
 
 #include "mex.h"
 #include "string.h"
+#include <math.h>
 
 #include "sim.h"
 #include "erk.h"
@@ -56,9 +57,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ubu = mxGetPr( mxGetField(prhs[0], 0, "ubu") );
     double *lbx = mxGetPr( mxGetField(prhs[0], 0, "lbx") );
     double *ubx = mxGetPr( mxGetField(prhs[0], 0, "ubx") );
-    
-    double *T_idx = mxGetPr( mxGetField(prhs[0], 0, "T_idx") );
-    
+        
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
     size_t np = mxGetScalar( mxGetField(prhs[1], 0, "np") ); if(np==0) np++;
@@ -98,6 +97,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
     double *lb_dx = mxGetPr( mxGetField(prhs[2], 0, "lb_dx") );
     double *ub_dx = mxGetPr( mxGetField(prhs[2], 0, "ub_dx") );
+    double *index_T = mxGetPr( mxGetField(prhs[2], 0, "index_T") );
     
     int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
@@ -184,8 +184,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 in->x = x+i*nx;
                 in->u = u+i*nu;
                 in->p = od+i*np;
-                opts->num_steps = (size_t)(T_idx[i+1]-T_idx[i])*ns;
-                opts->h = (T_idx[i+1]-T_idx[i])*Ts_st/opts->num_steps; 
+                opts->num_steps = (size_t)(index_T[i+1]-index_T[i])*ns;
+                opts->h = (index_T[i+1]-index_T[i])*Ts_st/opts->num_steps; 
                 out->xn = a+i*nx;
                 out->Sx = A + i*nx*nx;
                 out->Su = B + i*nx*nu;
@@ -212,6 +212,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         // Hessian
         if (!lin_obj){
             Ji_Fun(casadi_in, Jac);
+            
+            for (j=0;j<ny*nx;j++)
+                Jac[0][j]*=sqrt(index_T[i+1]-index_T[i]);
+            for (j=0;j<ny*nu;j++)
+                Jac[1][j]*=sqrt(index_T[i+1]-index_T[i]); 
+            
             dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
             dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
             dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
@@ -224,6 +230,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_out[0] = gx+i*nx;
         casadi_out[1] = gu+i*nu;
         gi_Fun(casadi_in, casadi_out);
+        
+        for (j=0;j<nx;j++)
+            *(gx+i*nx+j)=*(gx+i*nx+j)*(index_T[i+1]-index_T[i]);  
+        for (j=0;j<nu;j++)
+            *(gu+i*nu+j)=*(gu+i*nu+j)*(index_T[i+1]-index_T[i]); 
                 
         // constraint residual
         if (nc>0){  
@@ -252,12 +263,16 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     if (!lin_obj){
         JN_Fun(casadi_in, Jac_N);
+        for (j=0;j<nyN*nx;j++)
+            Jac_N[j]*=sqrt(index_T[r]-index_T[r-1]);
         dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, Jac_N, &nyN, Jac_N, &nyN, &zero, Q+N*nx*nx, &nx);
         regularization(nx, Q+N*nx*nx, reg);
     }
         
     casadi_out[0] = gx+N*nx;
     gN_Fun(casadi_in, casadi_out);
+    for (j=0;j<nx;j++)
+        *(gx+r*nx+j)=*(gx+r*nx+j)*(index_T[r]-index_T[r-1]);  
 
     if (ncN>0){
         casadi_out[0] = lc + N*nc;

@@ -50,7 +50,7 @@ N2 = N/5;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
 r = 10;
-settings.r = r;
+settings.r = r;      % No. of input blocks
 
 opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
@@ -60,7 +60,7 @@ opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
 opt.lin_obj='no'; % 'yes','no' % if objective function is linear least square
 opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
-opt.nonuniform_grid=1;
+opt.nonuniform_grid=0; % supports only ERK4 and IRK3
 
 %% available qpsolver
 %'qpoases' (for full condensing)
@@ -77,10 +77,11 @@ opt.nonuniform_grid=1;
 %% Initialize Data (all users have to do this)
 if opt.nonuniform_grid
     [input, data] = InitData_ngrid(settings);
-    settings.N = r;
+    N = r;
+    settings.N = N;
 else
-    [input, data] = InitData(settings);
-end
+	[input, data] = InitData(settings);
+end  
 
 %% Initialize Solvers (only for advanced users)
 
@@ -96,6 +97,7 @@ y_sim = [];
 constraints = [];
 CPT = [];
 ref_traj = [];
+KKT = [];
 
 while time(end) < Tf
         
@@ -160,15 +162,15 @@ while time(end) < Tf
     % store the optimal solution and states
     controls_MPC = [controls_MPC; output.u(:,1)'];
     state_sim = [state_sim; xf'];
+    KKT= [KKT;OptCrit];
+    CPT = [CPT; cpt, tshooting, tcond, tqp];
     
     % go to the next sampling instant
     nextTime = mem.iter*Ts; 
     mem.iter = mem.iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  Opt:' num2str(OptCrit) '  SQP_IT:' num2str(output.info.iteration_num)]);
         
-    time = [time nextTime];
-    
-    CPT = [CPT; cpt, tshooting, tcond, tqp];
+    time = [time nextTime];   
 end
 
 %%

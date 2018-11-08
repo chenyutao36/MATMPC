@@ -19,15 +19,25 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         if opt.nonuniform_grid
             qp_generation_ngrid(input, settings, mem);
         else
-            qp_generation(input, settings, mem);
+            if strcmp(opt.qpsolver, 'qpoases_mb')
+                qp_generation_mb(input, settings, mem);
+            else
+                qp_generation(input, settings, mem);
+            end
         end
+        
         tSHOOT = toc(tshoot)*1e3; 
         
         switch opt.condensing
-            case 'default_full'
+            case 'default_full'              
                 tcond=tic;
-                Condensing(mem, settings);
+                if ~strcmp(opt.qpsolver, 'qpoases_mb')
+                    Condensing(mem, settings);
+                else
+                    Condensing_mb(mem, settings);
+                end
                 tCOND=toc(tcond)*1e3;
+                
             case 'hpipm_full'
                 tcond=tic;
                 condensing_hpipm(mem, settings);
@@ -50,7 +60,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 [tQP,mem] = mpc_qp_solve_qpoases(settings,mem);
                 
             case 'qpoases_mb'              
-                [tQP,mem] = mpc_qp_solve_qpoases_mb(settings,mem);
+                [tQP,mem] = mpc_qp_solve_qpoases_mb(settings,mem, opt);
                 
             case 'quadprog_dense'
                 [tQP,mem] = mpc_qp_solve_quadprog(settings,mem);

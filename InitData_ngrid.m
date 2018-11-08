@@ -17,12 +17,6 @@ function [input, data] = InitData_ngrid(settings)
     nbu = settings.nbu;
     nbu_idx = settings.nbu_idx;
     
-    T_idx = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
-    input.T_idx = T_idx;
-    if length(T_idx)~=r+1
-        error('The index for non-uniform grid should be compatible with the length of horizon');
-    end
-
     switch settings.model
         case 'DiM'
             input.x0 = zeros(nx,1);    % initial state
@@ -30,7 +24,7 @@ function [input, data] = InitData_ngrid(settings)
             para0 = 0;  % initial parameters (by default a np by 1 vector, if there is no parameter, set para0=0)
 
             %weighting matrices
-            Q=diag([1200,1200,2000,800,800,5800,... % perceived acc and angular vel
+            q=[1200,1200,2000,800,800,5800,... % perceived acc and angular vel
                     32000*1.1,32000*1.1,1600*1,... %px,py,pz hex
                     3200*1.1,3200*1.1,2000*1,... %vx, vy, vz hex
                     4600*1,600*1,... % x,y tri
@@ -41,10 +35,10 @@ function [input, data] = InitData_ngrid(settings)
                     500.0,... % omega phi tri
                     0.0,0.0,0.001,... %ax,ay,az hex %         20*1.1,20*1.1,... % ax,ay tri
                     0.0,0.01,0.1 ... % alpha phi,theta, psi hex 
-                    ]);
-              Q = repmat(Q',1,N);
-
-              QN=Q(1:nyN,1);
+                    ];
+              Q = repmat(q',1,r);
+             
+              QN=q(1:nyN)';
               
               % upper and lower bounds for states (=nbx)
               lb_x = [];
@@ -65,14 +59,8 @@ function [input, data] = InitData_ngrid(settings)
             input.u0 = zeros(nu,1);    
             para0 = 0;  
 
-%             Q=repmat([10 10 0.1 0.1 0.01]',1,N);
-%             QN=[10 10 0.1 0.1]';
-            q = [10 10 0.1 0.1 0.01]';
-            Q = zeros(ny,r);
-            for i=1:r
-                Q(:,i) = (T_idx(i+1)-T_idx(i))*q;
-            end
-            QN= q(1:nyN);
+            Q=repmat([10 10 0.1 0.1 0.01]',1,r);
+            QN=[10 10 0.1 0.1]';
 
             % upper and lower bounds for states (=nbx)
             lb_x = -2;

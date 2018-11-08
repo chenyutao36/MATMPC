@@ -40,7 +40,7 @@ void exitFcn(){
         sim_out_free(out);    
 }
 
-double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, double *ub, double *lc, double *uc,
+double eval_cons_res(double *x, double *u, double *od, double *x0, double *lb, double *ub, double *lc, double *uc,
                    double *lbx, double *ubx, double *lbu, double *ubu, size_t nx, size_t nu, size_t nc, size_t ncN,
                    size_t N, size_t np, size_t nbx, double *nbx_idx, double *eq_res_vec, int sim_method, sim_opts *opts, sim_in *in, sim_out *out,
                    sim_erk_workspace *erk_workspace, sim_irk_workspace *irk_workspace)
@@ -65,7 +65,8 @@ double eval_cons_res(double *x, double *u, double *od, double *ds0, double *lb, 
     double *lx = (double *)mxMalloc( N*nbx * sizeof(double));        
     double *ux = (double *)mxMalloc( N*nbx * sizeof(double));
     
-    memcpy(eq_res_vec, ds0, nx*sizeof(double));
+    for (j=0;j<nx;j++)
+        eq_res_vec[j] = x0[j] - x[j];
            
     for (i=0;i<N;i++){      
         switch(sim_method){
@@ -256,7 +257,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lbu = mxGetPr( mxGetField(prhs[1], 0, "lbu") );
     double *ubu = mxGetPr( mxGetField(prhs[1], 0, "ubu") );  
     double *lbx = mxGetPr( mxGetField(prhs[1], 0, "lbx") );
-    double *ubx = mxGetPr( mxGetField(prhs[1], 0, "ubx") );   
+    double *ubx = mxGetPr( mxGetField(prhs[1], 0, "ubx") ); 
+    double *x0 = mxGetPr( mxGetField(prhs[1], 0, "x0") );
     
     size_t nx = mxGetScalar( mxGetField(prhs[2], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[2], 0, "nu") );
@@ -291,7 +293,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *mu_x_new = mxGetPr( mxGetField(prhs[0], 0, "mu_x_new") );
     double *lc = mxGetPr( mxGetField(prhs[0], 0, "lc") );
     double *uc = mxGetPr( mxGetField(prhs[0], 0, "uc") );
-    double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
     double *a = mxGetPr( mxGetField(prhs[0], 0, "a") );
           
     double rho = mxGetScalar( mxGetField(prhs[0], 0, "rho") );
@@ -356,7 +357,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     int newpoint = 0;
     alpha[0] = 1;
     if (sqp_maxit > 1){
-        cons_res = eval_cons_res(x, u, od, ds0, lb, ub, lc, uc,
+        cons_res = eval_cons_res(x, u, od, x0, lb, ub, lc, uc,
                                  lbx, ubx, lbu, ubu, nx, nu, nc, ncN,
                                  N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
                                  erk_workspace, irk_workspace);
@@ -388,7 +389,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             
             daxpy(&nx_t, alpha, dx, &one_i, x_new, &one_i); 
             daxpy(&nu_t, alpha, du, &one_i, u_new, &one_i);
-            cons_res = eval_cons_res(x_new, u_new, od, ds0, lb, ub, lc, uc,
+            cons_res = eval_cons_res(x_new, u_new, od, x0, lb, ub, lc, uc,
                                      lbx, ubx, lbu, ubu, nx, nu, nc, ncN,
                                      N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
                                      erk_workspace, irk_workspace);

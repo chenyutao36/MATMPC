@@ -16,6 +16,7 @@ function [mem] = InitMemory(settings, opt, input)
     ncN = settings.ncN;  % No. of general constraints at terminal stage
     N     = settings.N;             % No. of shooting points
     N2  = settings.N2;
+    r = settings.r;
 
     %% memory
     mem = struct;
@@ -78,8 +79,8 @@ function [mem] = InitMemory(settings, opt, input)
             mem.qpoases_opt = qpOASES_options('MPC');
 %             mem.qpoases_opt = qpOASES_options('default');
         case 'qpoases_mb'   
-%             mem.qpoases_opt = qpOASES_options('MPC');
-            mem.qpoases_opt = qpOASES_options('default');
+            mem.qpoases_opt = qpOASES_options('MPC');
+%             mem.qpoases_opt = qpOASES_options('default');
         case 'quadprog_dense'
             mem.quadprog_opt.Algorithm = 'interior-point-convex';
             mem.quadprog_opt.Display = 'off';
@@ -376,19 +377,32 @@ function [mem] = InitMemory(settings, opt, input)
     mem.lxc = zeros(N*nbx,1);
     mem.uxc = zeros(N*nbx,1);
     
-    if strcmp(opt.qpsolver,'qpoases_mb')
-        mem.r = 6;
-        T = zeros(N,mem.r);
-        index = [0,1,2,10,30,50,N]; % starts from 0, of length r+1
-        for i=1:mem.r
-            T(index(i)+1:index(i+1),i)=1;
-        end
-        mem.T = kron(T, eye(nu));
-
+    if strcmp(opt.qpsolver, 'qpoases_mb')
+        mem.r = r;
+        mem.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
+    %     mem.index_T = [0, 1, 10, 50];
         mem.Hc_r = zeros(mem.r*nu,mem.r*nu);
         mem.Ccx_r = zeros(N*nbx,mem.r*nu);
         mem.Ccg_r = zeros(N*nc+ncN,mem.r*nu);
         mem.gc_r = zeros(mem.r*nu,1);
+        mem.L = zeros(mem.r,1);
+        mem.Gr = zeros(N*nx,mem.r*nu);
+        T = zeros(N,mem.r);
+        for i=1:mem.r
+            T(mem.index_T(i)+1:mem.index_T(i+1),i)=1;
+        end
+        mem.T = kron(T, eye(nu));
+    end
+    
+    if opt.nonuniform_grid
+        mem.r = r;
+        mem.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
+    %     mem.index_T = [0, 1, 10, 50];
+        T = zeros(N,mem.r);
+        for i=1:mem.r
+            T(mem.index_T(i)+1:mem.index_T(i+1),i)=1;
+        end
+        mem.T = kron(T, eye(nu));
     end
     
     mem.dx = zeros(nx,N+1);
@@ -405,38 +419,41 @@ function [mem] = InitMemory(settings, opt, input)
         mem.Cx(i,nbx_idx(i)) = 1.0;
     end
     
+    mem.reg = 1e-12;
+    
+    mem.Q = zeros(nx,nx*(N+1));
+    mem.S = zeros(nx,nu*N);
+    mem.R = zeros(nu,nu*N);
     if strcmp(opt.lin_obj,'yes')
         mem.lin_obj = 1;
         
-        [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W(:,1));
-        Qi = full(Jx'*Jx);
-        for i=1:nx
-            if Qi(i,i)<1e-12
-                Qi(i,i)=1e-12;
+        for j=1:N
+            [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W(:,j));
+            Qi = full(Jx'*Jx);
+            for i=1:nx
+                if Qi(i,i)<mem.reg
+                    Qi(i,i)=mem.reg;
+                end
             end
+            Si = full(Jx'*Ju);
+            Ri = full(Ju'*Ju);
+            mem.Q(:,(j-1)*nx+1:j*nx) = Qi;
+            mem.S(:,(j-1)*nu+1:j*nu) = Si;
+            mem.R(:,(j-1)*nu+1:j*nu) = Ri;
         end
-        Si = full(Jx'*Ju);
-        Ri = full(Ju'*Ju);
-        mem.Q = repmat(Qi,1,N+1);
-        mem.S = repmat(Si,1,N);
-        mem.R = repmat(Ri,1,N);
         
         JN = JN_fun('JN_fun',zeros(nx,1),zeros(np,1),zeros(nyN,1), input.WN);
         Qf = full(JN'*JN);
         for i=1:nx
-            if Qf(i,i)<1e-12
-                Qf(i,i)=1e-12;
+            if Qf(i,i)<mem.reg
+                Qf(i,i)=mem.reg;
             end
         end
         mem.Q(:,N*nx+1:end) = Qf;
     else
         mem.lin_obj = 0;
-        mem.Q = zeros(nx,nx*(N+1));
-        mem.S = zeros(nx,nu*N);
-        mem.R = zeros(nu,nu*N);
     end
-    mem.reg = 1e-12;
-              
+                  
     mem.iter=1;
     
      %% for CMON-RTI	

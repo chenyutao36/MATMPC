@@ -24,7 +24,7 @@ function [input, data] = InitData(settings)
             para0 = 0;  % initial parameters (by default a np by 1 vector, if there is no parameter, set para0=0)
 
             %weighting matrices
-            Q=diag([1200,1200,2000,800,800,5800,... % perceived acc and angular vel
+            Q=[1200,1200,2000,800,800,5800,... % perceived acc and angular vel
                     32000*1.1,32000*1.1,1600*1,... %px,py,pz hex
                     3200*1.1,3200*1.1,2000*1,... %vx, vy, vz hex
                     4600*1,600*1,... % x,y tri
@@ -35,7 +35,7 @@ function [input, data] = InitData(settings)
                     500.0,... % omega phi tri
                     0.0,0.0,0.001,... %ax,ay,az hex %         20*1.1,20*1.1,... % ax,ay tri
                     0.0,0.01,0.1 ... % alpha phi,theta, psi hex 
-                    ]);
+                    ];
               Q = repmat(Q',1,N);
 
               QN=Q(1:nyN,1);
