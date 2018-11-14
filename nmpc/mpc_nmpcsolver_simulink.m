@@ -1,6 +1,12 @@
 function [input,mem,cpt] = mpc_nmpcsolver_simulink(input, settings, mem, opt)
 
+    mem.sqp_it=0;
+    mem.alpha =1;
+    StopCrit = 2*mem.kkt_lim;
+
     tic;
+    
+    while(mem.sqp_it < mem.sqp_maxit  &&  StopCrit > mem.kkt_lim && mem.alpha>1E-8 )
                
     qp_generation(input, settings, mem);
 
@@ -25,7 +31,13 @@ function [input,mem,cpt] = mpc_nmpcsolver_simulink(input, settings, mem, opt)
     
     Line_search(mem, input, settings);
     
-%     [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
+    [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
+                
+    StopCrit = max([eq_res, ineq_res, KKT]);
+    
+    mem.sqp_it=mem.sqp_it+1;
+    
+    end
 
     cpt=toc*1e3;
     

@@ -9,10 +9,12 @@ addpath([pwd,'/nmpc']);
 addpath([pwd,'/model_src']);
 addpath([pwd,'/mex_core']);
 %% Parametri Simulazione
-
+cd data;
 if exist('settings','file')==2
     load settings
+    cd ..
 else 
+    cd ..
     error('No setting data is detected!');
 end
 
