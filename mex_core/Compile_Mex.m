@@ -26,7 +26,7 @@ if OS_WIN
    CC_FLAGS='CXXFLAGS="$CXXFLAGS -Wall"'; % use MinGW not VS studio
 end
 if OS_LINUX 
-   CC_FLAGS = 'GCC="/usr/bin/gcc-4.9"';
+   CC_FLAGS = 'GCC="/usr/bin/gcc"';
 end
 
 OP_FLAGS='-O';
@@ -46,8 +46,6 @@ HEAD2_PATH = '';
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim.c','erk.c','irk.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
 % 
 mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
-%
-mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing_mb.c','mpc_common.c', LIB1);
 % 
 mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'full2sparse.c','mpc_common.c');
 % 
@@ -61,7 +59,13 @@ mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search
 % 
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_info.c','casadi_wrapper.c','casadi_src.c','sim.c','erk.c','irk.c','mpc_common.c', LIB1, LIB2);
 
-%%
+%% Optional functions
+mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing_mb.c','mpc_common.c', LIB1);
+
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_ngrid.c','casadi_wrapper.c','sim.c','erk.c','irk.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
 
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_mb.c','casadi_wrapper.c','sim.c','erk.c','irk.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
+
+mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_tac.c','casadi_wrapper.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
+
+mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'adaptive_eta.c',LIB1);

@@ -54,7 +54,7 @@ settings.r = r;      % No. of input blocks
 
 opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.hessian='gauss_newton';  % 'gauss_newton'
-opt.condensing='default_full';  %'default_full','no','blasfeo_full','partial_condensing'
+opt.condensing='default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
 opt.qpsolver='qpoases'; 
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
@@ -66,10 +66,10 @@ opt.nonuniform_grid=0; % supports only ERK4 and IRK3
 %'qpoases' (for full condensing)
 %'qpoases_mb' (for full condensing+moving block)
 %'quadprog_dense' (for full condensing)
-%'hpipm_sparse' (set opt.condensing='no')
-%'hpipm_pcond' (set opt.condensing='no')
-%'ipopt_dense' (for full condensing)
-%'ipopt_sparse' (set opt.condensing='no')
+%'hpipm_sparse' (run mex_core/compile_hpipm.m first; set opt.condensing='no')
+%'hpipm_pcond' (run mex_core/compile_hpipm.m first; set opt.condensing='no')
+%'ipopt_dense' (install OPTI Toolbox first; for full condensing)
+%'ipopt_sparse' (install OPTI Toolbox first; set opt.condensing='no')
 %'ipopt_partial_sparse'(set opt.condensing='partial_condensing'; only for state and control bounded problems)
 %'osqp_sparse' (set opt.condensing='no')
 %'osqp_partial_sparse' (set opt.condensing='partial_condensing')

@@ -1,5 +1,10 @@
+% ------------------------------------------------------
+%  This is an example of initializing simulink simulation
+%  ------------------------------------------------------
+
+%%
 clear mex; close all; clear; clc;
-%% Configuration (complete your configuration here...)
+
 addpath([pwd,'/nmpc']);
 addpath([pwd,'/model_src']);
 addpath([pwd,'/mex_core']);
@@ -13,32 +18,30 @@ end
 
 Ts  = settings.Ts;       % Sampling time
 Ts_st = settings.Ts_st;  % Shooting interval
-s = settings.s;      % number of integration steps per interval
-nx = settings.nx;    % No. of states
-nu = settings.nu;    % No. of controls
-ny = settings.ny;    % No. of outputs (references)    
-nyN= settings.nyN;   % No. of outputs at terminal stage 
-np = settings.np;    % No. of parameters (on-line data)
-nc = settings.nc;    % No. of constraints
-ncN = settings.ncN;  % No. of constraints at terminal stage
-nbu = settings.nbu;
-nbx = settings.nbx;
-nbu_idx = settings.nbu_idx;
-nbx_idx = settings.nbx_idx;
+s = settings.s;          % number of integration steps per interval
+nx = settings.nx;        % No. of states
+nu = settings.nu;        % No. of controls
+ny = settings.ny;        % No. of outputs (references)    
+nyN= settings.nyN;       % No. of outputs at terminal stage 
+np = settings.np;        % No. of parameters (on-line data)
+nc = settings.nc;        % No. of constraints
+ncN = settings.ncN;      % No. of constraints at terminal stage
+nbu = settings.nbu;      % No. of control bounds
+nbx = settings.nbx;      % No. of state bounds
+nbu_idx = settings.nbu_idx; % Index of control bounds
+nbx_idx = settings.nbx_idx; % Index of state bounds
 
 %% Prediction Horizon
-N=40;
+N=80;
 settings.N = N;
 
 %%
-% global x0 lb ub lbN ubN lbu ubu W WN para ref;
-
 x0 = [0;pi;0;0];    
 u0 = zeros(nu,1);    
 para0 = 0;  
 
-W=diag([10 10 0.1 0.1 0.01]);
-WN=W(1:nyN,1:nyN);
+W=repmat([10 10 0.1 0.1 0.01]',1,N);
+WN=W(1:nyN,1);
 
 % upper and lower bounds for states (=nbx)
 lb_x = -2;

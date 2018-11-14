@@ -1,24 +1,23 @@
 function [mem] = InitMemory(settings, opt, input)
 
-    Ts  = settings.Ts;       % Sampling time
-    Ts_st = settings.Ts_st;  % Shooting interval
-    s = settings.s;      % number of integration steps per interval
-    nx = settings.nx;    % No. of states
-    nu = settings.nu;    % No. of controls
-    ny = settings.ny;    % No. of outputs (references)    
-    nyN= settings.nyN;   % No. of outputs at terminal stage 
-    np = settings.np;    % No. of parameters (on-line data)
-    nbx = settings.nbx;  % No. of bounds on states
-    nbu = settings.nbu;  % No. of bounds on controls
+    Ts_st = settings.Ts_st;    % Shooting interval
+    s     = settings.s;        % number of integration steps per interval
+    nx    = settings.nx;       % No. of states
+    nu    = settings.nu;       % No. of controls
+    ny    = settings.ny;       % No. of outputs (references)    
+    nyN   = settings.nyN;      % No. of outputs at terminal stage 
+    np    = settings.np;       % No. of parameters (on-line data)
+    nbx   = settings.nbx;      % No. of bounds on states
+    nbu   = settings.nbu;      % No. of bounds on controls
     nbx_idx = settings.nbx_idx; % indexes of states which are bounded
     nbu_idx = settings.nbu_idx; % indexes of controls which are bounded
-    nc = settings.nc;    % No. of general constraints
-    ncN = settings.ncN;  % No. of general constraints at terminal stage
-    N     = settings.N;             % No. of shooting points
-    N2  = settings.N2;
-    r = settings.r;
+    nc    = settings.nc;       % No. of general constraints
+    ncN   = settings.ncN;      % No. of general constraints at terminal stage
+    N     = settings.N;        % No. of shooting points
+    N2    = settings.N2;       % No. of partial condensing blocks
+    r     = settings.r;        % No. of input move blocks
 
-    %% memory
+    %% initialize memory
     mem = struct;
     mem.warm_start=0;
     mem.hot_start=0;
@@ -58,22 +57,9 @@ function [mem] = InitMemory(settings, opt, input)
         mem.mem2.lc = zeros(mem.settings2.nc*N2+ncN,1);
         mem.mem2.uc = zeros(mem.settings2.nc*N2+ncN,1);
         
-%         if strcmp(opt.qpsolver,'hpipm_sparse')
-%             mem.mem2.dx = zeros(nx, N2+1);
-%             mem.mem2.du = zeros(mem.settings2.nu, N2);
-%             mem.mem2.lambda_new = zeros(nx, N2+1);
-%             mem.mem2.mu_u_new = zeros(mem.settings2.nu*N2, 1);
-%             mem.mem2.mu_x_new = zeros(nbx*N2, 1);
-%             mem.mem2.mu_new = zeros(mem.settings2.nc*N2+ncN, 1);
-% 
-%             mem.mem2.mu0=1e2;
-%             mem.mem2.max_qp_it = 100;
-%             mem.mem2.pred_corr = 1;
-%             mem.mem2.cond_pred_corr = 1;
-%             mem.mem2.solver_mode = 1;
-%         end
     end
     
+    % QP solver initialization
     switch opt.qpsolver
         case 'qpoases'   
             mem.qpoases_opt = qpOASES_options('MPC');
@@ -380,7 +366,6 @@ function [mem] = InitMemory(settings, opt, input)
     if strcmp(opt.qpsolver, 'qpoases_mb')
         mem.r = r;
         mem.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
-    %     mem.index_T = [0, 1, 10, 50];
         mem.Hc_r = zeros(mem.r*nu,mem.r*nu);
         mem.Ccx_r = zeros(N*nbx,mem.r*nu);
         mem.Ccg_r = zeros(N*nc+ncN,mem.r*nu);
@@ -397,7 +382,6 @@ function [mem] = InitMemory(settings, opt, input)
     if opt.nonuniform_grid
         mem.r = r;
         mem.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
-    %     mem.index_T = [0, 1, 10, 50];
         T = zeros(N,mem.r);
         for i=1:mem.r
             T(mem.index_T(i)+1:mem.index_T(i+1),i)=1;

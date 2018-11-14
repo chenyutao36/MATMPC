@@ -62,7 +62,7 @@ end
 mexcmd = 'mex';
 
 if OS_LINUX
-    mexcmd = [mexcmd, ' -O -DINT64 CFLAGS="\$CFLAGS -std=c99" GCC="/usr/bin/gcc-4.9"'];
+    mexcmd = [mexcmd, ' -O -DINT64 CFLAGS="\$CFLAGS -std=c99" GCC="/usr/bin/gcc"'];
     mexcmd = [mexcmd, ' -I.. -I/opt/hpipm/include -I/opt/blasfeo/include'];
 elseif OS_WIN
     mexcmd = [mexcmd, ' -O -DINT64 CFLAGS="$CFLAGS -std=c99" '];

@@ -162,14 +162,11 @@ if strcmp(generate,'y')
       
     opts = struct( 'main', false, 'mex' , true ) ; 
     Simulate_system.generate('Simulate_system.c',opts);
-%     D.generate('D.c',opts);
     h_fun.generate('h_fun.c',opts);
     path_con_fun.generate('path_con_fun.c',opts);
     path_con_N_fun.generate('path_con_N_fun.c',opts);
     Ji_fun.generate('Ji_fun.c',opts);
     JN_fun.generate('JN_fun.c',opts);
-%     intermStates.generate('intermStates',opts);
-%     costFun.generate('costFun',opts);
    
     opts = struct('main',false,'mex',false,'with_header',true);
     cd ../mex_core
@@ -239,14 +236,11 @@ if strcmp(compile,'y')
     
     cd model_src
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_fun.c');
-%     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'D.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_N_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'h_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Simulate_system.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Ji_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'JN_fun.c');
-%     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'intermStates.c');
-%     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'costFun.c');
        
     cd ../mex_core
     Compile_Mex;
