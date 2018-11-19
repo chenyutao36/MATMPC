@@ -12,32 +12,288 @@
 \usepackage{multirow}
 \usepackage{booktabs,array}
 \usepackage{hyperref}
+\usepackage{longtable}
+
+\newcommand{\software}[1]{{\tt#1}}
+\newcommand{\norm}[1]{\lVert#1\rVert}
+\newcommand{\alert}[1]{{\textit{#1}}}
 
 \begin{document}
-	\title{MATMPC User Manual}
-	\author{Yutao Chen}
+	\title{\software{MATMPC} User Manual}
+	\author{Yutao Chen\\ Email: \href{mailto:chenyutao890704@gmail.com}{chenyutao890704@gmail.com}}
 	
 	\maketitle
 	
+	\tableofcontents
+	
+	\newpage
+	
 \section{Installation}
-MATMPC requires two fundamental software and toolboxes
+\software{MATMPC} requires two fundamental software and toolboxes
 \begin{enumerate}
 	\item MATLAB (R2014b or above) 
-	\item CaADi (3.3.0 or above)
+	\item \software{CaADi} (3.3.0)
 \end{enumerate}
-CasADi is the state-of-art automatic differentiation (AD) tool that is employed in MATMPC for computing derivatives of a number of functions. For how to download and install CasADi, please visit \url{https://github.com/casadi/casadi/wiki/InstallationInstructions}
+\software{CaADi} is the state-of-art automatic differentiation (AD) tool \cite{andersson2018casadi} that is employed in \software{MATMPC} for computing derivatives of a number of functions. For how to download and install \software{CaADi}, please visit \url{https://github.com/casadi/casadi/wiki/InstallationInstructions}
 
-\subsection{Advanced functionalities}
+\subsection{Compiler}
+\software{MATMPC} is a collection of routines, mainly written in MATLAB scripts. However, its core algorithmic routines are written in MATLAB C API. To compile these routines into MEX functions, it is required to use GCC or MinGW (CLANG is not tested, but would probably work). In LINUX systems, users just need to install the compatible version of GCC for MATLAB. In WINDOWS systems, users need to install MinGW for MATLAB, from \url{https://www.mathworks.com/matlabcentral/fileexchange/52848-matlab-support-for-mingw-w64-c-c-compiler}.
+
+\subsection{Advanced functionality installation}
 
 \subsubsection{Linear Algebra Library}
-MATMPC employs MATLAB built in linear algebra (LA) library \emph{lapack} and \emph{blas}. However, for a specific application, it is easy to exploit tailored LA library such as openBLAS and blasfeo. In the \emph{test} folder, openBLAS is linked against.
+By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) library \software{lapack} and \software{blas} from INTEL MKL. For the full condensing routine, \software{MATMPC} also supports using \software{BLASFEO} \cite{frison2018blasfeo}. For how to install \software{BLASFEO}, please visit \url{https://github.com/giaf/blasfeo}. Note that, in WINDOWS, installing \software{BLASFEO} requires to install MinGW for WINDOWS (not for MATLAB), which is beyond the scope of this manual.
 
 \subsubsection{QP Solver}
-MATMPC comes with MATLAB built-in QP solver \emph{quadprog} but other QP solvers can also be used. The possible best dense QP solver, qpOASES, is employed in MATMPC. For how to download and install qpOASES (MATLAB interface only), please visit \url{https://projects.coin-or.org/qpOASES/wiki/QpoasesInstallation}.
+\software{MATMPC} comes with MATLAB built-in QP solver \emph{quadprog} but other QP solvers can also be used. By default, \software{MATMPC} provides compiled binaries of \software{qpOASES} and \software{OSQP} both for WINDOWS and LINUX. If users want to compile \software{qpOASES} themselves, please visit \url{https://projects.coin-or.org/qpOASES/wiki/QpoasesInstallation} and install its MATLAB interface only. If users want to compile \software{OSQP}, please visit \url{https://osqp.org/} and install its MATLAB interface only.
 
-For more options, it is recommended to use MATMPC in Linux systems. In this case, state-of-the-art open source solvers can be employed, including HPIPM and QORE. HPIPM uses interior point method (IPM) for solving structured QP problems. QORE is a variant of qpOASES which use blasfeo as LA kernel. In the \emph{test} folder, QORE is linked against.
+\software{MATMPC} provides more QP solvers, including \software{HPIPM} and \software{IPOPT}, both using interior point method (IPM) for solving sparse QP problems. In order to use \software{HPIPM}, either for sparse or partially condensed QP, users should run \emph{/mex\_core/compile\_hpipm.m} to obtain compatible MEX functions. Such compilation requires to install \software{BLASFEO} and \software{HPIPM}. For how to install \software{HPIPM}, please visit \url{https://github.com/giaf/hpipm}. The \software{IPOPT} binary is delivered by \software{OPTI Toolbox} at \url{https://www.inverseproblem.co.nz/OPTI/}. Hence, it is required to install \software{OPTI Toolbox} first. Note that \software{OPTI Toolbox} is only compatible with WINDOWS system.
 
-\section{Numerical Structures and Algorithms}
+\section{Data Structure}
 
+\subsection{Problem Description}
+
+\subsubsection{NLP}
+In \software{MATMPC}, we solve the following nonlinear programming (NLP) problem:
+\begin{subequations}\label{NLP}
+	\begin{equation}
+	\begin{aligned}
+	\min_{x_k,u_k} \,&\sum_{k=0}^{N-1} \frac{1}{2}\norm{h_k(x_k,u_k)}_{W_k}^2+\frac{1}{2}\norm{h_N(x_N)}_{W_N}^2\\
+	s.t.\, &0=x_0-\hat{x}_0,\\
+	&0=x_{k+1}-\phi_k(x_k,u_k),\, k=0,1,\ldots,N-1,\\
+	&\underline{x}_k\leq x_k\leq \overline{x}_k,\,k=0,1,\ldots,N,\\
+	&\underline{u}_k\leq u_k\leq \overline{u}_k,\,k=0,1,\ldots,N-1,\\
+	&\underline{r}_k\leq r_k(x_k,u_k)\leq \overline{r}_k, \,k=0,1,\ldots,N-1,\\
+	&\underline{r}_N\leq r_N(x_N)\leq \overline{r}_N,
+	\end{aligned}
+	\end{equation}
+\end{subequations}
+where $h:\mathbb{R}^{n_x}\times\mathbb{R}^{n_u}\rightarrow \mathbb{R}^{n_y},h_N:\mathbb{R}^{n_x}\rightarrow\mathbb{R}^{n_{y_N}}$ are vector functions of state and control $(x,u)$, $\hat{x}_0$ is the measurement of the current state. The function $r(x_k,u_k): \mathbb{R}^{n_x}\times\mathbb{R}^{n_u} \rightarrow \mathbb{R}^{n_c}$ and $r(x_N): \mathbb{R}^{n_x}\rightarrow \mathbb{R}^{n_{c_N}}$ can be linear or nonlinear, with lower and upper bound $\underline{r}_k, \overline{r}_k$. $\phi_k(x_k,u_k)$ is a numerical integration operator that solves the following initial value problem (IVP) and returns the solution at $t_{k+1}$.
+\begin{equation}
+0=f_{impl}(\dot{x}(t), x(t),u(t),t),\quad x(0)=x_k.
+\end{equation}
+If possible, the dynamics can be written in an explicit form as
+\begin{equation}
+\dot{x}(t)=f_{exp}(x(t),u(t),t),\quad x(0)=x_k.
+\end{equation}
+The decision variables can be written in the compact form:
+\begin{equation}
+\begin{aligned}
+&\mathbf{x}= \left [x_0^\top, x_1^\top,\dots, x_N^\top\right ]^\top,\\
+&\mathbf{u}= \left [u_0^\top, u_1^\top,\dots, u_{N-1}^\top\right ]^\top
+\end{aligned}
+\end{equation}
+
+\subsubsection{QP}
+At iteration $i$, given the initial trajectory $(\mathbf{x}^i,\mathbf{u}^i)$, problem \eqref{NLP} is linearized and would result in the following quadratic programming (QP) problem:
+\begin{equation}\label{QP}
+\begin{aligned}
+\min_{\Delta \mathbf{x},\Delta \mathbf{u}} \quad & \sum_{k=0}^{N-1}( \frac{1}{2}
+\begin{bmatrix}
+\Delta x_k\\
+\Delta u_k
+\end{bmatrix}^\top \begin{bmatrix}
+Q_k^i & S_k^i \\
+S_k^{i^\top} & R_k^i
+\end{bmatrix}
+\begin{bmatrix}
+\Delta x_k\\
+\Delta u_k
+\end{bmatrix} + \begin{bmatrix}
+g_{x_k}^i\\
+g_{u_k}^i
+\end{bmatrix}^\top
+\begin{bmatrix}
+\Delta x_k\\
+\Delta u_k
+\end{bmatrix} ) \\
+& + \frac{1}{2}\Delta x_N^\top Q_N^i  \Delta x_N + g_{x_N}^{i^\top}\Delta x_N \\
+s.t. \quad & \Delta x_0=\hat{x}_0-x_0,\\
+& \Delta x_{k+1}=A_{k}^i \Delta x_{k}+ B_{k}^i \Delta u_{k} +a_{k}^i, \,k=0,\ldots,N-1\\
+& \underline{x}_k - x_k^i\leq \Delta x_k\leq \overline{x}_k-x_k^i,\,k=1,\ldots,N\\
+& \underline{u}_k - u_k^i\leq \Delta u_k\leq\overline{u}_k-u_k^i,\,k=0,\ldots,N-1\\
+& \underline{c}_k^i\leq C_k^i \Delta x_k + D_k^i \Delta u_k\leq \overline{c}_k^i, \,k=0,\ldots,N-1\\
+&\underline{c}_n-c_N^i\leq C_N^i \Delta x_N \leq \overline{c}_n-c_N^i, 
+\end{aligned}
+\end{equation}
+where 
+\begin{equation}
+\begin{aligned}
+&\Delta \mathbf{x}=\mathbf{x}-\mathbf{x}^i,\\
+&\Delta \mathbf{u}=\mathbf{u}-\mathbf{u}^i
+\end{aligned}
+\end{equation}
+and
+\begin{equation}\label{QP data}
+\begin{aligned}
+&Q_k^i = \frac{\partial h_k^i}{\partial x_k}^\top \frac{\partial h_k^i}{\partial x_k},\quad S_k^i = \frac{\partial h_k^i}{\partial x_k}^\top \frac{\partial h_k^i}{\partial u_k},\quad R_k^i = \frac{\partial h_k^i}{\partial u_k}^\top \frac{\partial h_k^i}{\partial u_k},\\
+&g_{x_k}^i = \frac{\partial \norm{h_k^i}_{W_k}^2}{\partial x_k},\quad g_{u_k}^i = \frac{\partial \norm{h_k^i}_{W_k}^2}{\partial u_k},\quad g_{x_N}^i = \frac{\partial \norm{h_N^i}_{W_N}^2}{\partial x_N}\\
+&A_k^i=\frac{\partial \phi_k}{\partial x_k}, \quad B_k^i=\frac{\partial \phi_k}{\partial u_k},\quad a_k^i = \phi(x_k^i,u_k^i)-x_{k+1}^i,\\
+&C_k^i=\frac{\partial r_k}{\partial x_k}, \quad D_k^i=\frac{\partial r_k}{\partial u_k},\quad C_N^i=\frac{\partial r_N}{\partial x_N},\\
+&\overline{c}_k^i=\overline{r}_k-r_k(x_k^i,u_k^i),\quad  \underline{c}_k^i=\underline{r}_k-r_k(x_k^i,u_k^i),\\
+&\overline{c}_N^i=\overline{r}_N-r_N(x_N^i),\quad  \underline{c}_N^i=\underline{r}_N-r_N(x_N^i)
+\end{aligned}
+\end{equation}
+
+\subsubsection{Dual solution}
+The optimal primal solution of \eqref{QP} is denoted as $(\Delta \mathbf{x}^{i^*}, \Delta \mathbf{u}^{i^*})$. 
+The dual solution of \eqref{QP} are Lagrangian multipliers associated with constraints in \eqref{QP}. They are
+\begin{equation}
+\mathbf{\lambda} = \begin{bmatrix}
+\lambda_0\\
+\vdots\\
+\lambda_N
+\end{bmatrix}, \quad \mathbf{\mu}_u = \begin{bmatrix}
+\mu_{u_0}\\
+\vdots\\
+\mu_{u_{N-1}}
+\end{bmatrix},\quad \mathbf{\mu}_x = \begin{bmatrix}
+\mu_{x_0}\\
+\vdots\\
+\mu_{x_{N-1}}
+\end{bmatrix},\quad \mathbf{\mu}_g = \begin{bmatrix}
+\mu_{g_0}\\
+\vdots\\
+\mu_{g_{N}}
+\end{bmatrix}
+\end{equation}
+where $\mathbf{\lambda}$ is with equality constraints, $\mathbf{\mu}_u$ with input bounds, $\mathbf{\mu}_x$ with state bounds, $\mathbf{\mu}_g$ with general constraints. In detail, $\lambda_0\in\mathbb{R}^{n_x}$ is with initial value constraint in \eqref{QP}, and $\lambda_k\in\mathbb{R}^{n_x},k=1,\ldots,N$ are with state evolution constraints.  $\mu_{x_k}\in\mathbb{R}^{n_x},k=0,\ldots,N-1$ are with state bounds of $x_k, k=1,\ldots,N$, since $x_0$ is included in the initial value constraint. $\mu_{g_k}\in\mathbb{R}^{n_c},k=0,\ldots,N-1$ are with general constraints, and $\mu_{g_N}\in\mathbb{R}^{n_{c_n}}$ is with the general constraint at the terminal shooting point. Together with the primal solution, the dual solution is updated by \eqref{solution update}
+
+\subsubsection{Globalization}
+The primal solution is used to update the solution of \eqref{NLP} by
+\begin{equation}\label{solution update}
+\mathbf{x}^{i+1} = \mathbf{x}^{i} + \alpha^i \Delta\mathbf{x}^{i^*}, \, \mathbf{u}^{i+1} = \mathbf{u}^{i} + \alpha^i \Delta\mathbf{u}^{i^*},
+\end{equation}
+where $\alpha^i$ is the step length determined by globalization strategies. A practical line search SQP algorithm employing $\ell_1$ merit function \cite{nocedal2006numerical} is employed in \software{MATMPC}. The merit function is defined as
+\begin{equation}
+m(\mathbf{w};\mu)=l(\mathbf{w})+\mu\norm{e(\mathbf{w})}_1
+\end{equation}
+where $\mathbf{w}=[\mathbf{x}^\top,\mathbf{u}^\top]^\top$, $l(\mathbf{w})$ is the objective function of \eqref{NLP}, $e(\mathbf{w})$ contains all constraints in \eqref{NLP} with slack variables for inequality constraints and $\mu$ the penalty parameter. The step $\alpha^i\Delta \mathbf{w}^i$ is accepted if 
+\begin{equation}
+m(\mathbf{w}^i+\alpha^i\Delta \mathbf{w}^i;\mu^i)\leq m(\mathbf{w}^i;\mu^i)+\eta\alpha^i\mathcal{D}(m(\mathbf{w}^i;\mu^i);\Delta \mathbf{w}^i)
+\end{equation}
+where $\mathcal{D}(m(\mathbf{w}^i;\mu^i);\Delta \mathbf{w}^i)$ is the directional derivative of $m$ in the direction of $\Delta \mathbf{w}^i$. We adopt Algorithm 18.3 (\cite{nocedal2006numerical}, p. 545) to choose $\mu^i$ and compute $\alpha^i$ at each iteration.
+
+\subsection{Data in \software{MATMPC}}
+There are four main data structs in \software{MATMPC}, namely \alert{settings}, \alert{opts}, \alert{input} and \alert{mem}. There are two features regarding these structs:
+\begin{enumerate}
+	\item The data contained in these structs are pre-defined. However, the dimension and size of the data is not checked while running simulation. Users should check it carefully otherwise MATLAB would probably crash due to memory leak.
+	\item The memory needed for data in these structs are allocated a priori. Users can pause the simulation and investigate values in the data for debugging.
+\end{enumerate}
+\subsubsection{\alert{settings}}
+\begin{longtable}{l|l}
+			\hline
+			$T\_s$ & Sampling time                                \\
+			$Ts\_st$ & Shooting interval                            \\
+			$s$ & number of integration steps per interval     \\
+			$nx$ & No. of states                                \\
+			$nu$ & No. of controls                              \\
+			$ny$ & No. of outputs (references)                  \\
+			$nyN$ & No. of outputs at terminal stage             \\
+			$np$ & No. of parameters (on-line data)             \\
+			$nc$ & No. of general constraints                   \\
+			$ncN$ & No. of general constraints at terminal stage \\
+			$nbx$ & No. of bounds on states                      \\
+			$nbu$ & No. of bounds on controls                    \\
+			$nbx\_idx$ & indexes of states which are bounded          \\
+			$nbu\_idx$ & indexes of controls which are bounded        \\
+			$N$ & No. of shooting points                       \\
+			$N2$ & No. of partial condensing blocks             \\
+			$r$ & No. of input move blocks                     \\ \hline
+	\caption{variables in \alert{settings} struct}
+	\label{table:settings}
+\end{longtable}
+
+\subsubsection{\alert{opts}}
+\begin{longtable}{l|l}
+	\hline
+		integrator       & ERK4, IRK3, EKR4-CASADI                                                                                                                                      \\
+		hessian          & gauss\_newton                                                                                                                                                \\
+		condensing       & default\_full, no, blasfeo\_full, partial\_condensing                                                                                                        \\ \hline
+		\multirow{3}{*}{qpsolver} & qpoases, qpoases\_mb, quadprog\_dense, hpipm\_sparse        \\
+		& hpipm\_pcond, ipopt\_dense, ipopt\_sparse                   \\
+		& ipopt\_partial\_sparse, osqp\_sparse, osqp\_partial\_sparse \\ \hline
+		hotstart         & yes, no (only for qpoases)                                                                                                                                                     \\
+		shifting         & yes, no (naive one interval backward shifting)                                                                                                                                                      \\
+		lin\_obj         & yes, no (whether objective functions $h,h_N$ are linear in states and controls)                                                                                                                                                     \\
+		ref\_type        & 0-time invariant, 1-time varying(no preview), 2-time varying (preview)                                                                                                                                                     \\
+		nonuniform\_grid & 0-deactivate, 1-activate\\ \hline        		
+	\caption{variables in \alert{opts} struct}
+	\label{table:opts}                                                        
+\end{longtable}
+
+\subsubsection{\alert{input}}
+\begin{longtable}{l|l}
+	\hline
+	$x$ & $[x_0,x_1,\ldots,x_N]\in\mathbb{R}^{n_x\times (N+1)}$   \\
+	$u$ & $[u_0,u_1,\ldots,u_{N-1}]\in\mathbb{R}^{n_u\times N}$ \\
+	$x_0$ & initial state measurement \\
+	$lb$ & $[\underline{r}_0;\underline{r}_1;\ldots;\underline{r}_{N}]\in\mathbb{R}^{Nn_c+n_{c_N}}$ \\ 
+	$ub$ & $[\overline{r}_0;\overline{r}_1;\ldots;\overline{r}_{N}]\in\mathbb{R}^{Nn_c+n_{c_N}}$ \\ 
+	$lbu$ & $[\underline{u}_0,\underline{u}_1,\ldots,\underline{u}_{N-1}]\in\mathbb{R}^{n_u\times N}$ \\ 
+	$ubu$ & $[\overline{u}_0,\overline{u}_1,\ldots,\overline{u}_{N-1}]\in\mathbb{R}^{n_u\times N}$ \\ 
+	$lbx$ & $[\underline{x}_1,\underline{x}_2,\ldots,\underline{x}_{N}]\in\mathbb{R}^{nbx\times N}$ \\ 
+	$ubx$ & $[\overline{x}_1,\overline{x}_2,\ldots,\overline{x}_{N}]\in\mathbb{R}^{nbx\times N}$ \\ 
+	$od$ & $[p_0, p_1, \ldots, p_N]\in\mathbb{R}^{n_p\times (N+1)}$\\
+	$W$ & $[w_0, w_1, \ldots, w_{N-1}]\in\mathbb{R}^{n_y\times N}$\\
+	$WN$ & $w_N\in\mathbb{R}^{n_{y_N}}$\\
+	$\lambda$ & $[\lambda_0,\lambda_1,\ldots,\lambda_N]\in\mathbb{R}^{n_x\times (N+1)}$   \\
+	$\mu_u$ & $[\mu_{u_0};\mu_{u_1};\ldots;\mu_{u_{N-1}}]\in\mathbb{R}^{Nn_u}$ \\
+	$\mu_x$ & $[\mu_{x_0};\mu_{x_1};\ldots;\mu_{x_{N-1}}]\in\mathbb{R}^{Nnbx}$ \\
+	$\mu$ & $[\mu_{g_0};\mu_{g_1};\ldots;\mu_{g_{N}}]\in\mathbb{R}^{Nn_c+n_{c_N}}$ \\
+	\hline
+	\caption{variables in \alert{input} struct}
+	\label{table:input}
+\end{longtable}
+
+
+\subsubsection{\alert{mem}}
+The \alert{mem} struct contains a lot of fields, which are partially selected here for elaboration.
+\begin{longtable}{l|l}
+		\hline
+		sqp\_maxit & maximum number of SQP iterations          \\
+		kkt\_lim   & tolerance on optimality                   \\ \hline
+	    $Q$	& Hessian w.r.t. state                      \\
+		$S$	& Hessian w.r.t. state and control          \\
+		$R$	& Hessian w.r.t. control                    \\
+		$A$	& state transition matrix                   \\
+		$B$	& control transition matrix                 \\
+		$Cgx$	& general constraint Jacobian w.r.t. state          \\
+		$Cgu$	& general constraint Jacobian w.r.t. control        \\
+		$CgN$	& general constraint Jacobian w.r.t. terminal state \\
+		$gx$	& cost function gradient w.r.t. state       \\
+		$gu$	& cost function gradient w.r.t. control     \\
+		$a$	& linearized dynamics residual              \\
+		$ds0$	& initial value deviation                   \\
+		$lc$	& general constraint QP lower bound         \\
+		$uc$	& general constraint QP upper bound         \\
+	    lb\_du	& control bound QP lower bound              \\
+		ub\_du	& control bound QP upper bound              \\
+		lb\_dx	& state bound QP lower bound                \\
+		ub\_dx & state bound QP upper bound                \\\hline
+		$Hc$ & condensed Hessian                         \\
+		$Ccx$ & condensed state bound Jacobian            \\
+		$Ccg$ & condensed general constraint Jacobian     \\
+		$gc$ & condensed cost function gradient          \\
+		$lcc$ & condensed general constraint lower bound  \\
+		$ucc$ & condensed general constraint upper bound  \\
+		$lxc$ & condensed state bound lower bound         \\
+		$uxc$ & condensed state bound upper bound         \\\hline
+		$dx$ & optimal state update                      \\
+		$du$ & optimal control update                    \\
+		lambda\_new & new multiplier w.r.t. eq constraint       \\
+		mu\_new & new multiplier w.r.t. general constraint  \\
+		mu\_x\_new & new multiplier w.r.t. state bound         \\
+		mu\_u\_new & new multiplier w.r.t. control bound       \\
+		\hline
+	\caption{Important fields in \alert{mem} struct}
+	\label{table:mem}
+\end{longtable}
+
+\section{Example}
+Users should refer to \software{MATMPC} examples for how to write their model and choose right options. For more illustrations and advanced functionalities, please contact me via email.
+
+\bibliographystyle{abbrv}
+\bibliography{ref}
 
 \end{document}
