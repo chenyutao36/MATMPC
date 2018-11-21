@@ -3,6 +3,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
 
     mem.sqp_it=0;
     mem.alpha =1;
+    mem.obj=0;
     StopCrit = 2*mem.kkt_lim;
     
     CPT.SHOOT=0;
@@ -11,7 +12,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
 
     tic;
   
-    while(mem.sqp_it < mem.sqp_maxit  &&  StopCrit > mem.kkt_lim && mem.alpha>1E-4 ) % RTI or multiple call
+    while(mem.sqp_it < mem.sqp_maxit  &&  StopCrit > mem.kkt_lim && mem.alpha>1E-8 ) % RTI or multiple call
         
         %% ----------- QP Preparation
         
@@ -98,7 +99,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 
         %% ---------- KKT calculation 
         
-        [eq_res, ineq_res, KKT] = solution_info(input, settings, mem);
+        [eq_res, ineq_res, KKT, OBJ] = solution_info(input, settings, mem);
                 
         StopCrit = max([eq_res, ineq_res, KKT]);
         
@@ -123,6 +124,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
 
     output.info.iteration_num=mem.sqp_it;      
     output.info.kktValue=KKT;
+    output.info.objValue=OBJ;
     output.info.OptCrit = StopCrit;
     output.info.eq_res=eq_res;
     output.info.ineq_res=ineq_res;

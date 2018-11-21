@@ -73,6 +73,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
     double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
     double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
+    double *obj = mxGetPr( mxGetField(prhs[2], 0, "obj") );
      
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -151,17 +152,17 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexAtExit(exitFcn);
     }
     
-    casadi_in[4] = W;
     memcpy(eq_res_vec, ds0, nx*sizeof(double));
     
     double *work;
-    double KKT=0, eq_res=0, ineq_res=0;
+    double KKT=0, eq_res=0, ineq_res=0, OBJ=0;
     
     for (i=0;i<N;i++){
         casadi_in[0] = x+i*nx;
         casadi_in[1] = u+i*nu;
         casadi_in[2] = od+i*np;
         casadi_in[3] = y+i*ny;
+        casadi_in[4] = W+i*ny;
         casadi_in[5] = lambda+(i+1)*nx;
         if (i==0)
             casadi_in[6] = tmp;
@@ -172,7 +173,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
            
         casadi_out[0] = L+i*nz;
         adj_Fun(casadi_in, casadi_out);
-        
+                
         if (i>0){
             for (j=0;j<nx;j++)
                 casadi_out[1][j] -= lambda[i*nx+j];
@@ -182,7 +183,11 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
         
         daxpy(&nz, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
-        daxpy(&nz, &one_d, casadi_out[2], &one_i, casadi_out[0], &one_i);        
+        daxpy(&nz, &one_d, casadi_out[2], &one_i, casadi_out[0], &one_i);  
+        
+        casadi_out[0] = obj;
+        obji_Fun(casadi_in, casadi_out);
+        OBJ += obj[0];
               
         switch(sim_method){
             case 0:
@@ -249,7 +254,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_out[0][j] -= lambda[N*nx+j];
     
     daxpy(&nx, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
-           
+               
     if (ncN>0){
         casadi_out[0] = lc + N*nc;
         path_con_N_Fun(casadi_in, casadi_out); 
@@ -260,7 +265,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
          
     eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &neq, work);
-//     KKT = dlange(Norm, &nw, &one_i, L, &nw, work);
     KKT = dnrm2(&nw, L, &one_i);
     
     for (i=0;i<N*nu;i++)
@@ -270,8 +274,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     for (i=0;i<nineq;i++)
         ineq_res += MAX(-1*uc[i],0) + MAX(lc[i],0);
     
+    casadi_out[0] = obj;
+    objN_Fun(casadi_in, casadi_out);
+    OBJ += obj[0];
+    
     plhs[0] = mxCreateDoubleScalar(eq_res); // eq_res
     plhs[1] = mxCreateDoubleScalar(ineq_res); // ineq_res
     plhs[2] = mxCreateDoubleScalar(KKT); // KKT
-    
+    plhs[3] = mxCreateDoubleScalar(OBJ); // OBJ
 }

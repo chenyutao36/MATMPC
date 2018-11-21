@@ -98,6 +98,7 @@ constraints = [];
 CPT = [];
 ref_traj = [];
 KKT = [];
+OBJ=[];
 
 while time(end) < Tf
         
@@ -163,12 +164,13 @@ while time(end) < Tf
     controls_MPC = [controls_MPC; output.u(:,1)'];
     state_sim = [state_sim; xf'];
     KKT= [KKT;OptCrit];
+    OBJ= [OBJ;output.info.objValue];
     CPT = [CPT; cpt, tshooting, tcond, tqp];
     
     % go to the next sampling instant
     nextTime = mem.iter*Ts; 
     mem.iter = mem.iter+1;
-    disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  Opt:' num2str(OptCrit) '  SQP_IT:' num2str(output.info.iteration_num)]);
+    disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  Opt:' num2str(OptCrit) '   OBJ:' num2str(OBJ(end)) '  SQP_IT:' num2str(output.info.iteration_num)]);
         
     time = [time nextTime];   
 end

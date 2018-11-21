@@ -335,6 +335,7 @@ function [mem] = InitMemory(settings, opt, input)
     mem.mu_safty=1.1;            % constraint weight update factor (for merit function)
     mem.rho=0.5;                 % merit function parameter
     mem.alpha=1;                 % default step length
+    mem.obj=0;
     
     % allocate memory
     mem.A = zeros(nx,nx*N);

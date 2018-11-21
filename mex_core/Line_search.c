@@ -214,13 +214,14 @@ double eval_obj(double *x, double *u, double *od, double *y, double *yN, double 
     double *casadi_out[1];
     double obj=0.0;
     
-    casadi_in[4] = W;
+    
     casadi_out[0] = (double *) mxMalloc(sizeof(double));
     for (i=0; i<N; i++){
         casadi_in[0] = x+i*nx;
         casadi_in[1] = u+i*nu;
         casadi_in[2] = od+i*np;
         casadi_in[3] = y+i*ny;
+        casadi_in[4] = W+i*ny;
         
         obji_Fun(casadi_in, casadi_out);
         obj += *casadi_out[0];
@@ -383,7 +384,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
 //         mexPrintf("\nl:%f  pd:%f  mu_lb:%f  phi:%f  D:%f\n",cons_res,pd,mu_lb,obj,dir_grad);
                                 
-        while (newpoint!=1 && alpha[0] > 1E-4){
+        while (newpoint!=1 && alpha[0] > 1E-8){
             memcpy(x_new, x, nx_t*sizeof(double));
             memcpy(u_new, u, nu_t*sizeof(double));
             
