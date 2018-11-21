@@ -55,8 +55,7 @@ By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) librar
 
 \subsubsection{NLP}
 In \software{MATMPC}, we solve the following nonlinear programming (NLP) problem:
-\begin{subequations}\label{NLP}
-	\begin{equation}
+\begin{equation}\label{NLP}
 	\begin{aligned}
 	\min_{x_k,u_k} \,&\sum_{k=0}^{N-1} \frac{1}{2}\norm{h_k(x_k,u_k)-h_{ref}^k}_{W_k}^2+\frac{1}{2}\norm{h_N(x_N)-h_{ref}^N}_{W_N}^2\\
 	s.t.\, &0=x_0-\hat{x}_0,\\
@@ -66,8 +65,7 @@ In \software{MATMPC}, we solve the following nonlinear programming (NLP) problem
 	&\underline{r}_k\leq r_k(x_k,u_k)\leq \overline{r}_k, \,k=0,1,\ldots,N-1,\\
 	&\underline{r}_N\leq r_N(x_N)\leq \overline{r}_N,
 	\end{aligned}
-	\end{equation}
-\end{subequations}
+\end{equation}
 where $h:\mathbb{R}^{n_x}\times\mathbb{R}^{n_u}\rightarrow \mathbb{R}^{n_y},h_N:\mathbb{R}^{n_x}\rightarrow\mathbb{R}^{n_{y_N}}$ are vector functions of state and control $(x,u)$, with corresponding references $h_{ref}^k$ and $h_{ref}^N$. $\hat{x}_0$ is the measurement of the current state. The function $r(x_k,u_k): \mathbb{R}^{n_x}\times\mathbb{R}^{n_u} \rightarrow \mathbb{R}^{n_c}$ and $r(x_N): \mathbb{R}^{n_x}\rightarrow \mathbb{R}^{n_{c_N}}$ can be linear or nonlinear, with lower and upper bound $\underline{r}_k, \overline{r}_k$. $\phi_k(x_k,u_k)$ is a numerical integration operator that solves the following initial value problem (IVP) and returns the solution at $t_{k+1}$.
 \begin{equation}
 0=f_{impl}(\dot{x}(t), x(t),u(t),t),\quad x(0)=x_k.
@@ -253,38 +251,38 @@ The \alert{mem} struct contains a lot of fields, which are partially selected he
 		\hline
 		sqp\_maxit & maximum number of SQP iterations          \\
 		kkt\_lim   & tolerance on optimality                   \\ \hline
-	    $Q$	& Hessian w.r.t. state                      \\
-		$S$	& Hessian w.r.t. state and control          \\
-		$R$	& Hessian w.r.t. control                    \\
-		$A$	& state transition matrix                   \\
-		$B$	& control transition matrix                 \\
-		$Cgx$	& general constraint Jacobian w.r.t. state          \\
-		$Cgu$	& general constraint Jacobian w.r.t. control        \\
-		$CgN$	& general constraint Jacobian w.r.t. terminal state \\
-		$gx$	& cost function gradient w.r.t. state       \\
-		$gu$	& cost function gradient w.r.t. control     \\
-		$a$	& linearized dynamics residual              \\
-		$ds0$	& initial value deviation                   \\
-		$lc$	& general constraint QP lower bound         \\
-		$uc$	& general constraint QP upper bound         \\
-	    lb\_du	& control bound QP lower bound              \\
-		ub\_du	& control bound QP upper bound              \\
-		lb\_dx	& state bound QP lower bound                \\
-		ub\_dx & state bound QP upper bound                \\\hline
-		$Hc$ & condensed Hessian                         \\
-		$Ccx$ & condensed state bound Jacobian            \\
-		$Ccg$ & condensed general constraint Jacobian     \\
-		$gc$ & condensed cost function gradient          \\
-		$lcc$ & condensed general constraint lower bound  \\
-		$ucc$ & condensed general constraint upper bound  \\
-		$lxc$ & condensed state bound lower bound         \\
-		$uxc$ & condensed state bound upper bound         \\\hline
-		$dx$ & optimal state update                      \\
-		$du$ & optimal control update                    \\
-		lambda\_new & new multiplier w.r.t. eq constraint       \\
-		mu\_new & new multiplier w.r.t. general constraint  \\
-		mu\_x\_new & new multiplier w.r.t. state bound         \\
-		mu\_u\_new & new multiplier w.r.t. control bound       \\
+	    $Q$	& Hessian w.r.t. state  $\mathbb{R}^{n_x\times (N+1)n_x}$                    \\
+		$S$	& Hessian w.r.t. state and control $\mathbb{R}^{n_x\times Nn_u}$             \\
+		$R$	& Hessian w.r.t. control   $\mathbb{R}^{n_u\times Nn_u}$                 \\
+		$A$	& state transition matrix  $\mathbb{R}^{n_x\times Nn_x}$                 \\
+		$B$	& control transition matrix  $\mathbb{R}^{n_x\times Nn_u}$               \\
+		$Cgx$	& general constraint Jacobian w.r.t. state $\mathbb{R}^{n_c\times Nn_x}$         \\
+		$Cgu$	& general constraint Jacobian w.r.t. control $\mathbb{R}^{n_c\times Nn_u}$       \\
+		$CgN$	& general constraint Jacobian w.r.t. terminal state $\mathbb{R}^{n_{c_N}\times n_x}$ \\
+		$gx$	& cost function gradient w.r.t. state $\mathbb{R}^{n_x\times (N+1)}$      \\
+		$gu$	& cost function gradient w.r.t. control $\mathbb{R}^{n_u\times N}$    \\
+		$a$	& linearized dynamics residual  $\mathbb{R}^{n_x\times N}$            \\
+		$ds0$	& initial value deviation   $\mathbb{R}^{n_x}$                \\
+		$lc$	& general constraint QP lower bound $\mathbb{R}^{Nn_c+n_{c_N}}$         \\
+		$uc$	& general constraint QP upper bound $\mathbb{R}^{Nn_c+n_{c_N}}$         \\
+	    lb\_du	& control bound QP lower bound    $\mathbb{R}^{Nn_u}$           \\
+		ub\_du	& control bound QP upper bound    $\mathbb{R}^{Nn_u}$           \\
+		lb\_dx	& state bound QP lower bound    $\mathbb{R}^{Nnbx}$            \\
+		ub\_dx & state bound QP upper bound     $\mathbb{R}^{Nnbx}$           \\\hline
+		$Hc$ & condensed Hessian    $\mathbb{R}^{Nn_u\times Nn_u}$                     \\
+		$Ccx$ & condensed state bound Jacobian  $\mathbb{R}^{Nnbx\times Nn_u}$          \\
+		$Ccg$ & condensed general constraint Jacobian  $\mathbb{R}^{(Nn_c+n_{c_N})\times Nn_u}$    \\
+		$gc$ & condensed cost function gradient  $\mathbb{R}^{Nn_u}$        \\
+		$lcc$ & condensed general constraint lower bound $\mathbb{R}^{(Nn_c+n_{c_N})}$ \\
+		$ucc$ & condensed general constraint upper bound $\mathbb{R}^{(Nn_c+n_{c_N})}$ \\
+		$lxc$ & condensed state bound lower bound   $\mathbb{R}^{Nnbx}$      \\
+		$uxc$ & condensed state bound upper bound   $\mathbb{R}^{Nnbx}$      \\\hline
+		$dx$ & optimal state update     $\mathbb{R}^{n_x\times (N+1)}$                 \\
+		$du$ & optimal control update   $\mathbb{R}^{n_u\times N}$                 \\
+		lambda\_new & new multiplier w.r.t. eq constraint $\mathbb{R}^{n_x\times (N+1)}$      \\
+		mu\_new & new multiplier w.r.t. general constraint  $\mathbb{R}^{Nn_c+n_{c_N}}$ \\
+		mu\_x\_new & new multiplier w.r.t. state bound  $\mathbb{R}^{Nnbx}$       \\
+		mu\_u\_new & new multiplier w.r.t. control bound  $\mathbb{R}^{Nn_u}$     \\
 		\hline
 	\caption{Important fields in \alert{mem} struct}
 	\label{table:mem}
