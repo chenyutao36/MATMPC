@@ -42,7 +42,7 @@
 \subsection{Advanced functionality installation}
 
 \subsubsection{Linear Algebra Library}
-By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) library \software{lapack} and \software{blas} from INTEL MKL. For the full condensing routine, \software{MATMPC} also supports using \software{BLASFEO} \cite{frison2018blasfeo}. For how to install \software{BLASFEO}, please visit \url{https://github.com/giaf/blasfeo}. Note that, in WINDOWS, installing \software{BLASFEO} requires to install MinGW for WINDOWS (not for MATLAB), which is beyond the scope of this manual.
+By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) library \software{lapack} and \software{blas} from INTEL MKL. For the full condensing routine, \software{MATMPC} also supports using \software{BLASFEO} \cite{frison2018blasfeo}. For how to install \software{BLASFEO}, please visit \url{https://github.com/giaf/blasfeo}. Note that, in WINDOWS, installing \software{BLASFEO} requires to install MinGW for WINDOWS (not for MATLAB), which is described in detail in the <<HPIPM tutorial>>.
 
 \subsubsection{QP Solver}
 \software{MATMPC} comes with MATLAB built-in QP solver \emph{quadprog} but other QP solvers can also be used. By default, \software{MATMPC} provides compiled binaries of \software{qpOASES} and \software{OSQP} both for WINDOWS and LINUX. If users want to compile \software{qpOASES} themselves, please visit \url{https://projects.coin-or.org/qpOASES/wiki/QpoasesInstallation} and install its MATLAB interface only. If users want to compile \software{OSQP}, please visit \url{https://osqp.org/} and install its MATLAB interface only.
@@ -57,7 +57,7 @@ By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) librar
 In \software{MATMPC}, we solve the following nonlinear programming (NLP) problem:
 \begin{equation}\label{NLP}
 	\begin{aligned}
-	\min_{x_k,u_k} \,&\sum_{k=0}^{N-1} \frac{1}{2}\norm{h_k(x_k,u_k)-h_{ref}^k}_{W_k}^2+\frac{1}{2}\norm{h_N(x_N)-h_{ref}^N}_{W_N}^2\\
+	\min_{x_k,u_k} \,&\sum_{k=0}^{N-1} \frac{1}{2}d(h(x_k,u_k)-h_{ref}^k)_{W_k}^2+\frac{1}{2}d_N(h_N(x_N)-h_{ref}^N)_{W_N}^2\\
 	s.t.\, &0=x_0-\hat{x}_0,\\
 	&0=x_{k+1}-\phi_k(x_k,u_k),\, k=0,1,\ldots,N-1,\\
 	&\underline{x}_k\leq x_k\leq \overline{x}_k,\,k=0,1,\ldots,N,\\
@@ -66,7 +66,7 @@ In \software{MATMPC}, we solve the following nonlinear programming (NLP) problem
 	&\underline{r}_N\leq r_N(x_N)\leq \overline{r}_N,
 	\end{aligned}
 \end{equation}
-where $h:\mathbb{R}^{n_x}\times\mathbb{R}^{n_u}\rightarrow \mathbb{R}^{n_y},h_N:\mathbb{R}^{n_x}\rightarrow\mathbb{R}^{n_{y_N}}$ are vector functions of state and control $(x,u)$, with corresponding references $h_{ref}^k$ and $h_{ref}^N$. $\hat{x}_0$ is the measurement of the current state. The function $r(x_k,u_k): \mathbb{R}^{n_x}\times\mathbb{R}^{n_u} \rightarrow \mathbb{R}^{n_c}$ and $r(x_N): \mathbb{R}^{n_x}\rightarrow \mathbb{R}^{n_{c_N}}$ can be linear or nonlinear, with lower and upper bound $\underline{r}_k, \overline{r}_k$. $\phi_k(x_k,u_k)$ is a numerical integration operator that solves the following initial value problem (IVP) and returns the solution at $t_{k+1}$.
+where $h:\mathbb{R}^{n_x}\times\mathbb{R}^{n_u}\rightarrow \mathbb{R}^{n_y},h_N:\mathbb{R}^{n_x}\rightarrow\mathbb{R}^{n_{y_N}}$ are vector functions of state and control $(x,u)$, with corresponding references $h_{ref}^k$ and $h_{ref}^N$. Note that $h,h_N$ can be nonlinear and nonconvex. The outer objective functions $d:\mathbb{R}^{n_y}\rightarrow \mathbb{R}, d_N:\mathbb{R}^{n_{y_N}}\rightarrow \mathbb{R}$ are assumed convex, e.g. linear or quadratic. $W_k,W_N$ are weights for each term in $d$ for stage $k$. $\hat{x}_0$ is the measurement of the current state. The function $r(x_k,u_k): \mathbb{R}^{n_x}\times\mathbb{R}^{n_u} \rightarrow \mathbb{R}^{n_c}$ and $r(x_N): \mathbb{R}^{n_x}\rightarrow \mathbb{R}^{n_{c_N}}$ can be linear or nonlinear, with lower and upper bound $\underline{r}_k, \overline{r}_k$. $\phi_k(x_k,u_k)$ is a numerical integration operator that solves the following initial value problem (IVP) and returns the solution at $t_{k+1}$.
 \begin{equation}
 0=f_{impl}(\dot{x}(t), x(t),u(t),t),\quad x(0)=x_k.
 \end{equation}
@@ -124,14 +124,15 @@ where
 and
 \begin{equation}\label{QP data}
 \begin{aligned}
-&Q_k^i = \frac{\partial h_k^i}{\partial x_k}^\top \frac{\partial h_k^i}{\partial x_k},\quad S_k^i = \frac{\partial h_k^i}{\partial x_k}^\top \frac{\partial h_k^i}{\partial u_k},\quad R_k^i = \frac{\partial h_k^i}{\partial u_k}^\top \frac{\partial h_k^i}{\partial u_k},\\
-&g_{x_k}^i = \frac{\partial \norm{h_k^i-h_{ref}^k}_{W_k}^2}{\partial x_k},\quad g_{u_k}^i = \frac{\partial \norm{h_k^i-h_{ref}^k}_{W_k}^2}{\partial u_k},\quad g_{x_N}^i = \frac{\partial \norm{h_N^i-h_{ref}^N}_{W_N}^2}{\partial x_N}\\
+&Q_k^i = \frac{\partial (d^i)^2}{\partial^2 x_k},\quad S_k^i =\frac{\partial (d^i)^2}{\partial x_k \partial u_k},\quad R^i_k= \frac{\partial (d^i)^2}{\partial^2 u_k},\quad Q_N^i = \frac{\partial (d^i_N)^2}{\partial^2 x_N}\\
+&g_{x_k}^i = \frac{\partial d^i}{\partial x_k},\quad g_{u_k}^i = \frac{\partial d^i}{\partial u_k},\quad g_{x_N}^i = \frac{\partial d^i_N}{\partial x_N},\\
 &A_k^i=\frac{\partial \phi_k}{\partial x_k}, \quad B_k^i=\frac{\partial \phi_k}{\partial u_k},\quad a_k^i = \phi(x_k^i,u_k^i)-x_{k+1}^i,\\
 &C_k^i=\frac{\partial r_k}{\partial x_k}, \quad D_k^i=\frac{\partial r_k}{\partial u_k},\quad C_N^i=\frac{\partial r_N}{\partial x_N},\\
 &\overline{c}_k^i=\overline{r}_k-r_k(x_k^i,u_k^i),\quad  \underline{c}_k^i=\underline{r}_k-r_k(x_k^i,u_k^i),\\
 &\overline{c}_N^i=\overline{r}_N-r_N(x_N^i),\quad  \underline{c}_N^i=\underline{r}_N-r_N(x_N^i)
 \end{aligned}
 \end{equation}
+The Hessian matrices $Q_k,S_k,R_k$ are approximated by the Generalized-Gauss-Newton (GGN) method.
 
 \subsubsection{Dual solution}
 The optimal primal solution of \eqref{QP} is denoted as $(\Delta \mathbf{x}^{i^*}, \Delta \mathbf{u}^{i^*})$. 

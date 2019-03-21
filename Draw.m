@@ -83,7 +83,7 @@ switch settings.model
         xlim([-1.2 1.2]);
         ylim([-1.2 1.2]);
                 
-    case 'TethUAV_param_1order_slack'
+    case 'TethUAV'
          
         phi_ref = input.od(1,1);
         phi_ref = repmat(phi_ref, size(time));

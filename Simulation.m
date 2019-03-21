@@ -43,7 +43,7 @@ nbx = settings.nbx;
 
 %% solver configurations
 
-N  = 80;             % No. of shooting points
+N  = 40;             % No. of shooting points
 settings.N = N;
 
 N2 = N/5;
@@ -52,13 +52,12 @@ settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 mean
 r = 10;
 settings.r = r;      % No. of input blocks
 
-opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
-opt.hessian='gauss_newton';  % 'gauss_newton'
+opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.condensing='default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
 opt.qpsolver='qpoases'; 
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
-opt.lin_obj='no'; % 'yes','no' % if objective function is linear least square
+opt.lin_obj='no'; % 'yes','no' % if the inner objective function is linear and the outer objective is sum of quadratic
 opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 opt.nonuniform_grid=0; % supports only ERK4 and IRK3
 

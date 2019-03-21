@@ -83,22 +83,20 @@ B = jacobian(X,controls) + SX.zeros(nx,nu);
 D = Function('D', {states,controls,params}, {A, B});
 
 %% objective and constraints
-refs     = SX.sym('refs',ny,1);     % references of the first N stages
-refN     = SX.sym('refs',nyN,1);    % reference of the last stage
-Q        = SX.sym('Q',ny,1);        % weighting matrix of the first N stages
-QN       = SX.sym('QN',nyN,1);      % weighting matrix of the last stage
 
-obji_vec=sqrt(diag(Q))*(h_fun(states,controls,params)-refs);
-objN_vec=sqrt(diag(QN))*(hN_fun(states,params)-refN);
-Jxi = jacobian(obji_vec, states) + SX.zeros(ny, nx);
-Jui = jacobian(obji_vec, controls) + SX.zeros(ny, nu);
-JxN = jacobian(objN_vec, states) + SX.zeros(nyN, nx);
+h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
+hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
+path_con_fun=Function('path_con_fun', {states,controls,params}, {general_con},{'states','controls','params'},{'general_con'});
+path_con_N_fun=Function('path_con_N_fun', {states,params}, {general_con_N},{'states','params'},{'general_con_N'});
 
-obji = 0.5*(h_fun(states,controls,params)-refs)'*diag(Q)*(h_fun(states,controls,params)-refs);
-objN = 0.5*(hN_fun(states,params)-refN)'*diag(QN)*(hN_fun(states,params)-refN);
 gxi = jacobian(obji,states)' + SX.zeros(nx,1);
 gui = jacobian(obji,controls)' + SX.zeros(nu,1);
 gxN = jacobian(objN,states)' + SX.zeros(nx,1);
+
+Hxi = hessian(obji, states) + SX.zeros(nx, nx);
+Hui = hessian(obji, controls) + SX.zeros(nu, nu);
+Hxui = jacobian(jacobian(obji, states),controls) + SX.zeros(nx, nu);
+HN = hessian(objN, states) + SX.zeros(nx, nx);
 
 Cxi = jacobian(general_con, states) + SX.zeros(nc, nx);
 Cui = jacobian(general_con, controls) + SX.zeros(nc, nu);
@@ -107,8 +105,8 @@ CxN = jacobian(general_con_N, states) + SX.zeros(ncN, nx);
 obji_fun = Function('obji_fun',{states,controls,params,refs,Q},{obji+SX.zeros(1,1)});
 objN_fun = Function('objN_fun',{states,params,refN,QN},{objN+SX.zeros(1,1)});
 
-Ji_fun=Function('Ji_fun',{states,controls,params,refs,Q},{Jxi,Jui});
-JN_fun=Function('JN_fun',{states,params,refN,QN},{JxN});
+Hi_fun=Function('Hi_fun',{states,controls,params,refs,Q},{Hxi,Hui,Hxui});
+HN_fun=Function('HN_fun',{states,params,refN,QN},{HN});
 
 gi_fun=Function('gi_fun',{states,controls,params,refs,Q},{gxi, gui});
 gN_fun=Function('gN_fun',{states,params,refN,QN},{gxN});
@@ -155,8 +153,8 @@ generate=input('Would you like to generate the source code?(y/n)','s');
 
 if strcmp(generate,'y')
 
-    display('                           ');
-    display('    Generating source code...');
+    disp('                           ');
+    disp('    Generating source code...');
     
     cd model_src
       
@@ -165,8 +163,8 @@ if strcmp(generate,'y')
     h_fun.generate('h_fun.c',opts);
     path_con_fun.generate('path_con_fun.c',opts);
     path_con_N_fun.generate('path_con_N_fun.c',opts);
-    Ji_fun.generate('Ji_fun.c',opts);
-    JN_fun.generate('JN_fun.c',opts);
+    Hi_fun.generate('Hi_fun.c',opts);
+    HN_fun.generate('HN_fun.c',opts);
    
     opts = struct('main',false,'mex',false,'with_header',true);
     cd ../mex_core
@@ -186,8 +184,8 @@ if strcmp(generate,'y')
         P.add(objN_fun);
         P.add(gi_fun);
         P.add(gN_fun);
-        P.add(Ji_fun);
-        P.add(JN_fun);
+        P.add(Hi_fun);
+        P.add(HN_fun);
         P.add(Ci_fun);
         P.add(CN_fun);
         P.add(adj_fun);
@@ -198,15 +196,15 @@ if strcmp(generate,'y')
         P.generate();
     cd ..
 
-display('    Code generation completed!');
+disp('    Code generation completed!');
 
 end
 
-display('                           ');
+disp('                           ');
 compile=input('Would you like to compile the source code?(y/n)','s');
 if strcmp(compile,'y')
     
-    display('    Compiling...');
+    disp('    Compiling...');
     
     OS_MAC = 0;
     OS_LINUX = 0;
@@ -239,21 +237,21 @@ if strcmp(compile,'y')
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_N_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'h_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Simulate_system.c');
-    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Ji_fun.c');
-    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'JN_fun.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Hi_fun.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'HN_fun.c');
        
     cd ../mex_core
     Compile_Mex;
     cd ..
 
-display('    Compilation completed!');
+disp('    Compilation completed!');
 
 end
 
 %% NMPC preparation
 
-display('                           ');
-display('Preparing the NMPC solver...');
+disp('                           ');
+disp('Preparing the NMPC solver...');
 
 settings.Ts = Ts;
 settings.Ts_st = Ts_st;
@@ -276,5 +274,5 @@ cd ..
 
 clear all;
 
-display('NMPC solver prepared! Enjoy solving...');
-display('                           ');
+disp('NMPC solver prepared! Enjoy solving...');
+disp('                           ');

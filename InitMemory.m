@@ -413,22 +413,21 @@ function [mem] = InitMemory(settings, opt, input)
         mem.lin_obj = 1;
         
         for j=1:N
-            [Jx, Ju] = Ji_fun('Ji_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W(:,j));
-            Qi = full(Jx'*Jx);
+            [Qi,Ri,Si] = Hi_fun('Hi_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W(:,j));
+            Qi=full(Qi);
+            Ri=full(Ri);
+            Si=full(Si);
             for i=1:nx
                 if Qi(i,i)<mem.reg
                     Qi(i,i)=mem.reg;
                 end
             end
-            Si = full(Jx'*Ju);
-            Ri = full(Ju'*Ju);
             mem.Q(:,(j-1)*nx+1:j*nx) = Qi;
             mem.S(:,(j-1)*nu+1:j*nu) = Si;
             mem.R(:,(j-1)*nu+1:j*nu) = Ri;
         end
         
-        JN = JN_fun('JN_fun',zeros(nx,1),zeros(np,1),zeros(nyN,1), input.WN);
-        Qf = full(JN'*JN);
+        Qf = full( HN_fun('HN_fun',zeros(nx,1),zeros(np,1),zeros(nyN,1), input.WN) );
         for i=1:nx
             if Qf(i,i)<mem.reg
                 Qf(i,i)=mem.reg;

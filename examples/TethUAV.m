@@ -1,6 +1,10 @@
 %------------------------------------------%
+% Tethered quadcopter for a safe and constrained maneuver
 
-% Model
+% from "Online Nonlinear Model Predictive Control for Tethered UAVs to
+% Perform a Safe and Constrained Maneuver  ", E.Rossi, 2019
+
+% typical configuration: 1) N=30, Ts=Ts_st=0.01, no shifting 
 
 %------------------------------------------%
 
@@ -28,6 +32,10 @@ import casadi.*
 states   = SX.sym('states',nx,1);
 controls = SX.sym('controls',nu,1);
 params   = SX.sym('paras',np,1);
+refs     = SX.sym('refs',ny,1);     % references of the first N stages
+refN     = SX.sym('refs',nyN,1);    % reference of the last stage
+Q        = SX.sym('Q',ny,1);        % weighting matrix of the first N stages
+QN       = SX.sym('QN',nyN,1);      % weighting matrix of the last stage
 
 %% Dynamics
 
@@ -76,14 +84,18 @@ gamma2_vel = 180/pi/0.8;
 gamma1 = 1;
 gamma2 = 180/pi/3;
 
+% inner objectives
 h = [phi-phi_ref;phi_dot;theta-theta_ref;theta_dot;df1;df2;
      gamma1*(theta-theta_ref)*(1/(1+exp(-gamma2*(phi_lim-phi)))); % to arrive close to the ground with attitude = surface slope
      phi_dot*(1/(1+exp(-gamma2_vel*(phi_lim_vel-phi)))); % elev velocity goes to zero as the drone is closer to the surface
      theta_dot*(1/(1+exp(-gamma2_vel*(phi_lim_vel-phi)))); % attitude velocity goes to zero as the drone is closer to the surface
      1/(phi+theta-pi/2);...
      s1;s2]; 
-
 hN = [phi-phi_ref;phi_dot;theta-theta_ref;theta_dot];
+
+% outer objectives
+obji = 0.5*(h-refs)'*diag(Q)*(h-refs);
+objN = 0.5*(hN-refN)'*diag(QN)*(hN-refN);
 
 % general inequality path constraints
 general_con = [1/a2*phi_dot^2 + a1/a2*sin(phi) + sin(phi+theta)*(f1+f2); 
@@ -95,11 +107,3 @@ general_con_N = [1/a2*phi_dot^2 + a1/a2*sin(phi) + sin(phi+theta)*(f1+f2)];
 
 Ts = 0.01; % simulation sample time
 Ts_st = 0.01; % shooting interval time
-
-%% build casadi function (don't touch)
-
-h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
-hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
-
-path_con_fun=Function('path_con_fun', {states,controls,params}, {general_con},{'states','controls','params'},{'general_con'});
-path_con_N_fun=Function('path_con_N_fun', {states,params}, {general_con_N},{'states','params'},{'general_con_N'});

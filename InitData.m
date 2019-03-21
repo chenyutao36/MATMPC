@@ -98,7 +98,7 @@ function [input, data] = InitData(settings)
             lb_gN = [];
             ub_gN = [];
                                        
-        case 'TethUAV_param_1order_slack'
+        case 'TethUAV'
             
             input.x0=[0; 0; 0; 0; 9.81; 0];%zeros(nx,1);
             input.u0=[0; 0; 0; 0];%zeros(nu,1);%
@@ -137,7 +137,7 @@ function [input, data] = InitData(settings)
             ub_g = [fL_max; constr_max; constr_max];            
             lb_gN = [fL_min];
             ub_gN = [fL_max];  
-                                                
+                                                            
     end
 
     % prepare the data
@@ -159,7 +159,7 @@ function [input, data] = InitData(settings)
     
     input.lbx = repmat(lb_x,1,N);
     input.ubx = repmat(ub_x,1,N);
-
+    
     x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
     para = repmat(para0,1,N+1);  % initialize all parameters with the same initial para
@@ -169,7 +169,7 @@ function [input, data] = InitData(settings)
     input.od=para;       % on-line parameters (np by N+1 matrix)
     input.W=Q;           % weights of the first N stages (ny by ny matrix)
     input.WN=QN;         % weights of the terminal stage (nyN by nyN matrix)
-%     
+     
     input.lambda=zeros(nx,N+1);   % langrangian multiplier w.r.t. equality constraints
     input.mu=zeros(N*nc+ncN,1);   % langrangian multipliers w.r.t. general inequality constraints
     input.mu_u = zeros(N*nu,1);   % langrangian multipliers w.r.t. input bounds
@@ -190,9 +190,9 @@ function [input, data] = InitData(settings)
 
             data.REF=[1,0,0,zeros(1,3*(n-1)),zeros(1,nu)];
                                                                 
-        case 'TethUAV_param_1order_slack'
+        case 'TethUAV'
         	data.REF = zeros(1, ny);
-         
+                     
     end
     
 end

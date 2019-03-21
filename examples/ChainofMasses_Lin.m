@@ -4,6 +4,8 @@
 % from "Efficient direct multiple shooting for nonlinear model predictive
 % control on long horizons", Kirches, 2012
 
+% typical configuration: 1) N=40(80,160), Ts=Ts_st=0.2, no shifting 
+
 %------------------------------------------%
 
 %% Dimensions
@@ -30,6 +32,10 @@ import casadi.*
 states   = SX.sym('states',nx,1);
 controls = SX.sym('controls',nu,1);
 params   = SX.sym('paras',np,1);
+refs     = SX.sym('refs',ny,1);     % references of the first N stages
+refN     = SX.sym('refs',nyN,1);    % reference of the last stage
+Q        = SX.sym('Q',ny,1);        % weighting matrix of the first N stages
+QN       = SX.sym('QN',nyN,1);      % weighting matrix of the last stage
 
 %% Dynamics
 
@@ -80,9 +86,13 @@ impl_f = xdot - x_dot;
 
 %% Objectives and constraints
 
+% inner objectives
 h = [px(n);py(n);pz(n);vx;vy;vz;ux;uy;uz];
-
 hN = h(1:nyN);
+
+% outer objectives
+obji = 0.5*(h-refs)'*diag(Q)*(h-refs);
+objN = 0.5*(hN-refN)'*diag(QN)*(hN-refN);
 
 % general inequality path constraints
 general_con = []; 
@@ -92,11 +102,3 @@ general_con_N = [];
 
 Ts = 0.2; % simulation sample time
 Ts_st = 0.2; % shooting interval time
-
-%% build casadi function (don't touch)
-
-h_fun=Function('h_fun', {states,controls,params}, {h},{'states','controls','params'},{'h'});
-hN_fun=Function('hN_fun', {states,params}, {hN},{'states','params'},{'hN'});
-
-path_con_fun=Function('path_con_fun', {states,controls,params}, {general_con},{'states','controls','params'},{'general_con'});
-path_con_N_fun=Function('path_con_N_fun', {states,params}, {general_con_N},{'states','params'},{'general_con_N'});
