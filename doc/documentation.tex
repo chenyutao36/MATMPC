@@ -34,20 +34,20 @@
 	\item MATLAB (R2014b or above) 
 	\item \software{CaADi} (3.3.0)
 \end{enumerate}
-\software{CaADi} is the state-of-art automatic differentiation (AD) tool \cite{andersson2018casadi} that is employed in \software{MATMPC} for computing derivatives of a number of functions. For how to download and install \software{CaADi}, please visit \url{https://github.com/casadi/casadi/wiki/InstallationInstructions}
+\software{CaADi} is the state-of-art automatic differentiation (AD) tool \cite{andersson2018casadi} that is employed in \software{MATMPC} for computing derivatives of a number of functions. For how to download and install \software{CaADi}, please visit \href{https://github.com/casadi/casadi/wiki/InstallationInstructions}{this site}.
 
 \subsection{Compiler}
-\software{MATMPC} is a collection of routines, mainly written in MATLAB scripts. However, its core algorithmic routines are written in MATLAB C API. To compile these routines into MEX functions, it is required to use GCC or MinGW (CLANG is not tested, but would probably work). In LINUX systems, users just need to install the compatible version of GCC for MATLAB. In WINDOWS systems, users need to install MinGW for MATLAB, from \url{https://www.mathworks.com/matlabcentral/fileexchange/52848-matlab-support-for-mingw-w64-c-c-compiler}.
+\software{MATMPC} is a collection of routines, mainly written in MATLAB scripts. However, its core algorithmic routines are written in MATLAB C API. To compile these routines into MEX functions, it is required to use GCC or MinGW (CLANG is not tested, but would probably work). In LINUX systems, users just need to install the compatible version of GCC for MATLAB. In WINDOWS systems, users need to install MinGW for MATLAB, from \href{https://www.mathworks.com/matlabcentral/fileexchange/52848-matlab-support-for-mingw-w64-c-c-compiler}{here}.
 
 \subsection{Advanced functionality installation}
 
 \subsubsection{Linear Algebra Library}
-By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) library \software{lapack} and \software{blas} from INTEL MKL. For the full condensing routine, \software{MATMPC} also supports using \software{BLASFEO} \cite{frison2018blasfeo}. For how to install \software{BLASFEO}, please visit \url{https://github.com/giaf/blasfeo}. Note that, in WINDOWS, installing \software{BLASFEO} requires to install MinGW for WINDOWS (not for MATLAB), which is described in detail in the <<HPIPM tutorial>>.
+By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) library \software{lapack} and \software{blas} from INTEL MKL. For the full condensing routine, \software{MATMPC} also supports using \software{BLASFEO} \cite{frison2018blasfeo}. For how to install \software{BLASFEO}, please visit \href{https://github.com/giaf/blasfeo}{here}. Note that, in WINDOWS, installing \software{BLASFEO} requires to install MinGW for WINDOWS (not for MATLAB), which is described in detail in the ``HPIPM tutorial''.
 
 \subsubsection{QP Solver}
-\software{MATMPC} comes with MATLAB built-in QP solver \emph{quadprog} but other QP solvers can also be used. By default, \software{MATMPC} provides compiled binaries of \software{qpOASES} and \software{OSQP} both for WINDOWS and LINUX. If users want to compile \software{qpOASES} themselves, please visit \url{https://projects.coin-or.org/qpOASES/wiki/QpoasesInstallation} and install its MATLAB interface only. If users want to compile \software{OSQP}, please visit \url{https://osqp.org/} and install its MATLAB interface only.
+\software{MATMPC} comes with MATLAB built-in QP solver \emph{quadprog} but other QP solvers can also be used. By default, \software{MATMPC} provides compiled binaries of \software{qpOASES} \cite{ferreau2014qpoases} and \software{OSQP} \cite{stellato2018osqp} both for WINDOWS and LINUX. If users want to compile \software{qpOASES} themselves, please visit \href{https://projects.coin-or.org/qpOASES/wiki/QpoasesInstallation}{here} and install its MATLAB interface only. If users want to compile \software{OSQP}, please visit \href{https://osqp.org/}{here} and install its MATLAB interface only.
 
-\software{MATMPC} provides more QP solvers, including \software{HPIPM} and \software{IPOPT}, both using interior point method (IPM) for solving sparse QP problems. In order to use \software{HPIPM}, either for sparse or partially condensed QP, users should run \emph{/mex\_core/compile\_hpipm.m} to obtain compatible MEX functions. Such compilation requires to install \software{BLASFEO} and \software{HPIPM}. For how to install \software{HPIPM}, please visit \url{https://github.com/giaf/hpipm}. The \software{IPOPT} binary is delivered by \software{OPTI Toolbox} at \url{https://www.inverseproblem.co.nz/OPTI/}. Hence, it is required to install \software{OPTI Toolbox} first. Note that \software{OPTI Toolbox} is only compatible with WINDOWS system.
+\software{MATMPC} provides more QP solvers, including \software{HPIPM} and \software{IPOPT} \cite{wachter2006implementation}, both using interior point method (IPM) for solving sparse QP problems. In order to use \software{HPIPM}, either for sparse or partially condensed QP, users should run \emph{/mex\_core/compile\_hpipm.m} to obtain compatible MEX functions. Such compilation requires to install \software{BLASFEO} and \software{HPIPM}. For how to install \software{HPIPM}, please visit \href{https://github.com/giaf/hpipm}{here}. The \software{IPOPT} binary is delivered by \software{OPTI Toolbox} at \href{https://www.inverseproblem.co.nz/OPTI/}{this site}. Hence, it is required to install \software{OPTI Toolbox} first. Note that \software{OPTI Toolbox} is only compatible with WINDOWS system.
 
 \section{Data Structure}
 
@@ -289,8 +289,34 @@ The \alert{mem} struct contains a lot of fields, which are partially selected he
 	\label{table:mem}
 \end{longtable}
 
-\section{Example}
-Users should refer to \software{MATMPC} examples for how to write their model and choose right options. For more illustrations and advanced functionalities, please contact me via email.
+\section{How to use}
+In this section, a brief introduction of how to run a simulation is given.
+
+\subsection{MATLAB Simulation}
+\begin{enumerate}
+	\item For the first step, users should refer to \software{MATMPC} examples for how to write their models. Double check the dimensions of all data are correct.
+	\item In ``Model\_Generation.m'', choose your model by setting ``settings.model=...''. Change the number of integration steps per sample interval and shooting interval, respectively, by setting ``s=...''. Run this script.
+	\item Once model codes are generated, open ``Simulation.m''. Change a variety of options that may fit your application. Run this script.
+	\item Open ``draw.m'' and write your own plotting codes. Run this script to see your results.
+\end{enumerate}
+
+\subsection{Simulink Simulation}
+\begin{enumerate}
+	\item For the first step, users should refer to \software{MATMPC} examples for how to write their models. Double check the dimensions of all data are correct.
+	\item In ``Model\_Generation.m'', choose your model by setting ``settings.model=...''. Change the number of integration steps per sample interval and shooting interval, respectively, by setting ``s=...''. Run this script.
+	\item Once model codes are generated, open ``Initialization\_Simulink.m''. Change a variety of options that may fit your application. Also configure the initial conditions. Run this script.
+	\item Open ``MATMPC\_SIMULINK''. Run the simulation for the ``Inverted Pendulum'' example. Get an idea of how the simulation works.
+	\item Re-write or create a new Simulink simulation for your application.
+\end{enumerate}
+
+\section{Advanced Functions}
+Currently, \software{MATMPC} supports two advanced and unique functions:
+\begin{enumerate}
+	\item The curvature-like measure of nonlinearity (CMoN) NMPC schemes \cite{chen2017fast, chen2018adaptive}.
+	\item The input move blocking NMPC scheme (to be published). 
+\end{enumerate}
+
+For more illustrations and advanced functionalities, please contact me via email.
 
 \bibliographystyle{abbrv}
 \bibliography{ref}

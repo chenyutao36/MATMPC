@@ -20,7 +20,7 @@ function [cpt_qp, mem] = mpc_qp_solve_osqp(sizes,mem)
     mem.qp_obj.update('Px',v_H,'Ax',v_A,'q',mem.sparse_g,'l',l,'u',u);    
     sol = mem.qp_obj.solve();
             
-    assert(strcmp(sol.info.status,'solved'), ['QP Error: QP is ' sol.info.status]);
+    assert(strcmp(sol.info.status,'solved'), ['QP Error: ' sol.info.status]);
 
     mem.dx(:) = reshape(sol.x(1:neq,1),[nx,N+1]);
     mem.du(:) = reshape(sol.x(neq+1:nw,1),[nu,N]);

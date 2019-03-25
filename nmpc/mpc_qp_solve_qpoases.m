@@ -1,5 +1,5 @@
 function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
-
+    
     nu=sizes.nu;
     N=sizes.N;  
     nbx=sizes.nbx;

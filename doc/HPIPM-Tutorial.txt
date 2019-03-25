@@ -1,0 +1,45 @@
+This is a tutorial for installing BLASFEO and HPIPM on Windows system. BLASFEO is a linear algebra library and HPIPM is a sparse QP solver.
+
+Since they are developed in Linux systems, first you need to install MINGW and MSYS.
+
+1. start with no mingw or msys on your system (otherwise, please uninstall them)
+2. download msys2 at https://www.msys2.org/ (choose x86_64 for 64-bit system)
+3. run the MSYS2 installer, install MSYS2 at default path (e.g. C:\msys64)
+4. open MSYS2 at C:\msys64\msys2_shell.bat
+5. type "pacman -Syuu" (may take a while, if get stucked at end, then just close this window)
+6. close and reopen msys2_shell.bat, type "pacman -S base-devel mingw-w64-x86_64-toolchain" (take some time)
+7. add "C:\msys64\usr\bin" and "C:\msys64\mingw64\bin" into system environment path (not user path)
+8. open a windows command window by using "cmd", type "gcc -v", if you get information about your gcc version, then you have installed MINGW successfully.
+
+
+Now we can install BLASFEO and HPIPM.
+
+1. download BLASFEO and HPIPM from https://github.com/chenyutao36/blasfeo and https://github.com/chenyutao36/hpipm
+2. go to BLASFEO directory, open Makefile.rule using a text editor (recommend VS code https://code.visualstudio.com/)
+3. select target architecture according to your CPU type (if not sure, use X64_INTEL_CORE if you have a INTEL CPU)
+4. uncomment OS=WINDOWS when choosing operating system
+5. choose C Compiler as CC=x86_64-w64-mingw32-gcc instead of CC=gcc
+6. open Integrated Terminal in VS code in View->Integrated Terminal at the current location
+7. type "make" (take a while)
+8. type "make install_static"
+
+9. go to HPIPM directory, open Makefile.rule using VS code
+10. do the same thing as in steps 4 and 5
+11. do the same thing as in steps 7 and 8
+
+OK we are done! Let's compile mexFunction in MATMPC
+
+1. Open Matlab and go to MATMPC/mex_core
+2. open compile_hpipm.m
+3. Click Run and you should have hpipm_sparse.mexw64, hpipm_pcond.mexw64 and Condensing_Blasfeo.mexw64
+
+In Simulation.m, try
+
+1. opt.condensing = 'blasfeo_full', run simulations and it should be faster in terms of COND time than 'default_full'
+2. opt.condensing = 'no', opt.qpsolver = 'hpipm_sparse' or 'hpipm_pcond', the time for solving QP should be much less.
+
+Note: HPIPM is not so stable, so you may have NaN from it. In this case, try to scale better of your problem. 
+
+Good luck!
+
+Yutao

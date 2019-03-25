@@ -102,7 +102,7 @@ function [input, data] = InitData_ngrid(settings)
             lb_gN = [];
             ub_gN = [];
                                 
-        case 'TethUAV_param_1order_slack'
+        case 'TethUAV'
             
             input.x0=[0; 0; 0; 0; 9.81; 0];%zeros(nx,1);
             input.u0=[0; 0; 0; 0];%zeros(nu,1);%
@@ -194,7 +194,7 @@ function [input, data] = InitData_ngrid(settings)
 
             data.REF=[1,0,0,zeros(1,3*(n-1)),zeros(1,nu)];
                                                                 
-        case 'TethUAV_param_1order_slack'
+        case 'TethUAV'
         	data.REF = zeros(1, ny);
          
     end

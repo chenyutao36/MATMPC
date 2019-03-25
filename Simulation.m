@@ -90,8 +90,8 @@ mem = InitMemory(settings, opt, input);
 
 mem.iter = 1; time = 0.0;
 Tf = 4;  % simulation time
-state_sim= [input.x0]';
-controls_MPC = [input.u0]';
+state_sim= input.x0';
+controls_MPC = input.u0';
 y_sim = [];
 constraints = [];
 CPT = [];

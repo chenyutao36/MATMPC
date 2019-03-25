@@ -11,7 +11,7 @@ addpath([pwd,'/mex_core']);
 %% Parametri Simulazione
 cd data;
 if exist('settings','file')==2
-    load settings
+    load('settings');
     cd ..
 else 
     cd ..
@@ -33,14 +33,31 @@ nbx = settings.nbx;      % No. of state bounds
 nbu_idx = settings.nbu_idx; % Index of control bounds
 nbx_idx = settings.nbx_idx; % Index of state bounds
 
-%% Prediction Horizon
-N=80;
-settings.N = N;
+%% add more to Settings
 
-%%
+N  = 80;
+N2 = 5;
+r  = 10;
+
+settings.N = N;
+settings.N2 = N2;
+settings.r = r;
+
+%% options
+opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
+opt.condensing='default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
+opt.qpsolver='qpoases'; 
+opt.hotstart='no'; %'yes','no' (only for qpoases)
+opt.shifting='no'; % 'yes','no'
+opt.lin_obj='no'; % 'yes','no' % if the inner objective function is linear and the outer objective is sum of quadratic
+opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
+opt.nonuniform_grid=0; % supports only ERK4 and IRK3
+ 
+%% Initialization
+
 x0 = [0;pi;0;0];    
 u0 = zeros(nu,1);    
-para0 = 0;  
+para0 = zeros(max(1,np),1);  
 
 W=repmat([10 10 0.1 0.1 0.01]',1,N);
 WN=W(1:nyN,1);
@@ -58,7 +75,7 @@ lb_g = [];
 ub_g = [];            
 lb_gN = [];
 ub_gN = [];
-
+ 
 lb = repmat(lb_g,N,1);
 ub = repmat(ub_g,N,1);
 lb = [lb;lb_gN];
@@ -88,9 +105,3 @@ end
 x = repmat(x0,1,N+1);   
 u = repmat(u0,1,N);    
 para = repmat(para0,1,N+1);  
-
-ref = zeros(ny,1);
-
-%%
-assignin('base','Ts',Ts);
-assignin('base','x0',x0);
