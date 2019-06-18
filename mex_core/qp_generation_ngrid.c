@@ -18,9 +18,6 @@ static sim_erk_workspace *erk_workspace = NULL;
 static sim_irk_workspace *irk_workspace = NULL;
 static bool mem_alloc = false;
 
-static double *Jac[2]; 
-static double *Jac_N = NULL;
-
 void exitFcn(){
     if (erk_workspace!=NULL)
         sim_erk_workspace_free(opts, erk_workspace);
@@ -32,12 +29,6 @@ void exitFcn(){
         sim_in_free(in);
     if (out!=NULL)
         sim_out_free(out);    
-    if (Jac[0]!=NULL)
-        mxFree(Jac[0]);
-    if (Jac[1]!=NULL)
-        mxFree(Jac[1]);
-    if (Jac_N!=NULL)
-        mxFree(Jac_N);
 }
 
 void
@@ -110,6 +101,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     // allocate memory
     double *Sens[2];    
     double *Cons[2];
+    double *Hes[3];
       
     double *casadi_in[5];
     double *casadi_out[2];    
@@ -138,13 +130,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 mexErrMsgTxt("Please choose a supported integrator");
                 break;
         }               
-
-        Jac[0] = (double *) mxMalloc(ny*nx * sizeof(double));
-        mexMakeMemoryPersistent(Jac[0]); 
-        Jac[1] = (double *) mxMalloc(ny*nu * sizeof(double));
-        mexMakeMemoryPersistent(Jac[1]); 
-        Jac_N = (double *) mxMalloc(nyN*nx * sizeof(double));
-        mexMakeMemoryPersistent(Jac_N);
         
         mem_alloc=true;
         mexAtExit(exitFcn);
@@ -211,16 +196,17 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
        
         // Hessian
         if (!lin_obj){
-            Ji_Fun(casadi_in, Jac);
+            Hes[0] = Q+i*nx*nx;
+            Hes[1] = R+i*nu*nu;
+            Hes[2] = S+i*nx*nu;
+            Hi_Fun(casadi_in, Hes);
             
-            for (j=0;j<ny*nx;j++)
-                Jac[0][j]*=sqrt(index_T[i+1]-index_T[i]);
-            for (j=0;j<ny*nu;j++)
-                Jac[1][j]*=sqrt(index_T[i+1]-index_T[i]); 
-            
-            dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
-            dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
-            dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
+            for (j=0;j<nx*nx;j++)
+                Hes[0][j]*=index_T[i+1]-index_T[i];
+            for (j=0;j<nu*nu;j++)
+                Hes[1][j]*=index_T[i+1]-index_T[i];
+            for (j=0;j<nx*nu;j++)
+                Hes[2][j]*=index_T[i+1]-index_T[i];
             
             regularization(nx, Q+i*nx*nx, reg);
             regularization(nu, R+i*nu*nu, reg);
@@ -262,10 +248,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     casadi_in[3] = WN;
     
     if (!lin_obj){
-        JN_Fun(casadi_in, Jac_N);
-        for (j=0;j<nyN*nx;j++)
-            Jac_N[j]*=sqrt(index_T[r]-index_T[r-1]);
-        dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, Jac_N, &nyN, Jac_N, &nyN, &zero, Q+N*nx*nx, &nx);
+        Hes[0]=Q+N*nx*nx;
+        HN_Fun(casadi_in, Hes);
+        
+        for (j=0;j<nx*nx;j++)
+            Hes[0][j]*=index_T[r]-index_T[r-1];
+        
         regularization(nx, Q+N*nx*nx, reg);
     }
         
