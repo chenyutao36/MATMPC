@@ -44,14 +44,21 @@ settings.N2 = N2;
 settings.r = r;
 
 %% options
-opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
+opt.hessian='Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
+opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.condensing='default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
 opt.qpsolver='qpoases'; 
 opt.hotstart='no'; %'yes','no' (only for qpoases)
 opt.shifting='no'; % 'yes','no'
 opt.lin_obj='no'; % 'yes','no' % if the inner objective function is linear and the outer objective is sum of quadratic
 opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
-opt.nonuniform_grid=0; % supports only ERK4 and IRK3
+opt.nonuniform_grid=0; % currently not supported 
+
+%% available qpsolver
+%'qpoases' (for full condensing)
+%'qpoases_mb' (for full condensing+moving block, please use ERK4 as the integrator)
+%'hpipm_sparse' (run mex_core/compile_hpipm.m first; set opt.condensing='no')
+%'hpipm_pcond' (run mex_core/compile_hpipm.m first; set opt.condensing='no')
  
 %% Initialization
 

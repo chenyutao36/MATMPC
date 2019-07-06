@@ -9,8 +9,8 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases_mb(sizes,mem,opt)
     lb=[];
     ub=[];
     for i=1:mem.r
-            lb=[lb; mem.lb_du(mem.index_T(i)*nu+1:(mem.index_T(i)+1)*nu,1)]; 
-            ub=[ub; mem.ub_du(mem.index_T(i)*nu+1:(mem.index_T(i)+1)*nu,1)];
+        lb=[lb; mem.lb_du(mem.index_T(i)*nu+1:(mem.index_T(i)+1)*nu,1)]; 
+        ub=[ub; mem.ub_du(mem.index_T(i)*nu+1:(mem.index_T(i)+1)*nu,1)];
     end
     
     if mem.warm_start==0               

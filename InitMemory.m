@@ -289,6 +289,16 @@ function [mem] = InitMemory(settings, opt, input)
 
             mem.mem2.qp_obj.setup(osqp_H_pattern, [], osqp_A_pattern, -inf(size(osqp_A_pattern,1),1), inf(size(osqp_A_pattern,1),1), mem.mem2.osqp_options);
     end
+    
+    switch opt.hessian
+        case 'Gauss_Newton'
+            mem.hessian=0;
+        case 'Generalized_Gauss_Newton'
+            mem.hessian=1;
+        otherwise
+            error('Please choose a correct Hessian approximation');
+    end
+            
           
     switch opt.integrator
         case 'ERK4-CASADI'
@@ -328,7 +338,7 @@ function [mem] = InitMemory(settings, opt, input)
     
     % globalization
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-4;          % tolerance on optimality
+    mem.kkt_lim = 1e-2;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor
@@ -367,6 +377,8 @@ function [mem] = InitMemory(settings, opt, input)
     if strcmp(opt.qpsolver, 'qpoases_mb')
         mem.r = r;
         mem.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
+%         mem.index_T = [0, 1, 10, 50];
+%         mem.index_T = [0 1 3 5 7 10 13 16 19 22 25 28 31 35 40 45 50];
         mem.Hc_r = zeros(mem.r*nu,mem.r*nu);
         mem.Ccx_r = zeros(N*nbx,mem.r*nu);
         mem.Ccg_r = zeros(N*nc+ncN,mem.r*nu);
@@ -383,6 +395,8 @@ function [mem] = InitMemory(settings, opt, input)
     if opt.nonuniform_grid
         mem.r = r;
         mem.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
+%         mem.index_T = [0, 1, 10, 50];
+%         mem.index_T = [0 1 3 5 7 10 13 16 19 22 25 28 31 35 40 45 50];
         T = zeros(N,mem.r);
         for i=1:mem.r
             T(mem.index_T(i)+1:mem.index_T(i+1),i)=1;

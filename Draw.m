@@ -219,5 +219,108 @@ switch settings.model
         set(leg,'Interpreter','latex');
         xlabel('[s]')
         ylabel('[deg]')
+        
+    case 'DiM'	
+
+         samples=size(y_sim,1);	
+
+         figure;	
+        title('MCA Tracking of perceived signals');	
+
+         subplot(3,2,1);	
+        plot(y_sim(:,1),'r');	
+        hold on;	
+        plot(data.REF(1:samples,1),'k');	
+        title('Longitudinal: $\hat{a}_x$','Interpreter','latex');	
+
+         subplot(3,2,2);	
+        plot(y_sim(:,2),'r');	
+        hold on;	
+        plot(data.REF(1:samples,2),'k');	
+        title('Lateral: $\hat{a}_y$','Interpreter','latex');	
+
+         subplot(3,2,3);	
+        plot(y_sim(:,3),'r');	
+        hold on;	
+        plot(data.REF(1:samples,3),'k');	
+        title('Vertical: $\hat{a}_z$','Interpreter','latex');	
+
+         subplot(3,2,4);	
+        plot(y_sim(:,4),'r');	
+        hold on;	
+        plot(data.REF(1:samples,4),'k');	
+        title('Roll: $\hat{\omega}_{\psi}$','Interpreter','latex');	
+
+         subplot(3,2,5);	
+        plot(y_sim(:,5),'r');	
+        hold on;	
+        plot(data.REF(1:samples,5),'k');	
+        title('Pitch: $\hat{\omega}_{\theta}$','Interpreter','latex');	
+
+         subplot(3,2,6);	
+        plot(y_sim(:,6),'r');	
+        hold on;	
+        plot(data.REF(1:samples,6),'k');	
+        title('Yaw: $\hat{\omega}_{\phi}$','Interpreter','latex');	
+
+
+         figure;	
+        subplot(3,2,1)	
+        plot(y_sim(:,13));	
+        hold on;	
+        plot(y_sim(:,7),'r');	
+        plot(zeros(Tf*100,1),'k');	
+        title('Longitudinal displacement')	
+        lgd=legend('tripod: $p_{x,T}$','hex: $p_{x,H}$','ref: $p_{x,T}$');	
+        set(lgd,'Interpreter','latex');	
+
+        subplot(3,2,2)	
+        plot(y_sim(:,14));	
+        hold on;	
+        plot(y_sim(:,8),'r');	
+        plot(zeros(Tf*100,1),'k');	
+        title('Lateral displacement')	
+        lgd=legend('tripod: $p_{y,T}$','hex: $p_{y,H}$','ref: $p_{y,T}$');	
+        set(lgd,'Interpreter','latex');	
+
+        subplot(3,2,3)	
+        plot(y_sim(:,9),'r');	
+        hold on;	
+        plot(zeros(Tf*100,1),'k');	
+        title('Vertical displacement: $p_{z,H}$','Interpreter','latex');	
+
+        subplot(3,2,4)	
+        plot(y_sim(:,20));	
+        hold on;	
+        plot(y_sim(:,17),'r');	
+        plot(zeros(Tf*100,1),'k');	
+        title('Yaw')	
+        lgd=legend('tripod: $\phi_T$','hex: $\phi_H$','ref');	
+        set(lgd,'Interpreter','latex');	
+
+         subplot(3,2,5)	
+        plot(y_sim(:,18),'r');	
+        hold on;	
+        plot(zeros(Tf*100,1),'k');	
+        title('Pitch');	
+        lgd=legend('hexpod: $\theta_H$','ref');	
+        set(lgd,'Interpreter','latex');	
+
+        subplot(3,2,6)	
+        plot(y_sim(:,19),'r');	
+        hold on;	
+        plot(zeros(Tf*100,1),'k');	
+        title('Roll');	
+        lgd=legend('hexpod: $\psi_H$','ref');	
+        set(lgd,'Interpreter','latex');	
+
+        figure;	
+        title('Hex actuator constraints')	
+        plot(constraints(:,1:6));	
+        hold on;	
+        plot(1.045*ones(samples,1),':');	
+        plot(1.375*ones(samples,1),':');	
+        axis([0 mem.iter 1.0 1.4]);	
+        title('Hexpod actuator constraints');
 
 end

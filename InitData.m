@@ -136,7 +136,43 @@ function [input, data] = InitData(settings)
             lb_g = [fL_min; constr_min; constr_min];
             ub_g = [fL_max; constr_max; constr_max];            
             lb_gN = [fL_min];
-            ub_gN = [fL_max];  
+            ub_gN = [fL_max]; 
+            
+        case 'DiM'	
+            input.x0 = zeros(nx,1);    % initial state	
+            input.u0 = zeros(nu,1);    % initial control	
+            para0 = 0;  % initial parameters (by default a np by 1 vector, if there is no parameter, set para0=0)	
+
+             %weighting matrices	
+            Q=[1200,1200,2000,800,800,5800,... % perceived acc and angular vel	
+                    32000*1.1,32000*1.1,1600*1,... %px,py,pz hex	
+                    3200*1.1,3200*1.1,2000*1,... %vx, vy, vz hex	
+                    4600*1,600*1,... % x,y tri	
+                    850*1,850*1,... % vx,vy tri	
+                    3700,3000,1500,... % phi, theta, psi hex	
+                    750,... % phi tri	
+                    0.01,0.0,0.0,... % omega phi,theta,psi hex	
+                    500.0,... % omega phi tri	
+                    0.0,0.0,0.001,... %ax,ay,az hex %         20*1.1,20*1.1,... % ax,ay tri	
+                    0.0,0.01,0.1 ... % alpha phi,theta, psi hex 	
+                    ];	
+              Q = repmat(Q',1,N);	
+
+              QN=Q(1:nyN,1);	
+
+               % upper and lower bounds for states (=nbx)	
+              lb_x = [];	
+              ub_x = [];	
+
+               % upper and lower bounds for controls (=nbu)           	
+              lb_u = [];	
+              ub_u = [];	
+
+               % upper and lower bounds for general constraints (=nc)	
+              lb_g=[1.045;1.045;1.045;1.045;1.045;1.045];    % lower bounds for ineq constraints	
+              ub_g=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints	
+              lb_gN=[1.045;1.045;1.045;1.045;1.045;1.045];  % lower bounds for ineq constraints at terminal point	
+              ub_gN=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints at terminal point
                                                             
     end
 
@@ -192,6 +228,13 @@ function [input, data] = InitData(settings)
                                                                 
         case 'TethUAV'
         	data.REF = zeros(1, ny);
+        case 'DiM'	
+
+             load REF_DiM_2;	
+
+             REF_DiM_2 = [REF_DiM_2, zeros(5000,24)];	
+
+             data.REF = REF_DiM_2;
                      
     end
     

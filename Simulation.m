@@ -43,16 +43,17 @@ nbx = settings.nbx;
 
 %% solver configurations
 
-N  = 40;             % No. of shooting points
+N  = 80;             % No. of shooting points
 settings.N = N;
 
 N2 = N/5;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
-r = 10;
+r = 3;
 settings.r = r;      % No. of input blocks
 
-opt.integrator='ERK4-CASADI'; % 'ERK4','IRK3, 'ERK4-CASADI'
+opt.hessian='Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
+opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
 opt.condensing='default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
 opt.qpsolver='qpoases'; 
 opt.hotstart='no'; %'yes','no' (only for qpoases)

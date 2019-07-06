@@ -36,6 +36,8 @@ refs     = SX.sym('refs',ny,1);     % references of the first N stages
 refN     = SX.sym('refs',nyN,1);    % reference of the last stage
 Q        = SX.sym('Q',ny,1);        % weighting matrix of the first N stages
 QN       = SX.sym('QN',nyN,1);      % weighting matrix of the last stage
+aux      = SX.sym('aux',ny,1);      % auxilary variable
+auxN     = SX.sym('auxN',nyN,1);    % auxilary variable
 
 %% Dynamics
 
@@ -93,6 +95,9 @@ hN = h(1:nyN);
 % outer objectives
 obji = 0.5*(h-refs)'*diag(Q)*(h-refs);
 objN = 0.5*(hN-refN)'*diag(QN)*(hN-refN);
+
+phi = 0.5*(aux-refs)'*(aux-refs);
+phiN = 0.5*(auxN-refN)'*(auxN-refN);
 
 % general inequality path constraints
 general_con = []; 

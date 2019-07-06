@@ -8,11 +8,19 @@ function [input,mem,cpt,StopCrit,OBJ] = mpc_nmpcsolver_simulink(input, settings,
     tic;
     while(mem.sqp_it < mem.sqp_maxit  &&  StopCrit > mem.kkt_lim && mem.alpha>1E-8 )
                
-        qp_generation(input, settings, mem);
+        if strcmp(opt.qpsolver, 'qpoases_mb')
+            qp_generation_mb(input, settings, mem);
+        else
+            qp_generation(input, settings, mem);
+        end
 
         switch opt.condensing
-             case 'default_full'           
-                 Condensing(mem, settings);
+             case 'default_full'  
+                 if ~strcmp(opt.qpsolver, 'qpoases_mb')
+                    Condensing(mem, settings);
+                 else
+                    Condensing_mb(mem, settings);
+                 end
              case 'blasfeo_full'               
                  Condensing_Blasfeo(mem, settings);               
              case 'no'
@@ -22,6 +30,8 @@ function [input,mem,cpt,StopCrit,OBJ] = mpc_nmpcsolver_simulink(input, settings,
         switch opt.qpsolver
             case 'qpoases'              
                 [~,mem] = mpc_qp_solve_qpoases(settings,mem);
+            case 'qpoases_mb'              
+                [~,mem] = mpc_qp_solve_qpoases_mb(settings,mem, opt);
             case 'hpipm_sparse'               
                 hpipm_sparse(mem,settings);
             case 'hpipm_pcond'                             

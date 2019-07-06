@@ -47,7 +47,7 @@ By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) librar
 \subsubsection{QP Solver}
 \software{MATMPC} comes with MATLAB built-in QP solver \emph{quadprog} but other QP solvers can also be used. By default, \software{MATMPC} provides compiled binaries of \software{qpOASES} \cite{ferreau2014qpoases} and \software{OSQP} \cite{stellato2018osqp} both for WINDOWS and LINUX. If users want to compile \software{qpOASES} themselves, please visit \href{https://projects.coin-or.org/qpOASES/wiki/QpoasesInstallation}{here} and install its MATLAB interface only. If users want to compile \software{OSQP}, please visit \href{https://osqp.org/}{here} and install its MATLAB interface only.
 
-\software{MATMPC} provides more QP solvers, including \software{HPIPM} and \software{IPOPT} \cite{wachter2006implementation}, both using interior point method (IPM) for solving sparse QP problems. In order to use \software{HPIPM}, either for sparse or partially condensed QP, users should run \emph{/mex\_core/compile\_hpipm.m} to obtain compatible MEX functions. Such compilation requires to install \software{BLASFEO} and \software{HPIPM}. For how to install \software{HPIPM}, please visit \href{https://github.com/giaf/hpipm}{here}. The \software{IPOPT} binary is delivered by \software{OPTI Toolbox} at \href{https://www.inverseproblem.co.nz/OPTI/}{this site}. Hence, it is required to install \software{OPTI Toolbox} first. Note that \software{OPTI Toolbox} is only compatible with WINDOWS system.
+\software{MATMPC} provides more QP solvers, including \software{HPIPM} and \software{IPOPT} \cite{wachter2006implementation}, both using interior point method (IPM) for solving sparse QP problems. In order to use \software{HPIPM}, either for sparse or partially condensed QP, users should run \emph{/mex\_core/compile\_hpipm.m} to obtain compatible MEX functions. Such compilation requires to install \software{BLASFEO} and \software{HPIPM}. For how to obtain \software{HPIPM}, please visit \href{https://github.com/giaf/hpipm}{here}. The \software{IPOPT} binary is delivered by \software{OPTI Toolbox} at \href{https://www.inverseproblem.co.nz/OPTI/}{this site}. Hence, it is required to install \software{OPTI Toolbox} first. Note that \software{OPTI Toolbox} is only compatible with WINDOWS system.
 
 \section{Data Structure}
 
@@ -57,7 +57,7 @@ By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) librar
 In \software{MATMPC}, we solve the following nonlinear programming (NLP) problem:
 \begin{equation}\label{NLP}
 	\begin{aligned}
-	\min_{x_k,u_k} \,&\sum_{k=0}^{N-1} \frac{1}{2}d(h(x_k,u_k)-h_{ref}^k)_{W_k}^2+\frac{1}{2}d_N(h_N(x_N)-h_{ref}^N)_{W_N}^2\\
+	\min_{x_k,u_k} \,&\frac{1}{2}\sum_{k=0}^{N-1} d(h(x_k,u_k)-h_{ref}^k)_{W_k}+\frac{1}{2}d_N(h_N(x_N)-h_{ref}^N)_{W_N}\\
 	s.t.\, &0=x_0-\hat{x}_0,\\
 	&0=x_{k+1}-\phi_k(x_k,u_k),\, k=0,1,\ldots,N-1,\\
 	&\underline{x}_k\leq x_k\leq \overline{x}_k,\,k=0,1,\ldots,N,\\
@@ -66,7 +66,7 @@ In \software{MATMPC}, we solve the following nonlinear programming (NLP) problem
 	&\underline{r}_N\leq r_N(x_N)\leq \overline{r}_N,
 	\end{aligned}
 \end{equation}
-where $h:\mathbb{R}^{n_x}\times\mathbb{R}^{n_u}\rightarrow \mathbb{R}^{n_y},h_N:\mathbb{R}^{n_x}\rightarrow\mathbb{R}^{n_{y_N}}$ are vector functions of state and control $(x,u)$, with corresponding references $h_{ref}^k$ and $h_{ref}^N$. Note that $h,h_N$ can be nonlinear and nonconvex. The outer objective functions $d:\mathbb{R}^{n_y}\rightarrow \mathbb{R}, d_N:\mathbb{R}^{n_{y_N}}\rightarrow \mathbb{R}$ are assumed convex, e.g. linear or quadratic. $W_k,W_N$ are weights for each term in $d$ for stage $k$. $\hat{x}_0$ is the measurement of the current state. The function $r(x_k,u_k): \mathbb{R}^{n_x}\times\mathbb{R}^{n_u} \rightarrow \mathbb{R}^{n_c}$ and $r(x_N): \mathbb{R}^{n_x}\rightarrow \mathbb{R}^{n_{c_N}}$ can be linear or nonlinear, with lower and upper bound $\underline{r}_k, \overline{r}_k$. $\phi_k(x_k,u_k)$ is a numerical integration operator that solves the following initial value problem (IVP) and returns the solution at $t_{k+1}$.
+where $h:\mathbb{R}^{n_x}\times\mathbb{R}^{n_u}\rightarrow \mathbb{R}^{n_y},h_N:\mathbb{R}^{n_x}\rightarrow\mathbb{R}^{n_{y_N}}$ are vector functions of state and control $(x,u)$, with corresponding references $h_{ref}^k$ and $h_{ref}^N$. Note that $h,h_N$ can be nonlinear and nonconvex. The outer objective functions $d:\mathbb{R}^{n_y}\rightarrow \mathbb{R}, d_N:\mathbb{R}^{n_{y_N}}\rightarrow \mathbb{R}$ are assumed convex, e.g. linear sum or quadratic. $W_k,W_N$ are weights for each term in $d$ for stage $k$. $\hat{x}_0$ is the measurement of the current state. The function $r(x_k,u_k): \mathbb{R}^{n_x}\times\mathbb{R}^{n_u} \rightarrow \mathbb{R}^{n_c}$ and $r(x_N): \mathbb{R}^{n_x}\rightarrow \mathbb{R}^{n_{c_N}}$ can be linear or nonlinear, with lower and upper bound $\underline{r}_k, \overline{r}_k$. $\phi_k(x_k,u_k)$ is a numerical integration operator that solves the following initial value problem (IVP) and returns the solution at $t_{k+1}$.
 \begin{equation}
 0=f_{impl}(\dot{x}(t), x(t),u(t),t),\quad x(0)=x_k.
 \end{equation}
@@ -124,7 +124,7 @@ where
 and
 \begin{equation}\label{QP data}
 \begin{aligned}
-&Q_k^i = \frac{\partial (d^i)^2}{\partial^2 x_k},\quad S_k^i =\frac{\partial (d^i)^2}{\partial x_k \partial u_k},\quad R^i_k= \frac{\partial (d^i)^2}{\partial^2 u_k},\quad Q_N^i = \frac{\partial (d^i_N)^2}{\partial^2 x_N}\\
+%&Q_k^i = \frac{\partial (d^i)^2}{\partial^2 x_k},\quad S_k^i =\frac{\partial (d^i)^2}{\partial x_k \partial u_k},\quad R^i_k= \frac{\partial (d^i)^2}{\partial^2 u_k},\quad Q_N^i = \frac{\partial (d^i_N)^2}{\partial^2 x_N}\\
 &g_{x_k}^i = \frac{\partial d^i}{\partial x_k},\quad g_{u_k}^i = \frac{\partial d^i}{\partial u_k},\quad g_{x_N}^i = \frac{\partial d^i_N}{\partial x_N},\\
 &A_k^i=\frac{\partial \phi_k}{\partial x_k}, \quad B_k^i=\frac{\partial \phi_k}{\partial u_k},\quad a_k^i = \phi(x_k^i,u_k^i)-x_{k+1}^i,\\
 &C_k^i=\frac{\partial r_k}{\partial x_k}, \quad D_k^i=\frac{\partial r_k}{\partial u_k},\quad C_N^i=\frac{\partial r_N}{\partial x_N},\\
@@ -132,7 +132,7 @@ and
 &\overline{c}_N^i=\overline{r}_N-r_N(x_N^i),\quad  \underline{c}_N^i=\underline{r}_N-r_N(x_N^i)
 \end{aligned}
 \end{equation}
-The Hessian matrices $Q_k,S_k,R_k$ are approximated by the Generalized-Gauss-Newton (GGN) method.
+The Hessian matrices $Q_k,S_k,R_k$ can be approximated by the Gauss-Newton (GN) or the Generalized-Gauss-Newton (GGN) method. If $h$ is (non)linear and $d$ is sum of squares, both methods lead to the same Hessian approximation.
 
 \subsubsection{Dual solution}
 The optimal primal solution of \eqref{QP} is denoted as $(\Delta \mathbf{x}^{i^*}, \Delta \mathbf{u}^{i^*})$. 
@@ -206,6 +206,8 @@ There are four main data structs in \software{MATMPC}, namely \alert{settings}, 
 \subsubsection{\alert{opts}}
 \begin{longtable}{l|l}
 	\hline
+		hessian          & Gauss\_Newton, Generalized\_Gauss\_Newton
+		\\
 		integrator       & ERK4, IRK3, EKR4-CASADI                                                                                                                                      \\
 		hessian          & gauss\_newton                                                                                                                                                \\
 		condensing       & default\_full, no, blasfeo\_full, partial\_condensing                                                                                                        \\ \hline

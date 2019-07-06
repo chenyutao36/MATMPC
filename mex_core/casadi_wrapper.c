@@ -212,35 +212,35 @@ void D_Fun(double **in, double **out) {
     D(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-// void Ji_Fun(double **in, double **out) {
-//     const double *xi = in[0];
-//     const double *ui = in[1];
-//     const double *parai = in[2];
-//     const double *refi = in[3];
-//     const double *Qi = in[4];
-// 
-//     double *Jx = out[0];
-//     double *Ju = out[1];
-// 
-//     void *casadi_mem = NULL;
-// //     int casadi_mem = 0;
-//     int *casadi_iw = NULL;
-//     double *casadi_w = NULL;
-// 
-//     const double *casadi_arg[5];
-//     double *casadi_res[2];
-// 
-//     casadi_arg[0] = xi;
-//     casadi_arg[1] = ui;
-//     casadi_arg[2] = parai;
-//     casadi_arg[3] = refi;
-//     casadi_arg[4] = Qi;
-// 
-//     casadi_res[0] = Jx;
-//     casadi_res[1] = Ju;
-// 
-//     Ji_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
-// }
+void Ji_Fun(double **in, double **out) {
+    const double *xi = in[0];
+    const double *ui = in[1];
+    const double *parai = in[2];
+    const double *refi = in[3];
+    const double *Qi = in[4];
+
+    double *Jx = out[0];
+    double *Ju = out[1];
+
+    void *casadi_mem = NULL;
+//     int casadi_mem = 0;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[5];
+    double *casadi_res[2];
+
+    casadi_arg[0] = xi;
+    casadi_arg[1] = ui;
+    casadi_arg[2] = parai;
+    casadi_arg[3] = refi;
+    casadi_arg[4] = Qi;
+
+    casadi_res[0] = Jx;
+    casadi_res[1] = Ju;
+
+    Ji_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
 
 void Hi_Fun(double **in, double **out) {
     const double *xi = in[0];
@@ -249,9 +249,7 @@ void Hi_Fun(double **in, double **out) {
     const double *refi = in[3];
     const double *Qi = in[4];
 
-    double *Hx = out[0];
-    double *Hu = out[1];
-    double *Hxu = out[2];
+    double *Hz = out[0];
 
     void *casadi_mem = NULL;
 //     int casadi_mem = 0;
@@ -259,7 +257,7 @@ void Hi_Fun(double **in, double **out) {
     double *casadi_w = NULL;
 
     const double *casadi_arg[5];
-    double *casadi_res[3];
+    double *casadi_res[1];
 
     casadi_arg[0] = xi;
     casadi_arg[1] = ui;
@@ -267,10 +265,8 @@ void Hi_Fun(double **in, double **out) {
     casadi_arg[3] = refi;
     casadi_arg[4] = Qi;
 
-    casadi_res[0] = Hx;
-    casadi_res[1] = Hu;
-    casadi_res[2] = Hxu;
-
+    casadi_res[0] = Hz;
+    
     Hi_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
@@ -356,39 +352,13 @@ void Ci_Fun(double **in, double **out) {
     Ci_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }
 
-// void JN_Fun(double **in, double *out) {
-//     const double *xN = in[0];
-//     const double *paraN = in[1] ;
-//     const double *refN = in[2];
-//     const double *QN = in[3];
-// 
-//     double *JxN = out;
-// 
-//     void *casadi_mem = NULL;
-// //     int casadi_mem = 0;
-//     int *casadi_iw = NULL;
-//     double *casadi_w = NULL;
-// 
-//     const double *casadi_arg[4];
-//     double *casadi_res[1];
-// 
-//     casadi_arg[0] = xN;
-//     casadi_arg[1] = paraN;
-//     casadi_arg[2] = refN;
-//     casadi_arg[3] = QN;
-// 
-//     casadi_res[0] = JxN;
-//     
-//     JN_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
-// }
-
-void HN_Fun(double **in, double **out) {
+void JN_Fun(double **in, double **out) {
     const double *xN = in[0];
     const double *paraN = in[1] ;
     const double *refN = in[2];
     const double *QN = in[3];
 
-    double *HN = out[0];
+    double *JxN = out[0];
 
     void *casadi_mem = NULL;
 //     int casadi_mem = 0;
@@ -403,7 +373,33 @@ void HN_Fun(double **in, double **out) {
     casadi_arg[2] = refN;
     casadi_arg[3] = QN;
 
-    casadi_res[0] = HN;
+    casadi_res[0] = JxN;
+    
+    JN_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
+
+void HN_Fun(double **in, double **out) {
+    const double *xN = in[0];
+    const double *paraN = in[1] ;
+    const double *refN = in[2];
+    const double *QN = in[3];
+
+    double *HzN = out[0];
+
+    void *casadi_mem = NULL;
+//     int casadi_mem = 0;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[4];
+    double *casadi_res[1];
+
+    casadi_arg[0] = xN;
+    casadi_arg[1] = paraN;
+    casadi_arg[2] = refN;
+    casadi_arg[3] = QN;
+
+    casadi_res[0] = HzN;
     
     HN_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }

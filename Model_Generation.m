@@ -93,10 +93,14 @@ gxi = jacobian(obji,states)' + SX.zeros(nx,1);
 gui = jacobian(obji,controls)' + SX.zeros(nu,1);
 gxN = jacobian(objN,states)' + SX.zeros(nx,1);
 
-Hxi = hessian(obji, states) + SX.zeros(nx, nx);
-Hui = hessian(obji, controls) + SX.zeros(nu, nu);
-Hxui = jacobian(jacobian(obji, states),controls) + SX.zeros(nx, nu);
-HN = hessian(objN, states) + SX.zeros(nx, nx);
+Hz = hessian(phi, aux) + SX.zeros(ny, ny);
+HzN = hessian(phiN, auxN) + SX.zeros(nyN, nyN);
+
+obj_vec = sqrt(diag(Q))*h;
+objN_vec = sqrt(diag(QN))*hN;
+Jxi = jacobian(obj_vec, states) + SX.zeros(ny, nx);
+Jui = jacobian(obj_vec, controls) + SX.zeros(ny, nu);
+JxN = jacobian(objN_vec, states) + SX.zeros(nyN, nx);
 
 Cxi = jacobian(general_con, states) + SX.zeros(nc, nx);
 Cui = jacobian(general_con, controls) + SX.zeros(nc, nu);
@@ -105,8 +109,16 @@ CxN = jacobian(general_con_N, states) + SX.zeros(ncN, nx);
 obji_fun = Function('obji_fun',{states,controls,params,refs,Q},{obji+SX.zeros(1,1)});
 objN_fun = Function('objN_fun',{states,params,refN,QN},{objN+SX.zeros(1,1)});
 
-Hi_fun=Function('Hi_fun',{states,controls,params,refs,Q},{Hxi,Hui,Hxui});
-HN_fun=Function('HN_fun',{states,params,refN,QN},{HN});
+Hz_fun = Function('Hz_fun',{aux,params,refs,Q},{Hz});
+HzN_fun = Function('HzN_fun',{auxN,params,refN,QN},{HzN});
+Hw = Hz_fun(h,params,refs,Q) + SX.zeros(ny,ny);
+HwN = HzN_fun(hN,params,refN,QN)+ SX.zeros(nyN,nyN);
+
+Hi_fun=Function('Hi_fun',{states,controls,params,refs,Q},{Hw});
+HN_fun=Function('HN_fun',{states,params,refN,QN},{HwN});
+
+Ji_fun=Function('Ji_fun',{states,controls,params,refs,Q},{Jxi,Jui});
+JN_fun=Function('JN_fun',{states,params,refN,QN},{JxN});
 
 gi_fun=Function('gi_fun',{states,controls,params,refs,Q},{gxi, gui});
 gN_fun=Function('gN_fun',{states,params,refN,QN},{gxN});
@@ -163,8 +175,6 @@ if strcmp(generate,'y')
     h_fun.generate('h_fun.c',opts);
     path_con_fun.generate('path_con_fun.c',opts);
     path_con_N_fun.generate('path_con_N_fun.c',opts);
-    Hi_fun.generate('Hi_fun.c',opts);
-    HN_fun.generate('HN_fun.c',opts);
    
     opts = struct('main',false,'mex',false,'with_header',true);
     cd ../mex_core
@@ -186,6 +196,8 @@ if strcmp(generate,'y')
         P.add(gN_fun);
         P.add(Hi_fun);
         P.add(HN_fun);
+        P.add(Ji_fun);
+        P.add(JN_fun);
         P.add(Ci_fun);
         P.add(CN_fun);
         P.add(adj_fun);
@@ -237,8 +249,6 @@ if strcmp(compile,'y')
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_N_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'h_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Simulate_system.c');
-    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'Hi_fun.c');
-    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'HN_fun.c');
        
     cd ../mex_core
     Compile_Mex;

@@ -1,7 +1,6 @@
 
 #include "mex.h"
 #include "string.h"
-#include <math.h>
 
 #include "sim.h"
 #include "erk.h"
@@ -17,6 +16,11 @@ static sim_out *out = NULL;
 static sim_erk_workspace *erk_workspace = NULL;
 static sim_irk_workspace *irk_workspace = NULL;
 static bool mem_alloc = false;
+static double *Hes[1];
+static double *HesN[1];
+static double *Jac[2];
+static double *JacN[1];
+static double *temp[3];
 
 void exitFcn(){
     if (erk_workspace!=NULL)
@@ -28,7 +32,23 @@ void exitFcn(){
     if (in!=NULL)
         sim_in_free(in);
     if (out!=NULL)
-        sim_out_free(out);    
+        sim_out_free(out);
+    if (Hes[0]!=NULL)	
+        mxFree(Hes[0]);
+    if (HesN[0]!=NULL)	
+        mxFree(HesN[0]);	
+    if (Jac[0]!=NULL)	
+        mxFree(Jac[0]);	
+    if (Jac[1]!=NULL)	
+        mxFree(Jac[1]);	
+    if (JacN[0]!=NULL)	
+        mxFree(JacN[0]);
+    if (temp[0]!=NULL)	
+        mxFree(temp[0]);	
+    if (temp[1]!=NULL)	
+        mxFree(temp[1]);
+    if (temp[2]!=NULL)	
+        mxFree(temp[2]);
 }
 
 void
@@ -93,7 +113,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
     size_t ns = mxGetScalar( mxGetField(prhs[2], 0, "num_steps") );
-    
+    int hessian_type = mxGetScalar( mxGetField(prhs[2], 0, "hessian") );
     
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - x[i];
@@ -101,7 +121,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     // allocate memory
     double *Sens[2];    
     double *Cons[2];
-    double *Hes[3];
       
     double *casadi_in[5];
     double *casadi_out[2];    
@@ -129,7 +148,26 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
                 break;
-        }               
+        }  
+        
+        Hes[0] = (double *) mxMalloc(ny*ny * sizeof(double));	
+        mexMakeMemoryPersistent(Hes[0]); 	
+        HesN[0] = (double *) mxMalloc(nyN*nyN * sizeof(double));	
+        mexMakeMemoryPersistent(HesN[0]); 	
+                       
+        Jac[0] = (double *) mxMalloc(ny*nx * sizeof(double));	
+        mexMakeMemoryPersistent(Jac[0]); 	
+        Jac[1] = (double *) mxMalloc(ny*nu * sizeof(double));	
+        mexMakeMemoryPersistent(Jac[1]); 	
+        JacN[0] = (double *) mxMalloc(nyN*nx * sizeof(double));	
+        mexMakeMemoryPersistent(JacN[0]);       
+        
+        temp[0] = (double *) mxMalloc(ny*nx * sizeof(double));	
+        mexMakeMemoryPersistent(temp[0]); 	
+        temp[1] = (double *) mxMalloc(ny*nu * sizeof(double));	
+        mexMakeMemoryPersistent(temp[1]);        
+        temp[2] = (double *) mxMalloc(nyN*nx * sizeof(double));	
+        mexMakeMemoryPersistent(temp[2]); 
         
         mem_alloc=true;
         mexAtExit(exitFcn);
@@ -196,17 +234,37 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
        
         // Hessian
         if (!lin_obj){
-            Hes[0] = Q+i*nx*nx;
-            Hes[1] = R+i*nu*nu;
-            Hes[2] = S+i*nx*nu;
-            Hi_Fun(casadi_in, Hes);
+            Ji_Fun(casadi_in, Jac);
+            switch(hessian_type){                
+                case 0:                   
+                    dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
+                    dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
+                    dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
+                    break;
+                
+                case 1:
+                    Hi_Fun(casadi_in, Hes);
+                    dgemm(Trans, nTrans, &nx, &ny, &ny, &one_d, Jac[0], &ny, Hes[0], &ny, &zero, temp[0], &nx);
+                    dgemm(nTrans, nTrans, &nx, &nx, &ny, &one_d, temp[0], &nx, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
+                    
+                    dgemm(nTrans, nTrans, &nx, &nu, &ny, &one_d, temp[0], &nx, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
+                    
+                    dgemm(Trans, nTrans, &nu, &ny, &ny, &one_d, Jac[1], &ny, Hes[0], &ny, &zero, temp[1], &nu);
+                    dgemm(nTrans, nTrans, &nu, &nu, &ny, &one_d, temp[1], &nu, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
+                    
+                    break;
+                default:
+                    mexErrMsgTxt("Please choose a supported Hessian type");
+                    break;
+                                
+            }
             
             for (j=0;j<nx*nx;j++)
-                Hes[0][j]*=index_T[i+1]-index_T[i];
+                Q[i*nx*nx+j]*=index_T[i+1]-index_T[i];
             for (j=0;j<nu*nu;j++)
-                Hes[1][j]*=index_T[i+1]-index_T[i];
+                R[i*nu*nu+j]*=index_T[i+1]-index_T[i];
             for (j=0;j<nx*nu;j++)
-                Hes[2][j]*=index_T[i+1]-index_T[i];
+                S[i*nx*nu+j]*=index_T[i+1]-index_T[i];
             
             regularization(nx, Q+i*nx*nx, reg);
             regularization(nu, R+i*nu*nu, reg);
@@ -248,11 +306,24 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     casadi_in[3] = WN;
     
     if (!lin_obj){
-        Hes[0]=Q+N*nx*nx;
-        HN_Fun(casadi_in, Hes);
+        JN_Fun(casadi_in, JacN);
+        switch(hessian_type){            
+            case 0:
+                dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, JacN[0], &nyN, JacN[0], &nyN, &zero, Q+N*nx*nx, &nx);
+                break;
+            case 1:
+                HN_Fun(casadi_in, HesN);
+                dgemm(Trans, nTrans, &nx, &nyN, &nyN, &one_d, JacN[0], &nyN, HesN[0], &nyN, &zero, temp[2], &nx);
+                dgemm(nTrans, nTrans, &nx, &nx, &nyN, &one_d, temp[2], &nx, JacN[0], &nyN, &zero, Q+N*nx*nx, &nx);
+                break;
+            default:
+                mexErrMsgTxt("Please choose a supported Hessian type");
+                break;
+                
+        }
         
         for (j=0;j<nx*nx;j++)
-            Hes[0][j]*=index_T[r]-index_T[r-1];
+            Q[N*nx*nx+j]*=index_T[r]-index_T[r-1];
         
         regularization(nx, Q+N*nx*nx, reg);
     }
