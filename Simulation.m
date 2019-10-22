@@ -1,4 +1,4 @@
-clear mex; close all;clc;
+clear all; clear mex; close all;clc;
 
 disp( ' ' );
 disp( 'MATMPC -- A (MAT)LAB based Model(M) Predictive(P) Control(C) Package.' );
@@ -52,15 +52,15 @@ settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 mean
 r = 3;
 settings.r = r;      % No. of input blocks
 
-opt.hessian='Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
-opt.integrator='ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
-opt.condensing='default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
-opt.qpsolver='qpoases'; 
-opt.hotstart='no'; %'yes','no' (only for qpoases)
-opt.shifting='no'; % 'yes','no'
-opt.lin_obj='no'; % 'yes','no' % if the inner objective function is linear and the outer objective is sum of quadratic
-opt.ref_type=0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
-opt.nonuniform_grid=0; % supports only ERK4 and IRK3
+opt.hessian         = 'Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
+opt.integrator      = 'ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
+opt.condensing      = 'default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
+opt.qpsolver        = 'qpoases'; 
+opt.hotstart        = 'no'; %'yes','no' (only for qpoases)
+opt.shifting        = 'no'; % 'yes','no'
+opt.lin_obj         = 'no'; % 'yes','no' % if the inner objective function is linear and the outer objective is sum of quadratic
+opt.ref_type        = 0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
+opt.nonuniform_grid = 0; % supports only ERK4 and IRK3
 
 %% available qpsolver
 %'qpoases' (for full condensing)
@@ -90,7 +90,7 @@ mem = InitMemory(settings, opt, input);
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
-Tf = 4;  % simulation time
+Tf = 5;  % simulation time
 state_sim= input.x0';
 controls_MPC = input.u0';
 y_sim = [];
@@ -119,7 +119,7 @@ while time(end) < Tf
     % obtain the state measurement
     input.x0 = state_sim(end,:)';
     
-    % call the NMPC solver   
+    % call the NMPC solver 
     [output, mem]=mpc_nmpcsolver(input, settings, mem, opt);
     
     % obtain the solution and update the data

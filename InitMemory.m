@@ -310,7 +310,7 @@ function [mem] = InitMemory(settings, opt, input)
                        0, 0.5, 0, 0;
                        0, 0, 1, 0];
             mem.B_tab=[1/6, 1/3, 1/3, 1/6];
-            mem.num_steps = s;
+            mem.num_steps = 2;
             mem.num_stages = 4;
             mem.h=Ts_st/mem.num_steps;
             mem.nx = nx;
@@ -323,7 +323,11 @@ function [mem] = InitMemory(settings, opt, input)
                        5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;
                        5/36+sqrt(15)/30, 2/9+sqrt(15)/15, 5/36];
             mem.B_tab=[5/18;4/9;5/18];
-            mem.num_steps = s;
+%             mem.A_tab=[(88-7*sqrt(6))/360,    (296-169*sqrt(6))/1800, (-2+3*sqrt(6))/225;
+%                        (296+169*sqrt(6))/1800, (88+7*sqrt(6))/360     (-2-3*sqrt(6))/225;
+%                        (16-sqrt(6))/36,       (16+sqrt(6))/36,         1/9];
+%             mem.B_tab=[(16-sqrt(6))/36;(16+sqrt(6))/36;1/9];
+            mem.num_steps = 2;
             mem.num_stages = 3;
             mem.h= Ts_st/mem.num_steps;
             mem.nx = nx;
@@ -338,7 +342,7 @@ function [mem] = InitMemory(settings, opt, input)
     
     % globalization
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-2;          % tolerance on optimality
+    mem.kkt_lim = 1e-3;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor

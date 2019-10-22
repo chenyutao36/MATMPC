@@ -1,11 +1,11 @@
 #include "mex.h"
 #include "string.h"
-#include <stdbool.h>
+// #include <stdbool.h>
 
 #include "casadi_wrapper.h"
 #include "sim.h"
 #include "erk.h"
-#include "irk.h"
+#include "irk_ode.h"
 
 #include "lapack.h"
 #include "blas.h"
@@ -17,7 +17,7 @@ static sim_opts *opts = NULL;
 static sim_in *in = NULL;
 static sim_out *out = NULL;
 static sim_erk_workspace *erk_workspace = NULL;
-static sim_irk_workspace *irk_workspace = NULL;
+static sim_irk_ode_workspace *irk_ode_workspace = NULL;
 static bool mem_alloc = false;
 
 static double *casadi_out[3];
@@ -28,8 +28,8 @@ static double *lu, *uu, *lx, *ux, *tmp;
 void exitFcn(){   
     if (erk_workspace!=NULL)
         sim_erk_workspace_free(opts, erk_workspace);
-    if (irk_workspace!=NULL)
-        sim_irk_workspace_free(opts, irk_workspace);
+    if (irk_ode_workspace!=NULL)
+        sim_irk_ode_workspace_free(opts, irk_ode_workspace);
     if (opts!=NULL)
         sim_opts_free(opts);
     if (in!=NULL)
@@ -88,7 +88,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
           
-    size_t i=0,j=0;
+    size_t i=0,j=0,l=0;
     size_t nz = nx+nu;
     size_t nw = N*nz+nx;
     size_t neq = (N+1)*nx;
@@ -99,6 +99,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     int idx;
     
     double *casadi_in[9];
+    // double *casadi_in[8];
         
     if (!mem_alloc){
         casadi_out[1] = (double *)mxMalloc(nz * sizeof(double));
@@ -128,7 +129,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
             case 1:
                 opts = sim_opts_create(prhs[2]);
-                opts->forw_sens = false;
+                opts->forw_sens_flag = false;
+                opts->adj_sens_flag = true;
                 in = sim_in_create(opts);              
                 out = sim_out_create(opts);                
                 erk_workspace = sim_erk_workspace_create(opts);               
@@ -136,11 +138,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
             case 2:
                 opts = sim_opts_create(prhs[2]);
-                opts->forw_sens = false;
+                opts->forw_sens_flag = false;
+                opts->adj_sens_flag = true;
                 in = sim_in_create(opts);              
                 out = sim_out_create(opts);                
-                irk_workspace = sim_irk_workspace_create(opts);               
-                sim_irk_workspace_init(opts, prhs[2], irk_workspace);
+                irk_ode_workspace = sim_irk_ode_workspace_create(opts);               
+                sim_irk_ode_workspace_init(opts, prhs[2], irk_ode_workspace);
                 break;
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
@@ -164,71 +167,81 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_in[3] = y+i*ny;
         casadi_in[4] = W+i*ny;
         casadi_in[5] = lambda+(i+1)*nx;
-        if (i==0)
+        if (i==0){
             casadi_in[6] = tmp;
-        else
+        }
+        else{
             casadi_in[6] = mu_x+(i-1)*nbx;
+        }
         casadi_in[7] = mu_u+i*nu;
         casadi_in[8] = mu+i*nc;
-           
-        casadi_out[0] = L+i*nz;
-        adj_Fun(casadi_in, casadi_out);
-                
-        if (i>0){
-            for (j=0;j<nx;j++)
-                casadi_out[1][j] -= lambda[i*nx+j];
-        }else{
-            for (j=0;j<nx;j++)
-                casadi_out[1][j] += lambda[j];
-        }
-        
-        daxpy(&nz, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i);
-        daxpy(&nz, &one_d, casadi_out[2], &one_i, casadi_out[0], &one_i);  
-        
+
+        // objective value      
         casadi_out[0] = obj;
         obji_Fun(casadi_in, casadi_out);
         OBJ += obj[0];
               
+        // call integrator to compute xend and adjoint sensitivities
         switch(sim_method){
             case 0:
                 casadi_out[0] = eq_res_vec+(i+1)*nx;  
                 F_Fun(casadi_in, casadi_out);
+                adj_dG_Fun(casadi_in, &casadi_out[2]);
                 break;
             case 1:      
                 in->x = x+i*nx;
                 in->u = u+i*nu;
                 in->p = od+i*np;
+                in->lambda = lambda+(i+1)*nx;
                 out->xn = eq_res_vec+(i+1)*nx;
+                out->adj_sens = casadi_out[2];
                 sim_erk(in, out, opts, erk_workspace);
                 break;
             case 2:                         
                 in->x = x+i*nx;
                 in->u = u+i*nu;
                 in->p = od+i*np;
+                in->lambda = lambda+(i+1)*nx;
                 out->xn = eq_res_vec+(i+1)*nx;
-                sim_irk(in, out, opts, irk_workspace);
+                out->adj_sens = casadi_out[2];
+                sim_irk_ode(in, out, opts, irk_ode_workspace);
                 break;
             default :
                 mexErrMsgTxt("Please choose a supported integrator");
                 break;
         }
+
+        // compute gradient of Lagrangian
+        if (i>0){
+            for (j=0;j<nx;j++)
+                casadi_out[2][j] -= lambda[i*nx+j];
+        }else{
+            for (j=0;j<nx;j++)
+                casadi_out[2][j] += lambda[j];
+        }
+        casadi_out[0] = L+i*nz;
+        adj_Fun(casadi_in, casadi_out);                      
+        daxpy(&nz, &one_d, casadi_out[1], &one_i, casadi_out[0], &one_i); // dojb+dB'*mu
+        daxpy(&nz, &one_d, casadi_out[2], &one_i, casadi_out[0], &one_i); // dobj+dB'*mu+dG'*lambda 
         
-        
+        // equality constraint residual
         for (j=0;j<nx;j++)
             eq_res_vec[(i+1)*nx+j] -= x[(i+1)*nx+j];
         
-        
+        // control bound residual
         for (j=0;j<nu;j++){
             lu[i*nu+j] = lbu[i*nu+j] - u[i*nu+j];
             uu[i*nu+j] = ubu[i*nu+j] - u[i*nu+j];
         }
         
+        // state bound residual
         for (j=0;j<nbx;j++){
             idx = (int)nbx_idx[j]-1;
             lx[i*nbx+j] = lbx[i*nbx+j] - x[(i+1)*nx+idx];
             ux[i*nbx+j] = ubx[i*nbx+j] - x[(i+1)*nx+idx];
         }
         
+        // general constraint residual
         if (nc>0){
             casadi_in[0]=x+i*nx;
             casadi_in[1]=u+i*nu;

@@ -46,7 +46,7 @@ end
 Simulate_system = Function('Simulate_system', {states,controls,params}, {X}, {'states','controls','params'}, {'xf'});
 
 %% Integrator for multiple shooting
-s  = 1; % No. of integration steps per shooting interval
+s  = 2; % No. of integration steps per shooting interval
 DT = Ts_st/s;
 f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
 
@@ -66,6 +66,9 @@ vdeX = vdeX + jtimes(x_dot,states,Sx);
 vdeU = SX.zeros(nx,nu) + jacobian(x_dot,controls);
 vdeU = vdeU + jtimes(x_dot,states,Su);
 vdeFun = Function('vdeFun',{states,controls,params,Sx,Su},{vdeX,vdeU});
+
+adjW = SX.zeros(nx+nu,1) + jtimes(x_dot, [states;controls], lambda, true);
+adj_ERK_fun = Function('adj_ERK_fun',{states,controls,params,lambda},{adjW});
 
 X=states;
 U=controls; 
@@ -154,10 +157,10 @@ if ncN>0
     adj_dBN = adj_dBN + jtimes(general_con_N, states, muN_g, true);
 end
 
-adj_fun = Function('adj_fun',{states,controls,params,refs,Q,lambda,mu_x,mu_u,mu_g},{dobj, adj_dG, adj_dB});
+adj_fun = Function('adj_fun',{states,controls,params,refs,Q,lambda,mu_x,mu_u,mu_g},{dobj, adj_dB});
+adj_dG_fun = Function('adj_dG_fun',{states,controls,params,refs,Q,lambda},{adj_dG});
 adjN_fun = Function('adjN_fun',{states,params,refN, QN, mu_x,muN_g},{dobjN, adj_dBN});
 
-adj_dG_fun = Function('adj_dG_fun',{states,controls,params,refs,Q,lambda},{dobj, adj_dG});
 
 %% Code generation and Compile
 
@@ -181,6 +184,7 @@ if strcmp(generate,'y')
         P = CodeGenerator ('casadi_src.c', opts) ;
         P.add(f_fun);
         P.add(vdeFun);
+        P.add(adj_ERK_fun);
         P.add(impl_f_fun);
         P.add(impl_jac_x_fun);
         P.add(impl_jac_u_fun);
@@ -201,8 +205,7 @@ if strcmp(generate,'y')
         P.add(Ci_fun);
         P.add(CN_fun);
         P.add(adj_fun);
-        P.add(adjN_fun);
-        
+        P.add(adjN_fun);       
         P.add(adj_dG_fun);
         
         P.generate();

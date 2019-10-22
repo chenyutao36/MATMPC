@@ -16,6 +16,9 @@ typedef struct{
     double *dKu;
     double *jacX_t;
     double *jacU_t;
+    double *X_traj;
+    double *K_lambda;
+    double *lambda_t;
 }sim_erk_workspace;
 
 sim_erk_workspace* sim_erk_workspace_create(sim_opts *opts);

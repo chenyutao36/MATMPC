@@ -9,19 +9,22 @@ typedef struct{
     size_t nu;
     size_t num_stages;
     size_t num_steps;
-    bool forw_sens;
+    bool forw_sens_flag;
+    bool adj_sens_flag;
 }sim_opts;
 
 typedef struct{
     double *x;
     double *u;
     double *p;
+    double *lambda;
 }sim_in;
 
 typedef struct{
     double *xn;
     double *Sx;
     double *Su;
+    double *adj_sens;
 }sim_out;
 
 sim_opts* sim_opts_create(const mxArray *mem);

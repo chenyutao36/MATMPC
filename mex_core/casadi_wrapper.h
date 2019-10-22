@@ -3,6 +3,7 @@
 
 void f_Fun(double **in, double **out);
 void vde_Fun(double **in, double **out);
+void adj_ERK_Fun(double **in, double **out);
 void impl_f_Fun(double **in, double **out);
 void impl_jac_x_Fun(double **in, double **out);
 void impl_jac_u_Fun(double **in, double **out);

@@ -4,7 +4,7 @@
 
 #include "sim.h"
 #include "erk.h"
-#include "irk.h"
+#include "irk_ode.h"
 #include "casadi_wrapper.h"
 #include "mpc_common.h"
 
@@ -14,7 +14,7 @@ static sim_opts *opts = NULL;
 static sim_in *in = NULL;
 static sim_out *out = NULL;
 static sim_erk_workspace *erk_workspace = NULL;
-static sim_irk_workspace *irk_workspace = NULL;
+static sim_irk_ode_workspace *irk_ode_workspace = NULL;
 static bool mem_alloc = false;
 static double *Hes[1];
 static double *HesN[1];
@@ -25,8 +25,8 @@ static double *temp[3];
 void exitFcn(){
     if (erk_workspace!=NULL)
         sim_erk_workspace_free(opts, erk_workspace);
-    if (irk_workspace!=NULL)
-        sim_irk_workspace_free(opts, irk_workspace);
+    if (irk_ode_workspace!=NULL)
+        sim_irk_ode_workspace_free(opts, irk_ode_workspace);
     if (opts!=NULL)
         sim_opts_free(opts);
     if (in!=NULL)
@@ -68,6 +68,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ubu = mxGetPr( mxGetField(prhs[0], 0, "ubu") );
     double *lbx = mxGetPr( mxGetField(prhs[0], 0, "lbx") );
     double *ubx = mxGetPr( mxGetField(prhs[0], 0, "ubx") );
+    // double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda") );
     
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -106,6 +107,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
     double *lb_dx = mxGetPr( mxGetField(prhs[2], 0, "lb_dx") );
     double *ub_dx = mxGetPr( mxGetField(prhs[2], 0, "ub_dx") );
+    // double *adj_sens = mxGetPr( mxGetField(prhs[2], 0, "lambda_test") );
     
     int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
@@ -127,7 +129,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
             case 1:
                 opts = sim_opts_create(prhs[2]);
-                opts->forw_sens = true;
+                opts->forw_sens_flag = true;
+                opts->adj_sens_flag = false;
                 in = sim_in_create(opts);              
                 out = sim_out_create(opts);                
                 erk_workspace = sim_erk_workspace_create(opts);               
@@ -135,11 +138,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
             case 2:
                 opts = sim_opts_create(prhs[2]);
-                opts->forw_sens = true;
+                opts->forw_sens_flag = true;
+                opts->adj_sens_flag = false;
                 in = sim_in_create(opts);              
                 out = sim_out_create(opts);                
-                irk_workspace = sim_irk_workspace_create(opts);               
-                sim_irk_workspace_init(opts, prhs[2], irk_workspace);
+                irk_ode_workspace = sim_irk_ode_workspace_create(opts);               
+                sim_irk_ode_workspace_init(opts, prhs[2], irk_ode_workspace);
                 break;
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
@@ -215,7 +219,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 out->xn = a+i*nx;
                 out->Sx = A + i*nx*nx;
                 out->Su = B + i*nx*nu;
-                sim_irk(in, out, opts, irk_workspace);
+                sim_irk_ode(in, out, opts, irk_ode_workspace);
                 break;
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
