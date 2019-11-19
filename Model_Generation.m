@@ -30,7 +30,7 @@ mu_g=SX.sym('mu_g',nc,1);                  % the i th multiplier for bounds on c
 muN_g=SX.sym('muN_g',ncN,1);                 % the N th multiplier for inequality constraints
 
 %% Explicit Runge-Kutta 4 Integrator for simulation
-s  = 1; % No. of integration steps per sample interval
+s  = 2; % No. of integration steps per sample interval
 DT = Ts/s;
 f  = Function('f', {states,controls,params}, {x_dot},{'states','controls','params'},{'xdot'});
 X=states;
@@ -96,8 +96,8 @@ gxi = jacobian(obji,states)' + SX.zeros(nx,1);
 gui = jacobian(obji,controls)' + SX.zeros(nu,1);
 gxN = jacobian(objN,states)' + SX.zeros(nx,1);
 
-Hz = hessian(phi, aux) + SX.zeros(ny, ny);
-HzN = hessian(phiN, auxN) + SX.zeros(nyN, nyN);
+Hz = hessian(obji_GGN, aux) + SX.zeros(ny, ny);
+HzN = hessian(objN_GGN, auxN) + SX.zeros(nyN, nyN);
 
 obj_vec = sqrt(diag(Q))*h;
 objN_vec = sqrt(diag(QN))*hN;

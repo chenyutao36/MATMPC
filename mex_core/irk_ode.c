@@ -219,7 +219,7 @@ int sim_irk_ode(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_ode_workspace 
                 for (j=0; j<num_stages; j++){ //compute the block (ii,jj)th block = Jt
                     a = A[j * num_stages + i];
                     memcpy(tmp_nx_nx, jac_x_out[0], nx*nx*sizeof(double));
-                    a *= h
+                    a *= h;
                     dscal(&jx, &a, tmp_nx_nx, &one_i);                   
                     if(j==i){
                         daxpy(&jx, &one_d, jac_xdot_out[0], &one_i, tmp_nx_nx, &one_i);
