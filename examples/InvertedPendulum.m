@@ -71,8 +71,8 @@ hN = h(1:nyN);
 obji = 0.5*(h-refs)'*diag(Q)*(h-refs);
 objN = 0.5*(hN-refN)'*diag(QN)*(hN-refN);
 
-phi = 0.5*(aux-refs)'*(aux-refs);
-phiN = 0.5*(auxN-refN)'*(auxN-refN);
+obji_GGN = 0.5*(aux-refs)'*(aux-refs);
+objN_GGN = 0.5*(auxN-refN)'*(auxN-refN);
 
 % general inequality constraints
 general_con = [];

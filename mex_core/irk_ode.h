@@ -30,6 +30,7 @@ typedef struct{
     size_t *IPIV;
     size_t *IPIV_traj;
     int newton_iter;
+    double *tmp_nx_nx;
 }sim_irk_ode_workspace;
 
 sim_irk_ode_workspace* sim_irk_ode_workspace_create(sim_opts *opts);

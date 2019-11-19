@@ -319,10 +319,14 @@ function [mem] = InitMemory(settings, opt, input)
             mem.Su = zeros(nx,nu);
         case 'IRK3'
             mem.sim_method = 2;
+            
+            % Gauss-Legendre
             mem.A_tab=[5/36,             2/9-sqrt(15)/15, 5/36-sqrt(15)/30;
                        5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;
                        5/36+sqrt(15)/30, 2/9+sqrt(15)/15, 5/36];
             mem.B_tab=[5/18;4/9;5/18];
+
+            % Radau IIA
 %             mem.A_tab=[(88-7*sqrt(6))/360,    (296-169*sqrt(6))/1800, (-2+3*sqrt(6))/225;
 %                        (296+169*sqrt(6))/1800, (88+7*sqrt(6))/360     (-2-3*sqrt(6))/225;
 %                        (16-sqrt(6))/36,       (16+sqrt(6))/36,         1/9];

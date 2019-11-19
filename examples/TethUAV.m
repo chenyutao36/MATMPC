@@ -100,8 +100,8 @@ hN = [phi-phi_ref;phi_dot;theta-theta_ref;theta_dot];
 obji = 0.5*(h-refs)'*diag(Q)*(h-refs);
 objN = 0.5*(hN-refN)'*diag(QN)*(hN-refN);
 
-phi = 0.5*(aux-refs)'*(aux-refs);
-phiN = 0.5*(auxN-refN)'*(auxN-refN);
+obji_GGN = 0.5*(aux-refs)'*(aux-refs);
+objN_GGN = 0.5*(auxN-refN)'*(auxN-refN);
 
 % general inequality path constraints
 general_con = [1/a2*phi_dot^2 + a1/a2*sin(phi) + sin(phi+theta)*(f1+f2); 

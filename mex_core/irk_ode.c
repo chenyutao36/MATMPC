@@ -62,11 +62,13 @@ sim_irk_ode_workspace* sim_irk_ode_workspace_create(sim_opts *opts)
         work->JGu = mxMalloc(opts->num_stages*opts->nx*opts->nu*sizeof(double));
         work->JKx = mxMalloc(opts->num_stages*opts->nx*opts->nx*sizeof(double));
         work->JKu = mxMalloc(opts->num_stages*opts->nx*opts->nu*sizeof(double));
+        work->tmp_nx_nx = mxMalloc(opts->nx*opts->nx*sizeof(double));
         
         mexMakeMemoryPersistent(work->JGx);
         mexMakeMemoryPersistent(work->JGu);
         mexMakeMemoryPersistent(work->JKx);
         mexMakeMemoryPersistent(work->JKu);
+        mexMakeMemoryPersistent(work->tmp_nx_nx);
     }
 
     if (opts->adj_sens_flag){
@@ -158,6 +160,8 @@ int sim_irk_ode(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_ode_workspace 
     size_t *IPIV = workspace->IPIV;
     size_t *IPIV_traj = workspace->IPIV_traj;
     int newton_iter = workspace->newton_iter;
+
+    double *tmp_nx_nx = workspace->tmp_nx_nx;
     
     double measure;
        
@@ -211,28 +215,37 @@ int sim_irk_ode(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_ode_workspace 
                 impl_f_Fun(impl_ode_in, res_out);
                 impl_jac_x_Fun(impl_ode_in, jac_x_out);
                 impl_jac_xdot_Fun(impl_ode_in, jac_xdot_out);
-                                             
+                                                            
                 for (j=0; j<num_stages; j++){ //compute the block (ii,jj)th block = Jt
-                    a = A[i + num_stages*j];
-                    if (a!=0){
-                        a *= h;
-                        dscal(&jx, &a, jac_x_out[0], &one_i);
-                    }
+                    a = A[j * num_stages + i];
+                    memcpy(tmp_nx_nx, jac_x_out[0], nx*nx*sizeof(double));
+                    a *= h
+                    dscal(&jx, &a, tmp_nx_nx, &one_i);                   
                     if(j==i){
-                        daxpy(&jx, &one_d, jac_xdot_out[0], &one_i, jac_x_out[0], &one_i);
+                        daxpy(&jx, &one_d, jac_xdot_out[0], &one_i, tmp_nx_nx, &one_i);
                     }
                     // fill in the i-th, j-th block of JGK
-                    Block_Fill(nx, nx, jac_x_out[0], JGK, i*nx, j*nx, ldG);
+                    Block_Fill(nx, nx, tmp_nx_nx, JGK, i*nx, j*nx, ldG);
                 } // end j
-            }// end i             
-            
+            }// end i  
+                  
             dgetrf(&ldG, &ldG, JGK, &ldG, IPIV, &INFO);	
+
+            if (INFO < 0){
+                mexPrintf("The %d th argument had an illegal value\n", -1.0*INFO);
+                mexErrMsgTxt("The linear solver failed in the integrator!");
+            }
+            if (INFO > 0){
+                mexPrintf("The factorized U(%d,%d) is zero\n", INFO, INFO);
+                mexErrMsgTxt("The linear solver failed in the integrator!");
+            }
                       
             dgetrs(nTrans, &ldG, &one_i, JGK, &ldG, IPIV, rG, &ldG, &INFO);
                                     
             daxpy(&ldG, &minus_one_d, rG, &one_i, K, &one_i);
+
         }//end Newton iter
-        
+      
         measure = dnrm2(&ldG, rG, &one_i);
         if (measure>1E-2){
             mexPrintf("Integrator residual is %5.3e\n",measure);
@@ -269,20 +282,28 @@ int sim_irk_ode(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_ode_workspace 
                 }
                                               
                 for (j=0; j<num_stages; j++){ //compute the block (ii,jj)th block = Jt
-                    a = A[i + num_stages*j];
-                    if (a!=0){
-                        a *= h;
-                        dscal(&jx, &a, jac_x_out[0], &one_i);
-                    }
+                    a = A[j * num_stages + i];
+                    memcpy(tmp_nx_nx, jac_x_out[0], nx*nx*sizeof(double));
+                    a *= h;
+                    dscal(&jx, &a, tmp_nx_nx, &one_i);
                     if(j==i){
-                        daxpy(&jx, &one_d, jac_xdot_out[0], &one_i, jac_x_out[0], &one_i);
+                        daxpy(&jx, &one_d, jac_xdot_out[0], &one_i, tmp_nx_nx, &one_i);
                     }
                     // fill in the i-th, j-th block of JGK
-                    Block_Fill(nx, nx, jac_x_out[0], JGK, i*nx, j*nx, ldG);
+                    Block_Fill(nx, nx, tmp_nx_nx, JGK, i*nx, j*nx, ldG);
                 } // end j
             }// end i             
             
             dgetrf(&ldG, &ldG, JGK, &ldG, IPIV, &INFO);	
+
+            if (INFO < 0){
+                mexPrintf("The %d th argument had an illegal value\n", -1.0*INFO);
+                mexErrMsgTxt("The linear solver failed in the integrator!");
+            }
+            if (INFO > 0){
+                mexPrintf("The U(%d,%d) is zero\n", INFO, INFO);
+                mexErrMsgTxt("The linear solver failed in the integrator!");
+            }
 
             if (forw_sens_flag){
                 dgemm(nTrans, nTrans, &ldG, &nx, &nx, &one_d, JGx, &ldG, Jac_x, &nx, &zero, JKx, &ldG);
@@ -344,6 +365,8 @@ void sim_irk_ode_workspace_free(sim_opts *opts, sim_irk_ode_workspace *work)
         mxFree(work->JGu);
         mxFree(work->JKx);
         mxFree(work->JKu);
+
+        mxFree(work->tmp_nx_nx);
     }
 
     if (opts->adj_sens_flag){
