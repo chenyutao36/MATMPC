@@ -40,8 +40,8 @@ void exitFcn(){
         sim_out_free(out);    
 }
 
-double eval_cons_res(double *x, double *u, double *od, double *x0, double *lb, double *ub, double *lc, double *uc,
-                   double *lbx, double *ubx, double *lbu, double *ubu, size_t nx, size_t nu, size_t nc, size_t ncN,
+double eval_cons_res(double *x, double *u, double *od, double *z, double *x0, double *lb, double *ub, double *lc, double *uc,
+                   double *lbx, double *ubx, double *lbu, double *ubu, size_t nx, size_t nu, size_t nz, size_t nc, size_t ncN,
                    size_t N, size_t np, size_t nbx, double *nbx_idx, double *eq_res_vec, int sim_method, sim_opts *opts, sim_in *in, sim_out *out,
                    sim_erk_workspace *erk_workspace, sim_irk_ode_workspace *irk_ode_workspace)
 {
@@ -70,13 +70,13 @@ double eval_cons_res(double *x, double *u, double *od, double *x0, double *lb, d
            
     for (i=0;i<N;i++){      
         switch(sim_method){
-            case 0:
-                casadi_in[0]=x+i*nx;
-                casadi_in[1]=u+i*nu;
-                casadi_in[2]=od+i*np;
-                casadi_out[0] = eq_res_vec+(i+1)*nx;
-                F_Fun(casadi_in, casadi_out);
-                break;
+            // case 0:
+            //     casadi_in[0]=x+i*nx;
+            //     casadi_in[1]=u+i*nu;
+            //     casadi_in[2]=od+i*np;
+            //     casadi_out[0] = eq_res_vec+(i+1)*nx;
+            //     F_Fun(casadi_in, casadi_out);
+            //     break;
             case 1:               
                 in->x = x+i*nx;
                 in->u = u+i*nu;
@@ -88,6 +88,7 @@ double eval_cons_res(double *x, double *u, double *od, double *x0, double *lb, d
                 in->x = x+i*nx;
                 in->u = u+i*nu;
                 in->p = od+i*np;
+                in->z = z+i*nz;
                 out->xn = eq_res_vec+(i+1)*nx;
                 sim_irk_ode(in, out, opts, irk_ode_workspace);
                 break;
@@ -244,6 +245,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
     double *x = mxGetPr( mxGetField(prhs[1], 0, "x") );
     double *u = mxGetPr( mxGetField(prhs[1], 0, "u") );
+    double *z = mxGetPr( mxGetField(prhs[1], 0, "z") );
     double *lambda = mxGetPr( mxGetField(prhs[1], 0, "lambda") );
     double *mu = mxGetPr( mxGetField(prhs[1], 0, "mu") );
     double *mu_u = mxGetPr( mxGetField(prhs[1], 0, "mu_u") );
@@ -263,6 +265,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     size_t nx = mxGetScalar( mxGetField(prhs[2], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[2], 0, "nu") );
+    size_t nz = mxGetScalar( mxGetField(prhs[2], 0, "nz") );
     size_t nc = mxGetScalar( mxGetField(prhs[2], 0, "nc") );
     size_t ncN = mxGetScalar( mxGetField(prhs[2], 0, "ncN") );
     size_t N = mxGetScalar( mxGetField(prhs[2], 0, "N") );    
@@ -323,8 +326,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexMakeMemoryPersistent(u_new);
               
         switch(sim_method){
-            case 0:
-                break;
+            // case 0:
+            //     break;
             case 1:
                 opts = sim_opts_create(prhs[0]);
                 opts->forw_sens_flag = false;
@@ -360,8 +363,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     int newpoint = 0;
     alpha[0] = 1;
     if (sqp_maxit > 1){
-        cons_res = eval_cons_res(x, u, od, x0, lb, ub, lc, uc,
-                                 lbx, ubx, lbu, ubu, nx, nu, nc, ncN,
+        cons_res = eval_cons_res(x, u, od, z, x0, lb, ub, lc, uc,
+                                 lbx, ubx, lbu, ubu, nx, nu, nz, nc, ncN,
                                  N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
                                  erk_workspace, irk_ode_workspace);
               
@@ -392,8 +395,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             
             daxpy(&nx_t, alpha, dx, &one_i, x_new, &one_i); 
             daxpy(&nu_t, alpha, du, &one_i, u_new, &one_i);
-            cons_res = eval_cons_res(x_new, u_new, od, x0, lb, ub, lc, uc,
-                                     lbx, ubx, lbu, ubu, nx, nu, nc, ncN,
+            cons_res = eval_cons_res(x_new, u_new, od, z, x0, lb, ub, lc, uc,
+                                     lbx, ubx, lbu, ubu, nx, nu, nz, nc, ncN,
                                      N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
                                      erk_workspace, irk_ode_workspace);
                         

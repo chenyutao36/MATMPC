@@ -15,17 +15,19 @@ sim_irk_ode_workspace* sim_irk_ode_workspace_create(sim_opts *opts)
 {
     sim_irk_ode_workspace* work = (sim_irk_ode_workspace*)mxMalloc(sizeof(sim_irk_ode_workspace));
         
-    work->impl_ode_in = mxMalloc(4*sizeof(double *));
+    work->impl_ode_in = mxMalloc(5*sizeof(double *));
     work->res_out = mxMalloc(sizeof(double *));
     work->jac_x_out = mxMalloc(sizeof(double *));
     work->jac_u_out = mxMalloc(sizeof(double *));
     work->jac_xdot_out = mxMalloc(sizeof(double *));
+    work->tmp_nx_nx = mxMalloc(opts->nx*opts->nx*sizeof(double));
     
     mexMakeMemoryPersistent(work->impl_ode_in);
     mexMakeMemoryPersistent(work->res_out);
     mexMakeMemoryPersistent(work->jac_x_out);
     mexMakeMemoryPersistent(work->jac_u_out);
     mexMakeMemoryPersistent(work->jac_xdot_out);
+    mexMakeMemoryPersistent(work->tmp_nx_nx);
     
     work->jac_x_out[0] = mxMalloc(opts->nx*opts->nx*sizeof(double));
     work->jac_u_out[0] = mxMalloc(opts->nx*opts->nu*sizeof(double));
@@ -62,13 +64,12 @@ sim_irk_ode_workspace* sim_irk_ode_workspace_create(sim_opts *opts)
         work->JGu = mxMalloc(opts->num_stages*opts->nx*opts->nu*sizeof(double));
         work->JKx = mxMalloc(opts->num_stages*opts->nx*opts->nx*sizeof(double));
         work->JKu = mxMalloc(opts->num_stages*opts->nx*opts->nu*sizeof(double));
-        work->tmp_nx_nx = mxMalloc(opts->nx*opts->nx*sizeof(double));
-        
+                
         mexMakeMemoryPersistent(work->JGx);
         mexMakeMemoryPersistent(work->JGu);
         mexMakeMemoryPersistent(work->JKx);
         mexMakeMemoryPersistent(work->JKu);
-        mexMakeMemoryPersistent(work->tmp_nx_nx);
+        
     }
 
     if (opts->adj_sens_flag){
@@ -128,6 +129,7 @@ int sim_irk_ode(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_ode_workspace 
     bool adj_sens_flag = opts->adj_sens_flag;
       
     double *x = in->x;
+    double *z = in->z;
     double *lambda = in->lambda;
 
     double *xn = out->xn;   
@@ -190,6 +192,7 @@ int sim_irk_ode(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_ode_workspace 
     
     impl_ode_in[1] = in->u; // u
     impl_ode_in[2] = in->p; // p
+    impl_ode_in[4] = in->z; // z
       
     // forward sweep
     for (istep = 0; istep < num_steps; istep++) {
@@ -213,8 +216,8 @@ int sim_irk_ode(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_ode_workspace 
                 res_out[0] = rG+i*nx;
 
                 impl_f_Fun(impl_ode_in, res_out);
-                impl_jac_x_Fun(impl_ode_in, jac_x_out);
-                impl_jac_xdot_Fun(impl_ode_in, jac_xdot_out);
+                impl_jac_f_x_Fun(impl_ode_in, jac_x_out);
+                impl_jac_f_xdot_Fun(impl_ode_in, jac_xdot_out);
                                                             
                 for (j=0; j<num_stages; j++){ //compute the block (ii,jj)th block = Jt
                     a = A[j * num_stages + i];
@@ -271,9 +274,9 @@ int sim_irk_ode(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_ode_workspace 
                 impl_ode_in[0] = xt;
                 impl_ode_in[3] = K + i*nx; // xdot
                 
-                impl_jac_x_Fun(impl_ode_in, jac_x_out);
-                impl_jac_xdot_Fun(impl_ode_in, jac_xdot_out);
-                impl_jac_u_Fun(impl_ode_in, jac_u_out);
+                impl_jac_f_x_Fun(impl_ode_in, jac_x_out);
+                impl_jac_f_xdot_Fun(impl_ode_in, jac_xdot_out);
+                impl_jac_f_u_Fun(impl_ode_in, jac_u_out);
                 Block_Fill(nx, nx, jac_x_out[0], JGx, i*nx, 0, ldG);                   
                 if (adj_sens_flag){
                     Block_Fill(nx, nu, jac_u_out[0], JGu, i*nx, 0, ldG);
@@ -359,14 +362,14 @@ void sim_irk_ode_workspace_free(sim_opts *opts, sim_irk_ode_workspace *work)
     mxFree(work->rG);
     mxFree(work->JGK);
     mxFree(work->JFK);
+
+    mxFree(work->tmp_nx_nx);
     
     if (opts->forw_sens_flag || opts->adj_sens_flag){
         mxFree(work->JGx);
         mxFree(work->JGu);
         mxFree(work->JKx);
-        mxFree(work->JKu);
-
-        mxFree(work->tmp_nx_nx);
+        mxFree(work->JKu);        
     }
 
     if (opts->adj_sens_flag){

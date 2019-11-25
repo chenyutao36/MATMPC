@@ -17,6 +17,7 @@ typedef struct{
     double *x;
     double *u;
     double *p;
+    double *z;
     double *lambda;
 }sim_in;
 

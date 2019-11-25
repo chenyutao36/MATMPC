@@ -13,6 +13,7 @@
 
 nx=6;  % No. of states
 nu=4;  % No. of controls
+nz=0;
 ny=12; % No. of outputs
 nyN=4; % No. of outputs at the terminal point
 np=2; % No. of model parameters
@@ -31,6 +32,7 @@ import casadi.*
 
 states   = SX.sym('states',nx,1);
 controls = SX.sym('controls',nu,1);
+alg      = SX.sym('alg',nz,1);
 params   = SX.sym('paras',np,1);
 refs     = SX.sym('refs',ny,1);     % references of the first N stages
 refN     = SX.sym('refs',nyN,1);    % reference of the last stage
@@ -76,6 +78,8 @@ x_dot = [phi_dot; a1*cos(phi); theta_dot; 0] + ...
 x_dot = [x_dot;
          df1;          
          df2];
+     
+z_fun = [];
 
 xdot = SX.sym('xdot',nx,1);
 impl_f = xdot - x_dot;
@@ -109,7 +113,6 @@ general_con = [1/a2*phi_dot^2 + a1/a2*sin(phi) + sin(phi+theta)*(f1+f2);
                 -d*sin(theta-pi/6)-l*sin(pi/6+phi)-s2];
 general_con_N = [1/a2*phi_dot^2 + a1/a2*sin(phi) + sin(phi+theta)*(f1+f2)]; 
 
-%% NMPC sampling time [s]
+%% NMPC discretizing time length [s]
 
-Ts = 0.01; % simulation sample time
 Ts_st = 0.01; % shooting interval time

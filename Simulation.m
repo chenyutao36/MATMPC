@@ -2,7 +2,7 @@ clear all; clear mex; close all;clc;
 
 disp( ' ' );
 disp( 'MATMPC -- A (MAT)LAB based Model(M) Predictive(P) Control(C) Package.' );
-disp( 'Copyright (C) 2016-2018 by Yutao Chen, University of Padova' );
+disp( 'Copyright (C) 2016-2019 by Yutao Chen, University of Padova' );
 disp( 'All rights reserved.' );
 disp( ' ' );
 disp( 'MATMPC is distributed under the terms of the' );
@@ -29,9 +29,9 @@ else
     error('No setting data is detected!');
 end
 
-Ts  = settings.Ts;       % Sampling time
+Ts = 0.025;              % Sampling time
+
 Ts_st = settings.Ts_st;  % Shooting interval
-s = settings.s;      % number of integration steps per interval
 nx = settings.nx;    % No. of states
 nu = settings.nu;    % No. of controls
 ny = settings.ny;    % No. of outputs (references)    
@@ -53,12 +53,11 @@ r = 3;
 settings.r = r;      % No. of input blocks
 
 opt.hessian         = 'Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
-opt.integrator      = 'ERK4'; % 'ERK4','IRK3, 'ERK4-CASADI'
+opt.integrator      = 'ERK4'; % 'ERK4','IRK3'
 opt.condensing      = 'default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
 opt.qpsolver        = 'qpoases'; 
-opt.hotstart        = 'no'; %'yes','no' (only for qpoases)
+opt.hotstart        = 'no'; %'yes','no' (only for qpoases, use 'no' for nonlinear systems)
 opt.shifting        = 'no'; % 'yes','no'
-opt.lin_obj         = 'no'; % 'yes','no' % if the inner objective function is linear and the outer objective is sum of quadratic
 opt.ref_type        = 0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 opt.nonuniform_grid = 0; % supports only ERK4 and IRK3
 
@@ -90,7 +89,7 @@ mem = InitMemory(settings, opt, input);
 %% Simulation (start your simulation...)
 
 mem.iter = 1; time = 0.0;
-Tf = 5;  % simulation time
+Tf = 4;  % simulation time
 state_sim= input.x0';
 controls_MPC = input.u0';
 y_sim = [];
@@ -150,9 +149,11 @@ while time(end) < Tf
     % Simulate system dynamics
     sim_input.x = state_sim(end,:).';
     sim_input.u = output.u(:,1);
-    sim_input.p = input.od(:,1)';
+    sim_input.z = input.z(:,1);
+    sim_input.p = input.od(:,1);
 
-    xf=full( Simulate_system('Simulate_system', sim_input.x, sim_input.u, sim_input.p) ); 
+%     xf=full( Simulate_system('Simulate_system', sim_input.x, sim_input.u, sim_input.p) ); 
+    xf = Simulate_System(sim_input.x, sim_input.u, sim_input.z, sim_input.p, mem, settings);
     
     % Collect outputs
     y_sim = [y_sim; full(h_fun('h_fun', xf, sim_input.u, sim_input.p))'];  

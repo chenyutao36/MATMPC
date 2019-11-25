@@ -12,6 +12,7 @@
 n=10;
 nx=n*3+(n-1)*3;
 nu=3;
+nz=0;
 np=0;
 ny=3*(n-1)+3+3;
 nyN=3*(n-1)+3;
@@ -30,6 +31,7 @@ import casadi.*
 
 states   = SX.sym('states',nx,1);
 controls = SX.sym('controls',nu,1);
+alg      = SX.sym('alg',nz,1);
 params   = SX.sym('paras',np,1);
 refs     = SX.sym('refs',ny,1);     % references of the first N stages
 refN     = SX.sym('refs',nyN,1);    % reference of the last stage
@@ -83,6 +85,8 @@ end
 
 x_dot=[vx;ux;vy;uy;vz;uz;ax;ay;az];
 
+z_fun = [];
+
 xdot = SX.sym('xdot',nx,1);
 impl_f = xdot - x_dot;
 
@@ -103,7 +107,6 @@ objN_GGN = 0.5*(auxN-refN)'*(auxN-refN);
 general_con = []; 
 general_con_N = []; 
 
-%% NMPC sampling time [s]
+%% NMPC discretizing time length [s]
 
-Ts = 0.2; % simulation sample time
 Ts_st = 0.2; % shooting interval time
