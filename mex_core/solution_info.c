@@ -1,11 +1,11 @@
 #include "mex.h"
 #include "string.h"
-// #include <stdbool.h>
 
 #include "casadi_wrapper.h"
 #include "sim.h"
 #include "erk.h"
 #include "irk_ode.h"
+#include "irk_dae.h"
 
 #include "lapack.h"
 #include "blas.h"
@@ -18,6 +18,7 @@ static sim_in *in = NULL;
 static sim_out *out = NULL;
 static sim_erk_workspace *erk_workspace = NULL;
 static sim_irk_ode_workspace *irk_ode_workspace = NULL;
+static sim_irk_dae_workspace *irk_dae_workspace = NULL;
 static bool mem_alloc = false;
 
 static double *casadi_out[3];
@@ -30,6 +31,8 @@ void exitFcn(){
         sim_erk_workspace_free(opts, erk_workspace);
     if (irk_ode_workspace!=NULL)
         sim_irk_ode_workspace_free(opts, irk_ode_workspace);
+    if (irk_dae_workspace!=NULL)
+        sim_irk_dae_workspace_free(opts, irk_dae_workspace);
     if (opts!=NULL)
         sim_opts_free(opts);
     if (in!=NULL)
@@ -75,6 +78,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
     double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
     double *obj = mxGetPr( mxGetField(prhs[2], 0, "obj") );
+    double *z_out = mxGetPr( mxGetField(prhs[2], 0, "z_out") );
      
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -102,7 +106,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     int idx;
     
     double *casadi_in[9];
-    // double *casadi_in[8];
         
     if (!mem_alloc){
         casadi_out[1] = (double *)mxMalloc(nv * sizeof(double));
@@ -128,8 +131,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexMakeMemoryPersistent(tmp);
         
         switch(sim_method){
-            // case 0:
-            //     break;
             case 1:
                 opts = sim_opts_create(prhs[2]);
                 opts->forw_sens_flag = false;
@@ -147,6 +148,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 out = sim_out_create(opts);                
                 irk_ode_workspace = sim_irk_ode_workspace_create(opts);               
                 sim_irk_ode_workspace_init(opts, prhs[2], irk_ode_workspace);
+                break;
+            case 3:
+                opts = sim_opts_create(prhs[2]);
+                opts->forw_sens_flag = false;
+                opts->adj_sens_flag = true;
+                in = sim_in_create(opts);              
+                out = sim_out_create(opts);                
+                irk_dae_workspace = sim_irk_dae_workspace_create(opts);               
+                sim_irk_dae_workspace_init(opts, prhs[2], irk_dae_workspace);
                 break;
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
@@ -186,11 +196,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
               
         // call integrator to compute xend and adjoint sensitivities
         switch(sim_method){
-            // case 0:
-            //     casadi_out[0] = eq_res_vec+(i+1)*nx;  
-            //     F_Fun(casadi_in, casadi_out);
-            //     adj_dG_Fun(casadi_in, &casadi_out[2]);
-            //     break;
             case 1:      
                 in->x = x+i*nx;
                 in->u = u+i*nu;
@@ -209,6 +214,17 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 out->xn = eq_res_vec+(i+1)*nx;
                 out->adj_sens = casadi_out[2];
                 sim_irk_ode(in, out, opts, irk_ode_workspace);
+                break;
+            case 3:                         
+                in->x = x+i*nx;
+                in->u = u+i*nu;
+                in->p = od+i*np;
+                in->z = z+i*nz;
+                in->lambda = lambda+(i+1)*nx;
+                out->xn = eq_res_vec+(i+1)*nx;
+                out->zn = z_out+i*nz;
+                out->adj_sens = casadi_out[2];
+                sim_irk_dae(in, out, opts, irk_dae_workspace);
                 break;
             default :
                 mexErrMsgTxt("Please choose a supported integrator");
@@ -247,9 +263,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
         // general constraint residual
         if (nc>0){
-            casadi_in[0]=x+i*nx;
-            casadi_in[1]=u+i*nu;
-            casadi_in[2]=od+i*np;
             casadi_out[0] = lc + i*nc;
             path_con_Fun(casadi_in, casadi_out);
             for (j=0;j<nc;j++){
@@ -294,7 +307,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     casadi_out[0] = obj;
     objN_Fun(casadi_in, casadi_out);
     OBJ += obj[0];
+    
     OBJ *= Ts_st;
+
+    memcpy(z, z_out, N*nz*sizeof(double));
 
     plhs[0] = mxCreateDoubleScalar(eq_res); // eq_res
     plhs[1] = mxCreateDoubleScalar(ineq_res); // ineq_res

@@ -1,10 +1,10 @@
 %------------------------------------------%
 % Chain of masses connected by linear springs
 
-% from "Efficient direct multiple shooting for nonlinear model predictive
+% "Efficient direct multiple shooting for nonlinear model predictive
 % control on long horizons", Kirches, 2012
 
-% typical configuration: 1) N=40(80,160), Ts=Ts_st=0.2, no shifting 
+% typical configuration: N=40(80,160), Ts=Ts_st=0.2, no shifting 
 
 %------------------------------------------%
 
@@ -30,10 +30,10 @@ nbu_idx = 1:3;  % indexs of controls which are bounded
 
 import casadi.*
 
-states   = SX.sym('states',nx,1);
-controls = SX.sym('controls',nu,1);
-alg      = SX.sym('alg',nz,1);
-params   = SX.sym('paras',np,1);
+states   = SX.sym('states',nx,1);   % differential states
+controls = SX.sym('controls',nu,1); % control input
+alg      = SX.sym('alg',nz,1);      % algebraic states
+params   = SX.sym('paras',np,1);    % parameters
 refs     = SX.sym('refs',ny,1);     % references of the first N stages
 refN     = SX.sym('refs',nyN,1);    % reference of the last stage
 Q        = SX.sym('Q',ny,1);        % weighting matrix of the first N stages
@@ -83,10 +83,13 @@ for i=2:n
     az(i-1,1)= (Fz(i)-Fz(i-1))*n/m-g ;
 end
 
+% explicit ODE RHS
 x_dot=[vx;ux;vy;uy;vz;uz;ax;ay;az];
 
+% algebraic function
 z_fun = [];
 
+% implicit ODE: impl_f = 0
 xdot = SX.sym('xdot',nx,1);
 impl_f = xdot - x_dot;
 

@@ -9,6 +9,7 @@ sim_opts* sim_opts_create(const mxArray *mem)
        
     opts->nx = mxGetScalar( mxGetField(mem, 0, "nx") );
     opts->nu = mxGetScalar( mxGetField(mem, 0, "nu") );
+    opts->nz = mxGetScalar( mxGetField(mem, 0, "nz") );
     opts->num_stages = mxGetScalar( mxGetField(mem, 0, "num_stages") );
     opts->num_steps = mxGetScalar( mxGetField(mem, 0, "num_steps") );
     opts->h = mxGetScalar( mxGetField(mem, 0, "h") );

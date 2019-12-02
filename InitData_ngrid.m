@@ -1,11 +1,9 @@
 %% Initialization
 function [input, data] = InitData_ngrid(settings)
 
-    Ts  = settings.Ts;       % Sampling time
-    Ts_st = settings.Ts_st;  % Shooting interval
-    s = settings.s;          % number of integration steps per interval
-    nx = settings.nx;        % No. of states
-    nu = settings.nu;        % No. of controls
+    nx = settings.nx;       % No. of differential states
+    nu = settings.nu;       % No. of controls
+    nz = settings.nz;       % No. of algebraic states
     ny = settings.ny;        % No. of outputs (references)    
     nyN= settings.nyN;       % No. of outputs at terminal stage 
     np = settings.np;        % No. of parameters (on-line data)
@@ -21,7 +19,8 @@ function [input, data] = InitData_ngrid(settings)
                       
         case 'InvertedPendulum'
             input.x0 = [0;pi;0;0];    
-            input.u0 = zeros(nu,1);    
+            input.u0 = zeros(nu,1);   
+            input.z0 = zeros(nz,1);
             para0 = 0;  
 
             Q=repmat([10 10 0.1 0.1 0.01]',1,r);
@@ -45,6 +44,7 @@ function [input, data] = InitData_ngrid(settings)
             n=5;
             data.n=n;
             input.x0=zeros(nx,1);
+            input.z0 = zeros(nz,1);
             for i=1:n
                 input.x0(i)=7.5*i/n;
             end
@@ -78,6 +78,7 @@ function [input, data] = InitData_ngrid(settings)
             data.n=n;
             input.x0=[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 zeros(1,nx-n)]';
             input.u0=zeros(nu,1);
+            input.z0 = zeros(nz,1);
             para0=0;
             wv=[];wx=[];
             wu=[0.01, 0.01, 0.01];
@@ -106,6 +107,7 @@ function [input, data] = InitData_ngrid(settings)
             
             input.x0=[0; 0; 0; 0; 9.81; 0];%zeros(nx,1);
             input.u0=[0; 0; 0; 0];%zeros(nu,1);%
+            input.z0 = zeros(nz,1);
             alpha = pi/6;
             para0=[-alpha; alpha];
             % phi phi_dot theta theta_dot 
@@ -145,6 +147,7 @@ function [input, data] = InitData_ngrid(settings)
         case 'DiM'	
             input.x0 = zeros(nx,1);    % initial state	
             input.u0 = zeros(nu,1);    % initial control	
+            input.z0 = zeros(nz,1);
             para0 = 0;  % initial parameters (by default a np by 1 vector, if there is no parameter, set para0=0)	
 
              %weighting matrices	
@@ -177,6 +180,30 @@ function [input, data] = InitData_ngrid(settings)
               ub_g=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints	
               lb_gN=[1.045;1.045;1.045;1.045;1.045;1.045];  % lower bounds for ineq constraints at terminal point	
               ub_gN=[1.3750;1.3750;1.3750;1.3750;1.3750;1.3750];  % upper bounds for ineq constraints at terminal point
+              
+        case 'TurboEngine'
+            
+            input.x0 = [1.2; 1.2; 0; 0];
+            input.u0 = zeros(nu,1); 
+            input.z0 = [1.1; 1.1];
+            para0 = [2000; -0.3];  
+
+            Q=repmat([10 1e-7*0.05 1e-6*0.05]',1,r);
+            QN=[10]';
+
+            % upper and lower bounds for states (=nbx)
+            lb_x = [0;0];
+            ub_x = [100;100];
+
+            % upper and lower bounds for controls (=nbu)           
+            lb_u = [-800; -800];
+            ub_u = [800; 800];
+                       
+            % upper and lower bounds for general constraints (=nc)
+            lb_g = [0; 0; 0];
+            ub_g = [2; 90e3/60; 180e3/60];        
+            lb_gN = [0; 0; 0];
+            ub_gN = [2; 90e3/60; 180e3/60]; 
                                     
     end
 
@@ -202,13 +229,15 @@ function [input, data] = InitData_ngrid(settings)
 
     x = repmat(input.x0,1,r+1);  % initialize all shooting points with the same initial state 
     u = repmat(input.u0,1,r);    % initialize all controls with the same initial control
+    z = repmat(input.z0,1,r);    % initialize all algebraic state with the same initial condition
     para = repmat(para0,1,r+1);  % initialize all parameters with the same initial para
         
-    input.x=x;           % states and controls of the first N stages (nx by N+1 matrix)
-    input.u=u;           % states of the terminal stage (nu by N vector)
-    input.od=para;       % on-line parameters (np by N+1 matrix)
-    input.W=Q;           % weights of the first N stages (ny by ny matrix)
-    input.WN=QN;         % weights of the terminal stage (nyN by nyN matrix)
+    input.x=x;           % (nx by N+1)
+    input.u=u;           % (nu by N)
+    input.z=z;           % (nz by N)
+    input.od=para;       % (np by N+1)
+    input.W=Q;           % (ny by N)
+    input.WN=QN;         % (nyN by 1)
      
     input.lambda=zeros(nx,r+1);
     input.mu=zeros(r*nc+ncN,1);
@@ -231,6 +260,7 @@ function [input, data] = InitData_ngrid(settings)
             data.REF=[1,0,0,zeros(1,3*(n-1)),zeros(1,nu)];
                                                                 
         case 'TethUAV'
+            
         	data.REF = zeros(1, ny);
             
         case 'DiM'	
@@ -240,6 +270,10 @@ function [input, data] = InitData_ngrid(settings)
              REF_DiM_2 = [REF_DiM_2, zeros(5000,24)];	
 
              data.REF = REF_DiM_2;
+             
+        case 'TurboEngine'
+            
+            data.REF=[1.4, 0, 0];
          
     end
     

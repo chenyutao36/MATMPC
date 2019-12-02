@@ -71,9 +71,9 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int iter = mxGetScalar( mxGetField(prhs[0], 0, "iter") );
     int hot_start = mxGetScalar( mxGetField(prhs[0], 0, "hot_start") );
-    int lin_obj = mxGetScalar( mxGetField(prhs[0], 0, "lin_obj") );  
-    bool cond_save = (hot_start==1) && (lin_obj==1) ;
+ 
     bool flag=false;
+    
     /*Allocate memory*/
     int i=0,j=0,k=0,l=0;
      
@@ -109,106 +109,95 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
               
     /*Start the loop*/
         
-    if (iter==1 || !cond_save){ // check if adjoint rti is used    
-        /* compute G */
-
-        ///
-        for(i=0;i<r;i++){
-            k=(int)index_T[i];
-            memcpy(G+(i*N+k)*nx*nu, B+k*nx*nu, nx*nu*sizeof(double));
-            for(j=k+1;j<N;j++){
-                dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, A+j*nx*nx, &nx, G+(i*N+j-1)*nx*nu, &nx, &zero, G+(i*N+j)*nx*nu, &nx);
-                if (j<(int) index_T[i+1]){
-                    for(l=0;l<nx*nu;l++){
-                        *(G+(i*N+j)*nx*nu+l) += *(B+j*nx*nu+l);
-                    }
+    /* compute G */
+    for(i=0;i<r;i++){
+        k=(int)index_T[i];
+        memcpy(G+(i*N+k)*nx*nu, B+k*nx*nu, nx*nu*sizeof(double));
+        for(j=k+1;j<N;j++){
+            dgemm(nTrans, nTrans, &nx, &nu, &nx, &one_d, A+j*nx*nx, &nx, G+(i*N+j-1)*nx*nu, &nx, &zero, G+(i*N+j)*nx*nu, &nx);
+            if (j<(int) index_T[i+1]){
+                for(l=0;l<nx*nu;l++){
+                    *(G+(i*N+j)*nx*nu+l) += *(B+j*nx*nu+l);
                 }
-
             }
-        }
-        
-
-         /* Compute Hc */
-        for(i=0;i<r;i++){
-            dsymm(SIDE, UPLO, &nx, &nu, &one_d, Q+N*nx*nx, &nx, G+(i*N+N-1)*nx*nu, &nx, &zero, W_mat+(N-1)*nx*nu, &nx);
-            for(j=N-1;j>(int)index_T[i];j--){        
-                dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, S+j*nx*nu, &nx, G+(i*N+j-1)*nx*nu, &nx, &zero, Hi, &nu);                     
-                dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+j*nx*nu, &nx, W_mat+(j)*nx*nu, &nx, &one_d, Hi, &nu);
-                Block_Fill(nu, nu, Hi, Hc_temp, j*nu, i*nu, N*nu);
-           
-
-                dgemm(Trans, nTrans, &nx, &nu, &nx, &one_d, A+j*nx*nx, &nx, W_mat+(j)*nx*nu, &nx, &zero, W_mat+(j-1)*nx*nu, &nx); 
-                dsymm(SIDE, UPLO, &nx, &nu, &one_d, Q+j*nx*nx, &nx, G+(i*N+j-1)*nx*nu, &nx, &one_d, W_mat+(j-1)*nx*nu, &nx);
-            }
-            memcpy(Hi,R+i*nu*nu,nu*nu*sizeof(double));
-            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+((int)index_T[i])*nx*nu, &nx, W_mat+((int)index_T[i])*nx*nu, &nx, &one_d, Hi, &nu);
-            Block_Fill(nu, nu, Hi, Hc_temp, ((int)index_T[i])*nu, i*nu, N*nu);      
-        }
-        
-        k=-1;
-        
-        for(j=0;j<N;j++){  
-            if (j==(int)index_T[k+1]){
-                k++;
-                for (i=0; i< nu*(k+1);i++)
-                    for (l=0; l< nu;l++)    
-                        *(Hc+i*r*nu+k*nu+l)=  *(Hc_temp+i*N*nu+j*nu+l); 
-            }  
-            else{
-                for (i=0; i< nu*(k+1);i++)
-                    for (l=0; l< nu;l++)    
-                        *(Hc+i*r*nu+k*nu+l)+=  *(Hc_temp+i*N*nu+j*nu+l); 
-            }
-        }
-        
-        for(i=0;i<r;i++)
-            for(j=i+1;j<r;j++)
-                 for(l=0;l<nu;l++)
-                     for(k=0;k<nu;k++)
-                        *(Hc+r*nu*(j*nu+k)+i*nu+l) = *(Hc+r*nu*(i*nu+l)+j*nu+k);
-                     
-            
-        
-
-       
-        /* Compute Cc */
-        if (nc>0){
-        
-            for(i=0;i<r;i++){   
-                Block_Fill(nc, nu, Cgu+((int)(index_T[i]))*nc*nu, Ccg, ((int)(index_T[i]))*nc, i*nu, N*nc+ncN);              
-                for(j=((int)(index_T[i]))+1;j<N;j++){
-                    if (j<(int)(index_T[i+1])){
-                        memcpy(Cci,Cgu+(j)*nc*nu,nc*nu*sizeof(double));
-                        dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, Cgx+j*nc*nx, &nc, G+(i*N+j-1)*nx*nu, &nx, &one_d, Cci, &nc);
-                    }    
-                    else{
-                        dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, Cgx+j*nc*nx, &nc, G+(i*N+j-1)*nx*nu, &nx, &zero, Cci, &nc);
-                    }   
-                    Block_Fill(nc, nu, Cci, Ccg, j*nc, i*nu, N*nc+ncN); 
-                }                
-                              
-            }
-        }    
-        if (ncN>0){
-            for(i=0;i<r;i++){
-                dgemm(nTrans, nTrans, &ncN, &nu, &nx, &one_d, CgN, &ncN, G+(i*N+N-1)*nx*nu, &nx, &zero, CcN, &ncN);
-                Block_Fill(ncN, nu, CcN, Ccg, N*nc, i*nu, N*nc+ncN);
-            }
-        }
-        
-
-    
-    
-        /* Compute Ccx */
-        if (nbx>0){         
-            for(i=0;i<r;i++){
-                for(j=index_T[i];j<N;j++){   
-                    dgemm(nTrans, nTrans, &nbx, &nu, &nx, &one_d, Cx, &nbx, G+(i*N+j)*nx*nu, &nx, &zero, Ccxi, &nbx);
-                    Block_Fill(nbx, nu, Ccxi, Ccx, j*nbx, i*nu, N*nbx);
-                }  
-            }  
         }
     }
+    
+     /* Compute Hc */
+    for(i=0;i<r;i++){
+        dsymm(SIDE, UPLO, &nx, &nu, &one_d, Q+N*nx*nx, &nx, G+(i*N+N-1)*nx*nu, &nx, &zero, W_mat+(N-1)*nx*nu, &nx);
+        for(j=N-1;j>(int)index_T[i];j--){        
+            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, S+j*nx*nu, &nx, G+(i*N+j-1)*nx*nu, &nx, &zero, Hi, &nu);                     
+            dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+j*nx*nu, &nx, W_mat+(j)*nx*nu, &nx, &one_d, Hi, &nu);
+            Block_Fill(nu, nu, Hi, Hc_temp, j*nu, i*nu, N*nu);
+       
+            dgemm(Trans, nTrans, &nx, &nu, &nx, &one_d, A+j*nx*nx, &nx, W_mat+(j)*nx*nu, &nx, &zero, W_mat+(j-1)*nx*nu, &nx); 
+            dsymm(SIDE, UPLO, &nx, &nu, &one_d, Q+j*nx*nx, &nx, G+(i*N+j-1)*nx*nu, &nx, &one_d, W_mat+(j-1)*nx*nu, &nx);
+        }
+        memcpy(Hi,R+i*nu*nu,nu*nu*sizeof(double));
+        dgemm(Trans, nTrans, &nu, &nu, &nx, &one_d, B+((int)index_T[i])*nx*nu, &nx, W_mat+((int)index_T[i])*nx*nu, &nx, &one_d, Hi, &nu);
+        Block_Fill(nu, nu, Hi, Hc_temp, ((int)index_T[i])*nu, i*nu, N*nu);      
+    }
+    
+    k=-1;
+    
+    for(j=0;j<N;j++){  
+        if (j==(int)index_T[k+1]){
+            k++;
+            for (i=0; i< nu*(k+1);i++)
+                for (l=0; l< nu;l++)    
+                    *(Hc+i*r*nu+k*nu+l)=  *(Hc_temp+i*N*nu+j*nu+l); 
+        }  
+        else{
+            for (i=0; i< nu*(k+1);i++)
+                for (l=0; l< nu;l++)    
+                    *(Hc+i*r*nu+k*nu+l)+=  *(Hc_temp+i*N*nu+j*nu+l); 
+        }
+    }
+    
+    for(i=0;i<r;i++)
+        for(j=i+1;j<r;j++)
+             for(l=0;l<nu;l++)
+                 for(k=0;k<nu;k++)
+                    *(Hc+r*nu*(j*nu+k)+i*nu+l) = *(Hc+r*nu*(i*nu+l)+j*nu+k);
+                 
+            
+    /* Compute Cc */
+    if (nc>0){  
+        for(i=0;i<r;i++){   
+            Block_Fill(nc, nu, Cgu+((int)(index_T[i]))*nc*nu, Ccg, ((int)(index_T[i]))*nc, i*nu, N*nc+ncN);              
+            for(j=((int)(index_T[i]))+1;j<N;j++){
+                if (j<(int)(index_T[i+1])){
+                    memcpy(Cci,Cgu+(j)*nc*nu,nc*nu*sizeof(double));
+                    dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, Cgx+j*nc*nx, &nc, G+(i*N+j-1)*nx*nu, &nx, &one_d, Cci, &nc);
+                }    
+                else{
+                    dgemm(nTrans, nTrans, &nc, &nu, &nx, &one_d, Cgx+j*nc*nx, &nc, G+(i*N+j-1)*nx*nu, &nx, &zero, Cci, &nc);
+                }   
+                Block_Fill(nc, nu, Cci, Ccg, j*nc, i*nu, N*nc+ncN); 
+            }                
+                          
+        }
+    }    
+    if (ncN>0){
+        for(i=0;i<r;i++){
+            dgemm(nTrans, nTrans, &ncN, &nu, &nx, &one_d, CgN, &ncN, G+(i*N+N-1)*nx*nu, &nx, &zero, CcN, &ncN);
+            Block_Fill(ncN, nu, CcN, Ccg, N*nc, i*nu, N*nc+ncN);
+        }
+    }
+    
+    
+    
+    /* Compute Ccx */
+    if (nbx>0){         
+        for(i=0;i<r;i++){
+            for(j=index_T[i];j<N;j++){   
+                dgemm(nTrans, nTrans, &nbx, &nu, &nx, &one_d, Cx, &nbx, G+(i*N+j)*nx*nu, &nx, &zero, Ccxi, &nbx);
+                Block_Fill(nbx, nu, Ccxi, Ccx, j*nbx, i*nu, N*nbx);
+            }  
+        }  
+    }
+    
     
       /* compute L */
     memcpy(L,ds0, nx*sizeof(double)); 

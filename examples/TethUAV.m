@@ -1,19 +1,19 @@
 %------------------------------------------%
 % Tethered quadcopter for a safe and constrained maneuver
 
-% from "Online Nonlinear Model Predictive Control for Tethered UAVs to
-% Perform a Safe and Constrained Maneuver  ", E.Rossi, 2019
+% "Online Nonlinear Model Predictive Control for Tethered UAVs to
+% Perform a Safe and Constrained Maneuver", E.Rossi et,al., 2019
 
-% typical configuration: 1) N=30, Ts=Ts_st=0.01, no shifting 
+% typical configuration: N=30, Ts=Ts_st=0.01, no shifting 
 
 %------------------------------------------%
 
 
 %% Dimensions
 
-nx=6;  % No. of states
+nx=6;  % No. of differential states
 nu=4;  % No. of controls
-nz=0;
+nz=0;  % No. of algebraic states
 ny=12; % No. of outputs
 nyN=4; % No. of outputs at the terminal point
 np=2; % No. of model parameters
@@ -30,10 +30,10 @@ nbu_idx = 3:4;  % indexs of controls which are bounded
 
 import casadi.*
 
-states   = SX.sym('states',nx,1);
-controls = SX.sym('controls',nu,1);
-alg      = SX.sym('alg',nz,1);
-params   = SX.sym('paras',np,1);
+states   = SX.sym('states',nx,1);   % differential states
+controls = SX.sym('controls',nu,1); % control input
+alg      = SX.sym('alg',nz,1);      % algebraic states
+params   = SX.sym('paras',np,1);    % parameters
 refs     = SX.sym('refs',ny,1);     % references of the first N stages
 refN     = SX.sym('refs',nyN,1);    % reference of the last stage
 Q        = SX.sym('Q',ny,1);        % weighting matrix of the first N stages
@@ -69,6 +69,7 @@ s2 = controls(4);
 phi_ref = params(1);
 theta_ref = params(2);
 
+% explicit ODE RHS
 x_dot = [phi_dot; a1*cos(phi); theta_dot; 0] + ...
         [0                  0;
          a2*cos(phi+theta)  0;
@@ -78,9 +79,11 @@ x_dot = [phi_dot; a1*cos(phi); theta_dot; 0] + ...
 x_dot = [x_dot;
          df1;          
          df2];
-     
+
+% algebraic function
 z_fun = [];
 
+% implicit ODE: impl_f = 0
 xdot = SX.sym('xdot',nx,1);
 impl_f = xdot - x_dot;
      

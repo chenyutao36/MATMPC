@@ -112,11 +112,11 @@ int sim_erk(sim_in *in, sim_out *out, sim_opts *opts, sim_erk_workspace *workspa
     size_t ju = nx*nu;
     size_t nw = nx+nu;
     
-    double *vde_in[5];
+    double *vde_in[6];
     double *vde_out[2];
-    double *ode_in[3];
+    double *ode_in[4];
     double *ode_out[1];
-    double *adj_in[4];
+    double *adj_in[5];
     double *adj_out[2];
     
     // initialize
@@ -130,15 +130,18 @@ int sim_erk(sim_in *in, sim_out *out, sim_opts *opts, sim_erk_workspace *workspa
       
     ode_in[1] = in->u;
     ode_in[2] = in->p;
+    ode_in[3] = 0;
     
     if (forw_sens_flag){
         vde_in[1] = in->u;
         vde_in[2] = in->p;
+        vde_in[5] = 0;
     }
 
     if (adj_sens_flag){
         adj_in[1] = in->u;
         adj_in[2] = in->p;
+        adj_in[4] = 0;
 
         for (j=0;j<nu;j++)
             adj_sens[nx+j] = 0.0;

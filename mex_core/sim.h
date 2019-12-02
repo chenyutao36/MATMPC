@@ -7,6 +7,7 @@ typedef struct{
     double h;
     size_t nx;
     size_t nu;
+    size_t nz;
     size_t num_stages;
     size_t num_steps;
     bool forw_sens_flag;
@@ -23,6 +24,7 @@ typedef struct{
 
 typedef struct{
     double *xn;
+    double *zn;
     double *Sx;
     double *Su;
     double *adj_sens;

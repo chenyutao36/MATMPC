@@ -1,7 +1,7 @@
 clear all;clc;
 disp( ' ' );
 disp( 'MATMPC -- A (MAT)LAB based Model(M) Predictive(P) Control(C) Package.' );
-disp( 'Copyright (C) 2016-2018 by Yutao Chen, University of Padova' );
+disp( 'Copyright (C) 2016-2019 by Yutao Chen, University of Padova' );
 disp( 'All rights reserved.' );
 disp( ' ' );
 disp( 'MATMPC is distributed under the terms of the' );
@@ -23,7 +23,7 @@ run(settings.model);
 %%
 import casadi.*
 
-lambda=SX.sym('lambdai',nx,1);            % the i th multiplier for equality constraints
+lambda=SX.sym('lambda',nx,1);            % the i th multiplier for equality constraints
 mu_u=SX.sym('mu_u',nu,1);                  % the i th multiplier for bounds on controls
 mu_x=SX.sym('mu_x',nbx,1);                  % the i th multiplier for bounds on controls
 mu_g=SX.sym('mu_g',nc,1);                  % the i th multiplier for bounds on controls
@@ -31,18 +31,20 @@ muN_g=SX.sym('muN_g',ncN,1);                 % the N th multiplier for inequalit
 
 %% Generate some functions
 
-f_fun  = Function('f_fun', {states,controls,params}, {SX.zeros(nx,1)+x_dot},{'states','controls','params'},{'xdot'});
+f_fun  = Function('f_fun', {states,controls,params,alg}, {SX.zeros(nx,1)+x_dot},{'states','controls','params','alg'},{'xdot'});
 
 impl_jac_f_x = SX.zeros(nx,nx)+jacobian(impl_f,states);
 impl_jac_f_u = SX.zeros(nx,nu)+jacobian(impl_f,controls);
 impl_jac_f_xdot = SX.zeros(nx,nx)+jacobian(impl_f,xdot);
-impl_f = SX.zeros(nx,1) + impl_f;
-impl_f_fun = Function('impl_f_fun',{states,controls,params,xdot,alg},{impl_f});
+
+impl_f_fun = Function('impl_f_fun',{states,controls,params,xdot,alg},{SX.zeros(nx,1) + impl_f});
 impl_jac_f_x_fun = Function('impl_jac_f_x_fun',{states,controls,params,xdot,alg},{impl_jac_f_x});
 impl_jac_f_u_fun = Function('impl_jac_f_u_fun',{states,controls,params,xdot,alg},{impl_jac_f_u});
 impl_jac_f_xdot_fun = Function('impl_jac_f_xdot_fun',{states,controls,params,xdot,alg},{impl_jac_f_xdot});
 
 if nz>0
+    g_fun  = Function('g_fun', {states,controls,params,xdot,alg}, {SX.zeros(nz,1)+z_fun},{'states','controls','params','xdot','alg'},{'zfun'});
+    
     impl_jac_f_z = SX.zeros(nx,nz)+jacobian(impl_f,alg);
     impl_jac_g_x = SX.zeros(nz,nx)+jacobian(z_fun,states);
     impl_jac_g_u = SX.zeros(nz,nu)+jacobian(z_fun,controls);
@@ -53,26 +55,28 @@ if nz>0
     impl_jac_g_u_fun = Function('impl_jac_g_u_fun',{states,controls,params,xdot,alg},{impl_jac_g_u});
     impl_jac_g_z_fun = Function('impl_jac_g_z_fun',{states,controls,params,xdot,alg},{impl_jac_g_z});
 else
+    g_fun  = Function('g_fun', {states,controls,params,xdot,alg}, {0},{'states','controls','params','xdot','alg'},{'zfun'});
+    
     impl_jac_f_z_fun = Function('impl_jac_f_z_fun',{states,controls,params,xdot,alg},{0});
     impl_jac_g_x_fun = Function('impl_jac_g_x_fun',{states,controls,params,xdot,alg},{0});
     impl_jac_g_u_fun = Function('impl_jac_g_u_fun',{states,controls,params,xdot,alg},{0});
     impl_jac_g_z_fun = Function('impl_jac_g_z_fun',{states,controls,params,xdot,alg},{0});
 end
 
-if nz==0
-    Sx = SX.sym('Sx',nx,nx);
-    Su = SX.sym('Su',nx,nu);
+Sx = SX.sym('Sx',nx,nx);
+Su = SX.sym('Su',nx,nu);
+if nz==0    
     vdeX = SX.zeros(nx,nx);
     vdeX = vdeX + jtimes(x_dot,states,Sx);
     vdeU = SX.zeros(nx,nu) + jacobian(x_dot,controls);
     vdeU = vdeU + jtimes(x_dot,states,Su);
-    vdeFun = Function('vdeFun',{states,controls,params,Sx,Su},{vdeX,vdeU});
+    vdeFun = Function('vdeFun',{states,controls,params,Sx,Su,alg},{vdeX,vdeU});
     
     adjW = SX.zeros(nx+nu,1) + jtimes(x_dot, [states;controls], lambda, true);
-    adj_ERK_fun = Function('adj_ERK_fun',{states,controls,params,lambda},{adjW});
+    adj_ERK_fun = Function('adj_ERK_fun',{states,controls,params,lambda,alg},{adjW});
 else
-    vdeFun = Function('vdeFun',{states,controls,params,Sx,Su},{0,0});
-    adj_ERK_fun = Function('adj_ERK_fun',{states,controls,params,lambda},{0});
+    vdeFun = Function('vdeFun',{states,controls,params,Sx,Su,alg},{0,0});
+    adj_ERK_fun = Function('adj_ERK_fun',{states,controls,params,lambda,alg},{0});
 end
     
 %% objective and constraints
@@ -162,6 +166,8 @@ if strcmp(generate,'y')
       
     opts = struct( 'main', false, 'mex' , true ) ; 
     h_fun.generate('h_fun.c',opts);
+    f_fun.generate('f_fun.c',opts);
+    g_fun.generate('g_fun.c',opts);
     path_con_fun.generate('path_con_fun.c',opts);
     path_con_N_fun.generate('path_con_N_fun.c',opts);
    
@@ -169,6 +175,7 @@ if strcmp(generate,'y')
     cd ../mex_core
         P = CodeGenerator ('casadi_src.c', opts) ;
         P.add(f_fun);
+        P.add(g_fun);
         P.add(vdeFun);
         P.add(adj_ERK_fun);
         P.add(adj_fun);
@@ -238,6 +245,8 @@ if strcmp(compile,'y')
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'path_con_N_fun.c');
     mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'h_fun.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'f_fun.c');
+    mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, 'g_fun.c');
 
     cd ../mex_core
     Compile_Mex;

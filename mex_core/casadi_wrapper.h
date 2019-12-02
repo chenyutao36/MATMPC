@@ -2,6 +2,7 @@
 #define CASADI_WRAPPER_H_
 
 void f_Fun(double **in, double **out);
+void g_Fun(double **in, double **out);
 void vde_Fun(double **in, double **out);
 void adj_ERK_Fun(double **in, double **out);
 void impl_f_Fun(double **in, double **out);

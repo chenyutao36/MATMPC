@@ -29,7 +29,7 @@ else
     error('No setting data is detected!');
 end
 
-Ts = 0.025;              % Sampling time
+Ts = settings.Ts_st;     % Closed-loop sampling time (usually = shooting interval)
 
 Ts_st = settings.Ts_st;  % Shooting interval
 nx = settings.nx;    % No. of states
@@ -39,7 +39,7 @@ nyN= settings.nyN;   % No. of outputs at terminal stage
 np = settings.np;    % No. of parameters (on-line data)
 nc = settings.nc;    % No. of constraints
 ncN = settings.ncN;  % No. of constraints at terminal stage
-nbx = settings.nbx;
+nbx = settings.nbx;  % No. of state bounds
 
 %% solver configurations
 
@@ -49,21 +49,21 @@ settings.N = N;
 N2 = N/5;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
-r = 3;
+r = 5;
 settings.r = r;      % No. of input blocks
 
 opt.hessian         = 'Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
-opt.integrator      = 'ERK4'; % 'ERK4','IRK3'
+opt.integrator      = 'ERK4'; % 'ERK4','IRK3','IRK3-DAE'
 opt.condensing      = 'default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
 opt.qpsolver        = 'qpoases'; 
 opt.hotstart        = 'no'; %'yes','no' (only for qpoases, use 'no' for nonlinear systems)
 opt.shifting        = 'no'; % 'yes','no'
 opt.ref_type        = 0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
-opt.nonuniform_grid = 0; % supports only ERK4 and IRK3
+opt.nonuniform_grid = 0; % if use non-uniform grid discretization
 
 %% available qpsolver
-%'qpoases' (for full condensing)
-%'qpoases_mb' (for full condensing+moving block)
+%'qpoases' (condensing is needed)
+%'qpoases_mb' (move blocking strategy)
 %'quadprog_dense' (for full condensing)
 %'hpipm_sparse' (run mex_core/compile_hpipm.m first; set opt.condensing='no')
 %'hpipm_pcond' (run mex_core/compile_hpipm.m first; set opt.condensing='no')
@@ -119,13 +119,14 @@ while time(end) < Tf
     input.x0 = state_sim(end,:)';
     
     % call the NMPC solver 
-    [output, mem]=mpc_nmpcsolver(input, settings, mem, opt);
-    
+    [output, mem] = mpc_nmpcsolver(input, settings, mem, opt);
+        
     % obtain the solution and update the data
     switch opt.shifting
         case 'yes'
             input.x=[output.x(:,2:end),output.x(:,end)];  
-            input.u=[output.u(:,2:end),output.u(:,end)]; 
+            input.u=[output.u(:,2:end),output.u(:,end)];
+            input.z=[output.z(:,2:end),output.z(:,end)];
             input.lambda=[output.lambda(:,2:end),output.lambda(:,end)];
             input.mu=[output.mu(nc+1:end);output.mu(end-nc+1:end)];
             input.mu_x=[output.mu_x(nbx+1:end);output.mu_x(end-nbx+1:end)];
@@ -133,6 +134,7 @@ while time(end) < Tf
         case 'no'
             input.x=output.x;
             input.u=output.u;
+            input.z=output.z;
             input.lambda=output.lambda;
             input.mu=output.mu;
             input.mu_x=output.mu_x;
@@ -152,8 +154,8 @@ while time(end) < Tf
     sim_input.z = input.z(:,1);
     sim_input.p = input.od(:,1);
 
-%     xf=full( Simulate_system('Simulate_system', sim_input.x, sim_input.u, sim_input.p) ); 
-    xf = Simulate_System(sim_input.x, sim_input.u, sim_input.z, sim_input.p, mem, settings);
+    [xf, zf] = Simulate_System(sim_input.x, sim_input.u, sim_input.z, sim_input.p, mem, settings);
+    xf = full(xf);
     
     % Collect outputs
     y_sim = [y_sim; full(h_fun('h_fun', xf, sim_input.u, sim_input.p))'];  

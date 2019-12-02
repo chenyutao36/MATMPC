@@ -110,13 +110,14 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         CPT.QP=CPT.QP+tQP;
         
         mem.sqp_it=mem.sqp_it+1;
-              
+                      
     end
 
     output.info.cpuTime=toc*1e3;   % Total CPU time for the current sampling instant
     
     output.x=input.x;
     output.u=input.u;   
+    output.z=input.z;
     output.lambda=input.lambda;
     output.mu=input.mu;
     output.mu_x=input.mu_x;

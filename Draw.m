@@ -322,5 +322,44 @@ switch settings.model
         plot(1.375*ones(samples,1),':');	
         axis([0 mem.iter 1.0 1.4]);	
         title('Hexpod actuator constraints');
+        
+    case 'TurboEngine'
+        
+        figure()
+        ax1 = subplot(4,1,1);
+        hold on
+        stairs(time,state_sim(:,3),'Color',blue);
+        stairs(time,state_sim(:,4),'--','Color',red);
+        ylabel('actuation / %');
+        legend('u1', 'u2');
+        grid on;
+
+        ax2 = subplot(4,1,2);
+        hold on
+        plot(time(1:end-1),constraints(:,1),'Color',blue);
+        plot(time(1:end-1),data.REF(1)*ones(1,length(time)-1),'k--');
+        ylabel('charging pressure / bar');
+        legend('output', 'reference')
+        grid on;
+
+        ax3 = subplot(4,1,3);
+        hold on
+        plot(time(1:end-1),constraints(:,2)*60,'Color',blue);
+        plot(time(1:end-1),constraints(:,3)*60,'Color',red);
+        plot(time(1:end-1),90e3*ones(1,length(time)-1),'--','Color',blue);
+        plot(time(1:end-1),180e3*ones(1,length(time)-1),'--','Color',red);
+        ylabel('turbocharger speeds / min^{-1}');
+        grid on;
+        legend('lp', 'hp', 'limit');
+
+        ax4 = subplot(4,1,4);
+        hold on
+        plot(time,state_sim(:,1),'Color',blue);
+        plot(time,state_sim(:,2),'--','Color',red);
+        ylabel('x / -');
+        legend('x1', 'x2');
+        grid on;
+        
+        xlabel('Time[s]');
 
 end

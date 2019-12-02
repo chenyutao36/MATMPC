@@ -186,22 +186,22 @@ function [input, data] = InitData(settings)
             input.z0 = [1.1; 1.1];
             para0 = [2000; -0.3];  
 
-            Q=repmat([1 1e-5 1e-6]',1,N);
-            QN=[1]';
+            Q=repmat([10 1e-7*0.05 1e-6*0.05]',1,N);
+            QN=[10]';
 
             % upper and lower bounds for states (=nbx)
             lb_x = [0;0];
             ub_x = [100;100];
 
             % upper and lower bounds for controls (=nbu)           
-            lb_u = [-40; -40];
-            ub_u = [40; 40];
+            lb_u = [-800; -800];
+            ub_u = [800; 800];
                        
             % upper and lower bounds for general constraints (=nc)
             lb_g = [0; 0; 0];
-            ub_g = [2; 90e3; 180e3];        
+            ub_g = [2; 90e3/60; 180e3/60];        
             lb_gN = [0; 0; 0];
-            ub_gN = [2; 90e3; 180e3];  
+            ub_gN = [2; 90e3/60; 180e3/60];  
                                                             
     end
 
@@ -224,23 +224,24 @@ function [input, data] = InitData(settings)
     
     input.lbx = repmat(lb_x,1,N);
     input.ubx = repmat(ub_x,1,N);
-    
-    x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state 
-    u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
-    z = repmat(input.z0,1,N+1);
-    para = repmat(para0,1,N+1);  % initialize all parameters with the same initial para
         
-    input.x=x;           % states and controls of the first N stages (nx by N+1 matrix)
-    input.u=u;           % states of the terminal stage (nu by N vector)
-    input.z=z;           % 
-    input.od=para;       % on-line parameters (np by N+1 matrix)
-    input.W=Q;           % weights of the first N stages (ny by ny matrix)
-    input.WN=QN;         % weights of the terminal stage (nyN by nyN matrix)
+    x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state
+    u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
+    z = repmat(input.z0,1,N);    % initialize all algebraic state with the same initial condition
+    para = repmat(para0,1,N+1);  % initialize all parameters with the same initial para
+         
+    input.x=x;           % (nx by N+1)
+    input.u=u;           % (nu by N)
+    input.z=z;           % (nz by N)
+    input.od=para;       % (np by N+1)
+    input.W=Q;           % (ny by N)
+    input.WN=QN;         % (nyN by 1)
      
     input.lambda=zeros(nx,N+1);   % langrangian multiplier w.r.t. equality constraints
     input.mu=zeros(N*nc+ncN,1);   % langrangian multipliers w.r.t. general inequality constraints
     input.mu_u = zeros(N*nu,1);   % langrangian multipliers w.r.t. input bounds
     input.mu_x = zeros(N*nbx,1);  % langrangian multipliers w.r.t. state bounds
+    
     %% Reference generation
 
     switch settings.model
@@ -258,7 +259,9 @@ function [input, data] = InitData(settings)
             data.REF=[1,0,0,zeros(1,3*(n-1)),zeros(1,nu)];
                                                                 
         case 'TethUAV'
+            
         	data.REF = zeros(1, ny);
+            
         case 'DiM'	
 
              load REF_DiM_2;	
@@ -269,7 +272,7 @@ function [input, data] = InitData(settings)
              
         case 'TurboEngine'
             
-            data.REF=[1.5, 0, 0];
+            data.REF=[1.4, 0, 0];
                      
     end
     

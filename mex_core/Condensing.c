@@ -67,9 +67,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int iter = mxGetScalar( mxGetField(prhs[0], 0, "iter") );
     int hot_start = mxGetScalar( mxGetField(prhs[0], 0, "hot_start") );
-    // int lin_obj = mxGetScalar( mxGetField(prhs[0], 0, "lin_obj") );  
-    // bool cond_save = (hot_start==1) && (lin_obj==1) ;
-    
+       
     /*Allocate memory*/
     int i=0,j=0;
      
@@ -101,8 +99,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
               
     /*Start the loop*/
         
-    // if (iter==1 || !cond_save){ // check if adjoint rti is used    
-        /* compute G */
+    /* compute G */
     for(i=0;i<N;i++){
         memcpy(G+(i*N+i)*nx*nu, B+i*nx*nu, nx*nu*sizeof(double));
         for (j=i+1;j<N;j++){
@@ -155,7 +152,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             }    
         }  
     }
-    // }
          
     /* compute L */
     memcpy(L,ds0, nx*sizeof(double)); 

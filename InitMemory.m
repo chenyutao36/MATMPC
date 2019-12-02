@@ -301,8 +301,6 @@ function [mem] = InitMemory(settings, opt, input)
             
           
     switch opt.integrator
-%         case 'ERK4-CASADI'
-%             mem.sim_method = 0;
         case 'ERK4'
             mem.sim_method = 1;
             mem.A_tab=[0, 0, 0, 0;
@@ -315,6 +313,7 @@ function [mem] = InitMemory(settings, opt, input)
             mem.h=Ts_st/mem.num_steps;
             mem.nx = nx;
             mem.nu = nu;
+            mem.nz = nz;
             mem.Sx = eye(nx);
             mem.Su = zeros(nx,nu);
         case 'IRK3'
@@ -336,6 +335,7 @@ function [mem] = InitMemory(settings, opt, input)
             mem.h= Ts_st/mem.num_steps;
             mem.nx = nx;
             mem.nu = nu;
+            mem.nz = nz;
             mem.Sx = eye(nx);
             mem.Su = zeros(nx,nu);
             mem.newton_iter = 5;
@@ -344,12 +344,6 @@ function [mem] = InitMemory(settings, opt, input)
         case 'IRK3-DAE'
             mem.sim_method = 3;
             
-            % Gauss-Legendre
-%             mem.A_tab=[5/36,             2/9-sqrt(15)/15, 5/36-sqrt(15)/30;
-%                        5/36+sqrt(15)/24, 2/9            , 5/36-sqrt(15)/24;
-%                        5/36+sqrt(15)/30, 2/9+sqrt(15)/15, 5/36];
-%             mem.B_tab=[5/18;4/9;5/18];
-
             % Radau IIA
             mem.A_tab=[(88-7*sqrt(6))/360,    (296-169*sqrt(6))/1800, (-2+3*sqrt(6))/225;
                        (296+169*sqrt(6))/1800, (88+7*sqrt(6))/360     (-2-3*sqrt(6))/225;
@@ -360,17 +354,26 @@ function [mem] = InitMemory(settings, opt, input)
             mem.h= Ts_st/mem.num_steps;
             mem.nx = nx;
             mem.nu = nu;
+            mem.nz = nz;
             mem.Sx = eye(nx);
             mem.Su = zeros(nx,nu);
             mem.newton_iter = 5;
-            mem.JFK = mem.h*[mem.B_tab(1)*eye(nx,nx), mem.B_tab(2)*eye(nx,nx), mem.B_tab(3)*eye(nx,nx)];
+            mem.JFK = mem.h*[mem.B_tab(1)*eye(nx,nx), zeros(nx,nz), mem.B_tab(2)*eye(nx,nx), zeros(nx,nz), mem.B_tab(3)*eye(nx,nx), zeros(nx,nz)];
         otherwise 
             error('Please choose a correct integrator');       
     end
     
+    if nz>0 && ~strcmp(opt.integrator,'IRK3-DAE')
+        error('Please choose IRK-DAE for DAE systems');
+    end
+    
+    if nz==0 && strcmp(opt.integrator,'IRK3-DAE')
+        error('Please do not choose IRK-DAE for ODE systems');
+    end
+    
     % globalization
     mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-3;          % tolerance on optimality
+    mem.kkt_lim = 1e-4;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor
@@ -442,7 +445,7 @@ function [mem] = InitMemory(settings, opt, input)
     mem.mu_new = zeros(N*nc+ncN,1);
     mem.mu_x_new = zeros(N*nbx,1);
     mem.mu_u_new = zeros(N*nu,1);
-    mem.dz = zeros(nz,N+1);
+    mem.z_out = zeros(nz,N);
     
     mem.q_dual = zeros(nx,N+1);
     mem.dmu = zeros(N*nu+N*nbx+N*nc+ncN,1);
@@ -451,41 +454,12 @@ function [mem] = InitMemory(settings, opt, input)
         mem.Cx(i,nbx_idx(i)) = 1.0;
     end
     
-    mem.reg = 1e-12;
+    mem.reg = 1e-8;
     
     mem.Q = zeros(nx,nx*(N+1));
     mem.S = zeros(nx,nu*N);
     mem.R = zeros(nu,nu*N);
-    
-%     if strcmp(opt.lin_obj,'yes')
-%         mem.lin_obj = 1;
-%         
-%         for j=1:N
-%             [Qi,Ri,Si] = Hi_fun('Hi_fun',zeros(nx,1),zeros(nu,1),zeros(np,1),zeros(ny,1), input.W(:,j));
-%             Qi=full(Qi);
-%             Ri=full(Ri);
-%             Si=full(Si);
-%             for i=1:nx
-%                 if Qi(i,i)<mem.reg
-%                     Qi(i,i)=mem.reg;
-%                 end
-%             end
-%             mem.Q(:,(j-1)*nx+1:j*nx) = Qi;
-%             mem.S(:,(j-1)*nu+1:j*nu) = Si;
-%             mem.R(:,(j-1)*nu+1:j*nu) = Ri;
-%         end
-%         
-%         Qf = full( HN_fun('HN_fun',zeros(nx,1),zeros(np,1),zeros(nyN,1), input.WN) );
-%         for i=1:nx
-%             if Qf(i,i)<mem.reg
-%                 Qf(i,i)=mem.reg;
-%             end
-%         end
-%         mem.Q(:,N*nx+1:end) = Qf;
-%     else
-%         mem.lin_obj = 0;
-%     end
-                  
+                      
     mem.iter=1;
     
      %% for CMON-RTI	

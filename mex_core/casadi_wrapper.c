@@ -6,64 +6,9 @@ void f_Fun(double **in, double **out){
     const double *x = in[0];
     const double *u = in[1];
     const double *p = in[2];
+    const double *z = in[3];
     
     double *xn = out[0];
-    
-    void *casadi_mem = NULL;
-//     int casadi_mem = 0;
-    int *casadi_iw = NULL;
-    double *casadi_w = NULL;
-
-    const double *casadi_arg[3];
-    double *casadi_res[1];
-
-    casadi_arg[0] = x;
-    casadi_arg[1] = u;
-    casadi_arg[2] = p;
-
-    casadi_res[0] = xn;
-
-    f_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
-}
-
-void vde_Fun(double **in, double **out){
-    const double *x = in[0];
-    const double *u = in[1];
-    const double *p = in[2];
-    const double *Sx = in[3];
-    const double *Su = in[4];
-    
-    double *jac_x = out[0];
-    double *jac_u = out[1];
-    
-    void *casadi_mem = NULL;
-//     int casadi_mem = 0;
-    int *casadi_iw = NULL;
-    double *casadi_w = NULL;
-
-    const double *casadi_arg[5];
-    double *casadi_res[2];
-
-    casadi_arg[0] = x;
-    casadi_arg[1] = u;
-    casadi_arg[2] = p;
-    casadi_arg[3] = Sx;
-    casadi_arg[4] = Su;
-
-    casadi_res[0] = jac_x;
-    casadi_res[1] = jac_u;
-
-    vdeFun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
-}
-
-void adj_ERK_Fun(double **in, double **out){
-    const double *x = in[0];
-    const double *u = in[1];
-    const double *p = in[2];
-    const double *lambda = in[3];
-    
-    double *adjW = out[0];
-    // double *adjU = out[1];
     
     void *casadi_mem = NULL;
 //     int casadi_mem = 0;
@@ -76,10 +21,97 @@ void adj_ERK_Fun(double **in, double **out){
     casadi_arg[0] = x;
     casadi_arg[1] = u;
     casadi_arg[2] = p;
+    casadi_arg[3] = z;
+
+    casadi_res[0] = xn;
+
+    f_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
+
+void g_Fun(double **in, double **out){
+    const double *x = in[0];
+    const double *u = in[1];
+    const double *p = in[2];
+    const double *xdot = in[3];
+    const double *z = in[4];
+    
+    double *z_res = out[0];
+    
+    void *casadi_mem = NULL;
+//     int casadi_mem = 0;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[5];
+    double *casadi_res[1];
+
+    casadi_arg[0] = x;
+    casadi_arg[1] = u;
+    casadi_arg[2] = p;
+    casadi_arg[3] = xdot;
+    casadi_arg[4] = z;
+
+    casadi_res[0] = z_res;
+
+    g_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
+
+void vde_Fun(double **in, double **out){
+    const double *x = in[0];
+    const double *u = in[1];
+    const double *p = in[2];
+    const double *Sx = in[3];
+    const double *Su = in[4];
+    const double *z = in[5];
+    
+    double *jac_x = out[0];
+    double *jac_u = out[1];
+    
+    void *casadi_mem = NULL;
+//     int casadi_mem = 0;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[6];
+    double *casadi_res[2];
+
+    casadi_arg[0] = x;
+    casadi_arg[1] = u;
+    casadi_arg[2] = p;
+    casadi_arg[3] = Sx;
+    casadi_arg[4] = Su;
+    casadi_arg[5] = z;
+
+    casadi_res[0] = jac_x;
+    casadi_res[1] = jac_u;
+
+    vdeFun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
+}
+
+void adj_ERK_Fun(double **in, double **out){
+    const double *x = in[0];
+    const double *u = in[1];
+    const double *p = in[2];
+    const double *lambda = in[3];
+    const double *z = in[4];
+    
+    double *adjW = out[0];
+    
+    void *casadi_mem = NULL;
+//     int casadi_mem = 0;
+    int *casadi_iw = NULL;
+    double *casadi_w = NULL;
+
+    const double *casadi_arg[5];
+    double *casadi_res[1];
+
+    casadi_arg[0] = x;
+    casadi_arg[1] = u;
+    casadi_arg[2] = p;
     casadi_arg[3] = lambda;
+    casadi_arg[4] = z;
 
     casadi_res[0] = adjW;
-    // casadi_res[1] = adjU;
 
     adj_ERK_fun(casadi_arg, casadi_res, casadi_iw, casadi_w, casadi_mem);
 }

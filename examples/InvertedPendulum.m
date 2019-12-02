@@ -1,7 +1,7 @@
 %------------------------------------------%
 % Inverted Pendulum 
   
-% from "Autogenerating microsecond solvers for nonlinear MPC: A tutorial
+% "Autogenerating microsecond solvers for nonlinear MPC: A tutorial
 % using ACADO integrators", Quirynen, 2015
 
 % typical configuration: 1) N=80, Ts=Ts_st=0.025, no shifting 2) N=40,
@@ -31,10 +31,10 @@ nbu_idx = 1; % indexs of controls which are bounded
 
 import casadi.*
 
-states   = SX.sym('states',nx,1);
-controls = SX.sym('controls',nu,1);
-alg      = SX.sym('alg',nz,1);
-params   = SX.sym('paras',np,1);
+states   = SX.sym('states',nx,1);   % differential states
+controls = SX.sym('controls',nu,1); % control input
+alg      = SX.sym('alg',nz,1);      % algebraic states
+params   = SX.sym('paras',np,1);    % parameters
 refs     = SX.sym('refs',ny,1);     % references of the first N stages
 refN     = SX.sym('refs',nyN,1);    % reference of the last stage
 Q        = SX.sym('Q',ny,1);        % weighting matrix of the first N stages
@@ -59,12 +59,15 @@ a=-m*l*sin(theta)*omega^2+m*g*cos(theta)*sin(theta)+u;
 b=-m*l*cos(theta)*sin(theta)*omega^2+u*cos(theta)+(M+m)*g*sin(theta);
 c=M+m-m*(cos(theta))^2;
 
-x_dot=[v;omega;a/c;b/(l*c)];
+% explicit ODE RHS
+x_dot=[v;omega;a/c;b/(l*c)];  
+ 
+% algebraic function
+z_fun = [];                   
 
-z_fun = [];
-
+% implicit ODE: impl_f = 0
 xdot = SX.sym('xdot',nx,1);
-impl_f = xdot - x_dot;
+impl_f = xdot - x_dot;        
      
 %% Objectives and constraints
 

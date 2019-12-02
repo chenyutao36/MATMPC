@@ -4,7 +4,8 @@
 
 #include "sim.h"
 #include "erk.h"
-#include "irk.h"
+#include "irk_ode.h"
+#include "irk_dae.h"
 #include "casadi_wrapper.h"
 #include "mpc_common.h"
 
@@ -14,7 +15,8 @@ static sim_opts *opts = NULL;
 static sim_in *in = NULL;
 static sim_out *out = NULL;
 static sim_erk_workspace *erk_workspace = NULL;
-static sim_irk_workspace *irk_workspace = NULL;
+static sim_irk_ode_workspace *irk_ode_workspace = NULL;
+static sim_irk_dae_workspace *irk_dae_workspace = NULL;
 static bool mem_alloc = false;
 static double *Hes[1];
 static double *HesN[1];
@@ -28,8 +30,10 @@ static double *gu_temp = NULL;
 void exitFcn(){
     if (erk_workspace!=NULL)
         sim_erk_workspace_free(opts, erk_workspace);
-    if (irk_workspace!=NULL)
-        sim_irk_workspace_free(opts, irk_workspace);
+    if (irk_ode_workspace!=NULL)
+        sim_irk_ode_workspace_free(opts, irk_ode_workspace);
+    if (irk_dae_workspace!=NULL)
+        sim_irk_dae_workspace_free(opts, irk_dae_workspace);
     if (opts!=NULL)
         sim_opts_free(opts);
     if (in!=NULL)
@@ -63,6 +67,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
     double *x = mxGetPr( mxGetField(prhs[0], 0, "x") );
     double *u = mxGetPr( mxGetField(prhs[0], 0, "u") );
+    double *z = mxGetPr( mxGetField(prhs[0], 0, "z") );
     double *y = mxGetPr( mxGetField(prhs[0], 0, "y") );
     double *yN = mxGetPr( mxGetField(prhs[0], 0, "yN") );
     double *od = mxGetPr( mxGetField(prhs[0], 0, "od") );
@@ -78,6 +83,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
+    size_t nz = mxGetScalar( mxGetField(prhs[1], 0, "nz") );
     size_t np = mxGetScalar( mxGetField(prhs[1], 0, "np") ); if(np==0) np++;
     size_t ny = mxGetScalar( mxGetField(prhs[1], 0, "ny") );
     size_t nyN = mxGetScalar( mxGetField(prhs[1], 0, "nyN") );
@@ -113,10 +119,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *ub_du = mxGetPr( mxGetField(prhs[2], 0, "ub_du") );
     double *lb_dx = mxGetPr( mxGetField(prhs[2], 0, "lb_dx") );
     double *ub_dx = mxGetPr( mxGetField(prhs[2], 0, "ub_dx") );
+    double *z_out = mxGetPr( mxGetField(prhs[2], 0, "z_out") );
     double *index_T = mxGetPr( mxGetField(prhs[2], 0, "index_T") );
     size_t r = mxGetScalar( mxGetField(prhs[2], 0, "r") );
     
-    int lin_obj = mxGetScalar( mxGetField(prhs[2], 0, "lin_obj") );
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
     int hessian_type = mxGetScalar( mxGetField(prhs[2], 0, "hessian") );
     
@@ -132,11 +138,10 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
        
     if (!mem_alloc){
         switch(sim_method){
-            case 0:
-                break;
             case 1:
                 opts = sim_opts_create(prhs[2]);
-                opts->forw_sens = true;
+                opts->forw_sens_flag = true;
+                opts->adj_sens_flag = false;
                 in = sim_in_create(opts);              
                 out = sim_out_create(opts);                
                 erk_workspace = sim_erk_workspace_create(opts);               
@@ -144,16 +149,26 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
             case 2:
                 opts = sim_opts_create(prhs[2]);
-                opts->forw_sens = true;
+                opts->forw_sens_flag = true;
+                opts->adj_sens_flag = false;
                 in = sim_in_create(opts);              
                 out = sim_out_create(opts);                
-                irk_workspace = sim_irk_workspace_create(opts);               
-                sim_irk_workspace_init(opts, prhs[2], irk_workspace);
+                irk_ode_workspace = sim_irk_ode_workspace_create(opts);               
+                sim_irk_ode_workspace_init(opts, prhs[2], irk_ode_workspace);
+                break;
+            case 3:
+                opts = sim_opts_create(prhs[2]);
+                opts->forw_sens_flag = true;
+                opts->adj_sens_flag = false;
+                in = sim_in_create(opts);              
+                out = sim_out_create(opts);                
+                irk_dae_workspace = sim_irk_dae_workspace_create(opts);               
+                sim_irk_dae_workspace_init(opts, prhs[2], irk_dae_workspace);
                 break;
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
                 break;
-        }                      
+        }            
 
         R_temp = (double *) mxMalloc(nu*nu * sizeof(double));
         mexMakeMemoryPersistent(R_temp);    
@@ -207,13 +222,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         
         // integration                      
         switch(sim_method){
-            case 0:
-                casadi_out[0] = a+i*nx;
-                Sens[0] = A + i*nx*nx;
-                Sens[1] = B + i*nx*nu;
-                F_Fun(casadi_in, casadi_out);
-                D_Fun(casadi_in, Sens);
-                break;
             case 1:
                 in->x = x+i*nx;
                 in->u = u+i*nu;
@@ -227,10 +235,22 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 in->x = x+i*nx;
                 in->u = u+i*nu;
                 in->p = od+i*np;
+                in->z = z+i*nz;
                 out->xn = a+i*nx;
                 out->Sx = A + i*nx*nx;
                 out->Su = B + i*nx*nu;
-                sim_irk(in, out, opts, irk_workspace);
+                sim_irk_ode(in, out, opts, irk_ode_workspace);
+                break;
+            case 3:
+                in->x = x+i*nx;
+                in->u = u+i*nu;
+                in->p = od+i*np;
+                in->z = z+i*nz;
+                out->xn = a+i*nx;
+                out->Sx = A + i*nx*nx;
+                out->Su = B + i*nx*nu;
+                out->zn = z_out + i*nz;
+                sim_irk_dae(in, out, opts, irk_dae_workspace);
                 break;
             default:
                 mexErrMsgTxt("Please choose a supported integrator");
@@ -242,50 +262,44 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             a[i*nx+j] -= x[(i+1)*nx+j];
        
         // Hessian
-        if (!lin_obj){
-            Ji_Fun(casadi_in, Jac);
-            switch(hessian_type){
-                case 0:                   
-                    dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
-                    dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
-                    dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
-                    break;
-                case 1:
-                    Hi_Fun(casadi_in, Hes);
-                    dgemm(Trans, nTrans, &nx, &ny, &ny, &one_d, Jac[0], &ny, Hes[0], &ny, &zero, temp[0], &nx);
-                    dgemm(nTrans, nTrans, &nx, &nx, &ny, &one_d, temp[0], &nx, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
-                    
-                    dgemm(nTrans, nTrans, &nx, &nu, &ny, &one_d, temp[0], &nx, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
-                    
-                    dgemm(Trans, nTrans, &nu, &ny, &ny, &one_d, Jac[1], &ny, Hes[0], &ny, &zero, temp[1], &nu);
-                    dgemm(nTrans, nTrans, &nu, &nu, &ny, &one_d, temp[1], &nu, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
-                    
-                    break;
-                default:
-                    mexErrMsgTxt("Please choose a supported Hessian type");
-                    break;
-            }
-            
-            
-            if ( (int)(index_T[k])==i){
-                memcpy(R_temp, R+i*nu*nu, nu*nu*sizeof(double));
-            }  
-            else{
-                for (j=0;j<nu*nu;j++)
-                      R_temp[j] += R[i*nu*nu+j];
-            }  
-            
-            
-            if ( (int)(index_T[k+1])==i+1){
-
-                memcpy(R+k*nu*nu, R_temp, nu*nu*sizeof(double));
-                regularization(nu, R+k*nu*nu, reg);
-            }   
+        Ji_Fun(casadi_in, Jac);
+        switch(hessian_type){
+            case 0:                   
+                dgemm(Trans, nTrans, &nx, &nx, &ny, &one_d, Jac[0], &ny, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
+                dgemm(Trans, nTrans, &nx, &nu, &ny, &one_d, Jac[0], &ny, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
+                dgemm(Trans, nTrans, &nu, &nu, &ny, &one_d, Jac[1], &ny, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
+                break;
+            case 1:
+                Hi_Fun(casadi_in, Hes);
+                dgemm(Trans, nTrans, &nx, &ny, &ny, &one_d, Jac[0], &ny, Hes[0], &ny, &zero, temp[0], &nx);
+                dgemm(nTrans, nTrans, &nx, &nx, &ny, &one_d, temp[0], &nx, Jac[0], &ny, &zero, Q+i*nx*nx, &nx);
                 
-            regularization(nx, Q+i*nx*nx, reg);
-            
+                dgemm(nTrans, nTrans, &nx, &nu, &ny, &one_d, temp[0], &nx, Jac[1], &ny, &zero, S+i*nx*nu, &nx);
+                
+                dgemm(Trans, nTrans, &nu, &ny, &ny, &one_d, Jac[1], &ny, Hes[0], &ny, &zero, temp[1], &nu);
+                dgemm(nTrans, nTrans, &nu, &nu, &ny, &one_d, temp[1], &nu, Jac[1], &ny, &zero, R+i*nu*nu, &nu);
+                
+                break;
+            default:
+                mexErrMsgTxt("Please choose a supported Hessian type");
+                break;
         }
+        regularization(nx, Q+i*nx*nx, reg);
         
+        if ( (int)(index_T[k])==i){
+            memcpy(R_temp, R+i*nu*nu, nu*nu*sizeof(double));
+        }  
+        else{
+            for (j=0;j<nu*nu;j++)
+                  R_temp[j] += R[i*nu*nu+j];
+        }  
+        
+        
+        if ( (int)(index_T[k+1])==i+1){
+            memcpy(R+k*nu*nu, R_temp, nu*nu*sizeof(double));
+            regularization(nu, R+k*nu*nu, reg);
+        }              
+               
         // gradient
         casadi_out[0] = gx+i*nx;
         casadi_out[1] = gu_temp;
@@ -329,23 +343,23 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     casadi_in[2] = yN;
     casadi_in[3] = WN;
     
-    if (!lin_obj){
-        JN_Fun(casadi_in, JacN);
-        switch(hessian_type){            
-            case 0:
-                dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, JacN[0], &nyN, JacN[0], &nyN, &zero, Q+N*nx*nx, &nx);
-                break;
-            case 1:
-                HN_Fun(casadi_in, HesN);
-                dgemm(Trans, nTrans, &nx, &nyN, &nyN, &one_d, JacN[0], &nyN, HesN[0], &nyN, &zero, temp[2], &nx);
-                dgemm(nTrans, nTrans, &nx, &nx, &nyN, &one_d, temp[2], &nx, JacN[0], &nyN, &zero, Q+N*nx*nx, &nx);
-                break;
-            default:
-                mexErrMsgTxt("Please choose a supported Hessian type");
-                break;                
-        }
-        regularization(nx, Q+N*nx*nx, reg);
+
+    JN_Fun(casadi_in, JacN);
+    switch(hessian_type){            
+        case 0:
+            dgemm(Trans, nTrans, &nx, &nx, &nyN, &one_d, JacN[0], &nyN, JacN[0], &nyN, &zero, Q+N*nx*nx, &nx);
+            break;
+        case 1:
+            HN_Fun(casadi_in, HesN);
+            dgemm(Trans, nTrans, &nx, &nyN, &nyN, &one_d, JacN[0], &nyN, HesN[0], &nyN, &zero, temp[2], &nx);
+            dgemm(nTrans, nTrans, &nx, &nx, &nyN, &one_d, temp[2], &nx, JacN[0], &nyN, &zero, Q+N*nx*nx, &nx);
+            break;
+        default:
+            mexErrMsgTxt("Please choose a supported Hessian type");
+            break;                
     }
+    regularization(nx, Q+N*nx*nx, reg);
+    
         
     casadi_out[0] = gx+N*nx;
     gN_Fun(casadi_in, casadi_out);
