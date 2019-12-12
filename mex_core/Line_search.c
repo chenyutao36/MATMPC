@@ -451,12 +451,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         for (i=0;i<nbx_t;i++)
             dmu[nbu_t+i] = alpha[0]*(mu_x_new[i] - mu_x[i]);
         daxpy(&nbx_t, &one_d, dmu+nbu_t, &one_i, mu_x, &one_i);
+
     }
     
     if (nineq>0){        
         for (i=0;i<nineq;i++)
             dmu[nbu_t+nbx_t+i] = alpha[0]*(mu_new[i] - mu[i]);
-        daxpy(&nineq, &one_d, dmu+nbu_t+nbx_t, &one_i, mu, &one_i);                    
+        daxpy(&nineq, &one_d, dmu+nbu_t+nbx_t, &one_i, mu, &one_i);                
     }
     
 }

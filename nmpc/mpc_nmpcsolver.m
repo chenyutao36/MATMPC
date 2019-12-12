@@ -24,9 +24,10 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 qp_generation_mb(input, settings, mem);
             else
                 qp_generation(input, settings, mem);
+%                 qp_generation_tac(input, settings, mem);
             end
         end
-        
+      
         tSHOOT = toc(tshoot)*1e3; 
         
         switch opt.condensing
@@ -96,6 +97,12 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ---------- Line search
 
         Line_search(mem, input, settings);
+        
+        %% ---------- CMoN
+%         if mem.iter==1 && mem.sqp_it==0
+%             [mem.rho_cmon, mem.gamma] = CMoN_Init(settings, mem, input);                                   
+%         end  
+%         adaptive_eta(mem,settings);
                 
         %% ---------- KKT calculation 
         

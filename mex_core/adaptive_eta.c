@@ -28,8 +28,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *threshold_dual = mxGetPr( mxGetField(prhs[0], 0, "threshold_dual") );	
     double *tol = mxGetPr( mxGetField(prhs[0], 0, "tol") );	
     	
-    double alpha = mxGetScalar( mxGetField(prhs[0], 0, "alpha") );	
-    double beta = mxGetScalar( mxGetField(prhs[0], 0, "beta") );	
+    double alpha = mxGetScalar( mxGetField(prhs[0], 0, "alpha_cmon") );	
+    double beta = mxGetScalar( mxGetField(prhs[0], 0, "beta_cmon") );	
     double c1 = mxGetScalar( mxGetField(prhs[0], 0, "c1") );	
     double rho_cmon = mxGetScalar( mxGetField(prhs[0], 0, "rho_cmon") );
     double gamma = mxGetScalar( mxGetField(prhs[0], 0, "gamma") );
@@ -53,8 +53,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t nx_t = (N+1)*nx;
     size_t nu_t = N*nu;
     size_t m = N*nx;	
-    size_t nz = nx+nu;	
-    size_t n = N*nz;	
+    size_t nv = nx+nu;	
+    size_t n = N*nv;	
     size_t ns = (n+nx)+(m+nx)+(N*nu)+(N*nbx)+(N*nc+ncN);	
     char *nTrans = "N", *Trans="T";	
     double one_d = 1.0, zero = 0.0, minus_one_d = 1.0;	
@@ -77,8 +77,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         dgemv(nTrans, &nx, &nx, &one_d, A+i*nx*nx, &nx, x_pri+i*nx, &one_i, &zero, V_pri+i*nx, &one_i);            	
         dgemv(nTrans, &nx, &nu, &one_d, B+i*nx*nu, &nx, u_pri+i*nu, &one_i, &one_d, V_pri+i*nx, &one_i);	
         	
-        dgemv(Trans, &nx, &nx, &one_d, A+i*nx*nx, &nx, q_dual+(i+1)*nx, &one_i, &zero, V_dual+i*nz, &one_i);            	
-        dgemv(Trans, &nx, &nu, &one_d, B+i*nx*nu, &nx, q_dual+(i+1)*nx, &one_i, &zero, V_dual+i*nz+nx, &one_i);	
+        dgemv(Trans, &nx, &nx, &one_d, A+i*nx*nx, &nx, q_dual+(i+1)*nx, &one_i, &zero, V_dual+i*nv, &one_i);            	
+        dgemv(Trans, &nx, &nu, &one_d, B+i*nx*nu, &nx, q_dual+(i+1)*nx, &one_i, &zero, V_dual+i*nv+nx, &one_i);	
         	
     }	
         	

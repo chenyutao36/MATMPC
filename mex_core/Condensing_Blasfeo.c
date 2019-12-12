@@ -214,8 +214,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     int iter = mxGetScalar( mxGetField(prhs[0], 0, "iter") );
     int hot_start = mxGetScalar( mxGetField(prhs[0], 0, "hot_start") );
-    int lin_obj = mxGetScalar( mxGetField(prhs[0], 0, "lin_obj") );  
-    bool cond_save = (hot_start==1) && (lin_obj==1) ;
     
     /*Allocate memory*/
     int i=0,j=0;
@@ -265,58 +263,56 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                
     /*Start the loop*/
         
-    if (iter==1 || !cond_save){ // check if adjoint rti is used    
-        /* compute G */
-        for(i=0;i<N;i++){
-            blasfeo_dgecp(nu, nx, BtAt, 0, i*nx, Gt, i*nu, i*nx);
-            for (j=i+1;j<N;j++){
-                blasfeo_dgemm_nn(nu, nx, nx, 1.0, Gt, (j-1)*nu, i*nx, BtAt, nu, j*nx, 0.0, Gt, j*nu, i*nx, Gt, j*nu, i*nx);
-            }
+    /* compute G */
+    for(i=0;i<N;i++){
+        blasfeo_dgecp(nu, nx, BtAt, 0, i*nx, Gt, i*nu, i*nx);
+        for (j=i+1;j<N;j++){
+            blasfeo_dgemm_nn(nu, nx, nx, 1.0, Gt, (j-1)*nu, i*nx, BtAt, nu, j*nx, 0.0, Gt, j*nu, i*nx, Gt, j*nu, i*nx);
         }
-                   
-        /* Compute Hc */
-        for(i=0;i<N;i++){
-            blasfeo_dgemm_nt(nu, nx, nx, 1.0, Gt, (N-1)*nu, i*nx, StQ, nu, N*nx, 0.0, HtWt, N*nu, i*(nu+nx)+nu, HtWt, N*nu, i*(nu+nx)+nu);
-            for(j=N-1;j>i;j--){                       
-                blasfeo_dgemm_nt(nu,nu+nx,nx,1.0,Gt,(j-1)*nu,i*nx,StQ,0,j*nx,0.0,HtWt,j*nu,i*(nu+nx),HtWt,j*nu,i*(nu+nx));
-                blasfeo_dgemm_nt(nu,nu+nx,nx,1.0,HtWt,(j+1)*nu,i*(nx+nu)+nu,BtAt,0,j*nx,1.0,HtWt,j*nu,i*(nu+nx),HtWt,j*nu,i*(nu+nx));
-                
-                blasfeo_dgecp(nu, nu, HtWt, j*nu, i*(nx+nu), Hc_dmat, i*nu, j*nu);
-            }          
-            blasfeo_dgemm_nt(nu,nu,nx,1.0,HtWt,(i+1)*nu,i*(nx+nu)+nu,BtAt,0,i*nx,1.0,Rt,0,i*nu,Hc_dmat,i*nu,i*nu);
-        }
-        blasfeo_dtrtr_u(N*nu, Hc_dmat, 0, 0, Hc_dmat, 0, 0);
-        blasfeo_unpack_dmat(N*nu,N*nu,Hc_dmat,0,0,Hc,N*nu);
-                
-        /* Compute Cc */
-        if (nc>0){         
-            for(i=0;i<N;i++){
-                blasfeo_pack_dmat(nc, nu, Cgu+i*nc*nu, nc, Ccg_dmat, i*nc, i*nu);
-                for(j=i+1;j<N;j++)   
-                    blasfeo_dgemm_nt(nc,nu,nx,1.0,Cgx_dmat,0,j*nx,Gt,(j-1)*nu,i*nx,0.0,Ccg_dmat,j*nc,i*nu,Ccg_dmat,j*nc,i*nu);                        
-            }            
-        }
-        
-        /* Compute CcN */
-        if (ncN>0){          
-            for(i=0;i<N;i++)                
-                blasfeo_dgemm_nt(ncN,nu,nx,1.0,CgN_dmat,0,0,Gt,(N-1)*nu,i*nx,0.0,Ccg_dmat,N*nc,i*nu,Ccg_dmat,N*nc,i*nu);                                        
-        }
-            
-        blasfeo_unpack_dmat(N*nc+ncN,N*nu,Ccg_dmat,0,0,Ccg,N*nc+ncN);
-        
-        /* Compute Ccx */
-        if (nbx>0){         
-            for(i=0;i<N;i++){
-                for(j=i+1;j<=N;j++)             
-//                     blasfeo_dgemm_nt(nbx,nu,nx,1.0,Cx_dmat,0,0,Gt,(j-1)*nu,i*nx,0.0,Ccx_dmat,j*nbx,i*nu,Ccx_dmat,j*nbx,i*nu); 
-                    blasfeo_dgemm_nt(nbx,nu,nx,1.0,Cx_dmat,0,0,Gt,(j-1)*nu,i*nx,0.0,Ccx_dmat,(j-1)*nbx,i*nu,Ccx_dmat,(j-1)*nbx,i*nu);
-            }
-//             blasfeo_unpack_dmat((N+1)*nbx,N*nu,Ccx_dmat,0,0,Ccx,(N+1)*nbx);
-            blasfeo_unpack_dmat(N*nbx,N*nu,Ccx_dmat,0,0,Ccx,N*nbx);
-        }  
     }
-         
+               
+    /* Compute Hc */
+    for(i=0;i<N;i++){
+        blasfeo_dgemm_nt(nu, nx, nx, 1.0, Gt, (N-1)*nu, i*nx, StQ, nu, N*nx, 0.0, HtWt, N*nu, i*(nu+nx)+nu, HtWt, N*nu, i*(nu+nx)+nu);
+        for(j=N-1;j>i;j--){                       
+            blasfeo_dgemm_nt(nu,nu+nx,nx,1.0,Gt,(j-1)*nu,i*nx,StQ,0,j*nx,0.0,HtWt,j*nu,i*(nu+nx),HtWt,j*nu,i*(nu+nx));
+            blasfeo_dgemm_nt(nu,nu+nx,nx,1.0,HtWt,(j+1)*nu,i*(nx+nu)+nu,BtAt,0,j*nx,1.0,HtWt,j*nu,i*(nu+nx),HtWt,j*nu,i*(nu+nx));
+            
+            blasfeo_dgecp(nu, nu, HtWt, j*nu, i*(nx+nu), Hc_dmat, i*nu, j*nu);
+        }          
+        blasfeo_dgemm_nt(nu,nu,nx,1.0,HtWt,(i+1)*nu,i*(nx+nu)+nu,BtAt,0,i*nx,1.0,Rt,0,i*nu,Hc_dmat,i*nu,i*nu);
+    }
+    blasfeo_dtrtr_u(N*nu, Hc_dmat, 0, 0, Hc_dmat, 0, 0);
+    blasfeo_unpack_dmat(N*nu,N*nu,Hc_dmat,0,0,Hc,N*nu);
+            
+    /* Compute Cc */
+    if (nc>0){         
+        for(i=0;i<N;i++){
+            blasfeo_pack_dmat(nc, nu, Cgu+i*nc*nu, nc, Ccg_dmat, i*nc, i*nu);
+            for(j=i+1;j<N;j++)   
+                blasfeo_dgemm_nt(nc,nu,nx,1.0,Cgx_dmat,0,j*nx,Gt,(j-1)*nu,i*nx,0.0,Ccg_dmat,j*nc,i*nu,Ccg_dmat,j*nc,i*nu);                        
+        }            
+    }
+    
+    /* Compute CcN */
+    if (ncN>0){          
+        for(i=0;i<N;i++)                
+            blasfeo_dgemm_nt(ncN,nu,nx,1.0,CgN_dmat,0,0,Gt,(N-1)*nu,i*nx,0.0,Ccg_dmat,N*nc,i*nu,Ccg_dmat,N*nc,i*nu);                                        
+    }
+        
+    blasfeo_unpack_dmat(N*nc+ncN,N*nu,Ccg_dmat,0,0,Ccg,N*nc+ncN);
+    
+    /* Compute Ccx */
+    if (nbx>0){         
+        for(i=0;i<N;i++){
+            for(j=i+1;j<=N;j++)             
+//                    blasfeo_dgemm_nt(nbx,nu,nx,1.0,Cx_dmat,0,0,Gt,(j-1)*nu,i*nx,0.0,Ccx_dmat,j*nbx,i*nu,Ccx_dmat,j*nbx,i*nu); 
+                blasfeo_dgemm_nt(nbx,nu,nx,1.0,Cx_dmat,0,0,Gt,(j-1)*nu,i*nx,0.0,Ccx_dmat,(j-1)*nbx,i*nu,Ccx_dmat,(j-1)*nbx,i*nu);
+        }
+//            blasfeo_unpack_dmat((N+1)*nbx,N*nu,Ccx_dmat,0,0,Ccx,(N+1)*nbx);
+        blasfeo_unpack_dmat(N*nbx,N*nu,Ccx_dmat,0,0,Ccx,N*nbx);
+    }  
+             
     /* compute L */
     blasfeo_pack_dvec(nx, ds0, L, 0);
     for(i=0;i<N;i++){

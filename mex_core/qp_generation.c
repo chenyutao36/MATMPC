@@ -120,8 +120,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - x[i];
     
-    // allocate memory
-    double *Sens[2];    
+    // allocate memory    
     double *Cons[2];
       
     double *casadi_in[5];

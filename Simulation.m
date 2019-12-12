@@ -49,8 +49,8 @@ settings.N = N;
 N2 = N/5;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
-r = 5;
-settings.r = r;      % No. of input blocks
+r = 10;
+settings.r = r;      % No. of input blocks (go to InitMemory.m, line 418 to configure)
 
 opt.hessian         = 'Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
 opt.integrator      = 'ERK4'; % 'ERK4','IRK3','IRK3-DAE'
@@ -59,9 +59,10 @@ opt.qpsolver        = 'qpoases';
 opt.hotstart        = 'no'; %'yes','no' (only for qpoases, use 'no' for nonlinear systems)
 opt.shifting        = 'no'; % 'yes','no'
 opt.ref_type        = 0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
-opt.nonuniform_grid = 0; % if use non-uniform grid discretization
-
+opt.nonuniform_grid = 0; % if use non-uniform grid discretization (go to InitMemory.m, line 436 to configure)
+opt.RTI             = 'yes'; % if use Real-time Iteration
 %% available qpsolver
+
 %'qpoases' (condensing is needed)
 %'qpoases_mb' (move blocking strategy)
 %'quadprog_dense' (for full condensing)
@@ -98,6 +99,7 @@ CPT = [];
 ref_traj = [];
 KKT = [];
 OBJ=[];
+numIT=[];
 
 while time(end) < Tf
         
@@ -131,6 +133,16 @@ while time(end) < Tf
             input.mu=[output.mu(nc+1:end);output.mu(end-nc+1:end)];
             input.mu_x=[output.mu_x(nbx+1:end);output.mu_x(end-nbx+1:end)];
             input.mu_u=[output.mu_u(nu+1:end);output.mu_u(end-nu+1:end)];
+            
+            % for CMoN-RTI
+%             mem.A=[mem.A(:,nx+1:end),mem.A(:,end-nx+1:end)];
+%             mem.B=[mem.B(:,nu+1:end),mem.B(:,end-nu+1:end)];
+%             mem.F_old = [mem.F_old(:,2:end),mem.F_old(:,end)];
+%             mem.V_pri = [mem.V_pri(:,2:end),mem.V_pri(:,end)];
+%             mem.V_dual = [mem.V_dual(:,2:end),mem.V_dual(:,end)];
+%             mem.q_dual = [mem.q_dual(:,2:end),mem.q_dual(:,end)];            
+%             mem.shift_x = input.x-output.x;
+%             mem.shift_u = input.u-output.u;
         case 'no'
             input.x=output.x;
             input.u=output.u;
@@ -169,12 +181,13 @@ while time(end) < Tf
     KKT= [KKT;OptCrit];
     OBJ= [OBJ;output.info.objValue];
     CPT = [CPT; cpt, tshooting, tcond, tqp];
+    numIT = [numIT; output.info.iteration_num];
     
     % go to the next sampling instant
     nextTime = mem.iter*Ts; 
     mem.iter = mem.iter+1;
     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  Opt:' num2str(OptCrit) '   OBJ:' num2str(OBJ(end)) '  SQP_IT:' num2str(output.info.iteration_num)]);
-        
+%     disp(['current time:' num2str(nextTime) '  CPT:' num2str(cpt) 'ms  SHOOTING:' num2str(tshooting) 'ms  COND:' num2str(tcond) 'ms  QP:' num2str(tqp) 'ms  Opt:' num2str(OptCrit) '   OBJ:' num2str(OBJ(end)) '  SQP_IT:' num2str(output.info.iteration_num) '  Perc:' num2str(mem.perc)]);   
     time = [time nextTime];   
 end
 

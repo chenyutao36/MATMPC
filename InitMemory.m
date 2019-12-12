@@ -372,8 +372,12 @@ function [mem] = InitMemory(settings, opt, input)
     end
     
     % globalization
-    mem.sqp_maxit = 1;           % maximum number of iterations for each sampling instant (for RTI, this is ONE)
-    mem.kkt_lim = 1e-4;          % tolerance on optimality
+    if strcmp(opt.RTI,'yes')
+        mem.sqp_maxit=1;         % use RTI
+    else       
+        mem.sqp_maxit = 50;      % maximum number of iterations for each sampling instant
+    end
+    mem.kkt_lim = 1e-2;          % tolerance on optimality
     mem.mu_merit=0;              % initialize the parameter
     mem.eta=1e-4;                % merit function parameter
     mem.tau=0.8;                 % step length damping factor
@@ -462,7 +466,8 @@ function [mem] = InitMemory(settings, opt, input)
                       
     mem.iter=1;
     
-     %% for CMON-RTI	
+     %% for CMON-RTI
+     
 %     mem.F_old = zeros(nx,N);	
 %     mem.CMON_pri = zeros(N,1);	
 %     mem.CMON_dual = zeros(N,1);	
@@ -476,8 +481,8 @@ function [mem] = InitMemory(settings, opt, input)
 %     mem.perc=100;
 %     mem.idxc=zeros(N,1);
 %     
-%     mem.tol_abs=5e-1;
-%     mem.tol_ref=5e-1;  	       
+%     mem.tol_abs=1e-1;
+%     mem.tol_ref=1e-1;  	       
 %     mem.alpha_cmon = 1;      
 %     mem.beta_cmon = 1;        
 %     mem.c1 = 0.1;

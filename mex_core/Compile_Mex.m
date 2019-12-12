@@ -62,12 +62,13 @@ mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_in
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'Simulate_System.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
 
 %% Optional functions
+
 mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing_mb.c','mpc_common.c', LIB1);
 
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_ngrid.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
 
 mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_mb.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
-% 
-% mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_tac.c','casadi_wrapper.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
+ 
+% mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_tac.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
 
 % mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'adaptive_eta.c',LIB1);
