@@ -8,6 +8,7 @@ OS_WIN = 0;
 
 if ismac
     OS_MAC = 1;
+    addpath(genpath('../solver/mac'));
 elseif isunix
     OS_LINUX = 1;
     addpath(genpath('../solver/linux'));
@@ -27,6 +28,9 @@ if OS_WIN
 end
 if OS_LINUX 
    CC_FLAGS = 'GCC="/usr/bin/gcc"';
+end
+if OS_MAC
+   CC_FLAGS = '';
 end
 
 OP_FLAGS='-O';

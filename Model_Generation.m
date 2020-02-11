@@ -237,6 +237,9 @@ if strcmp(compile,'y')
     if OS_LINUX 
        CC_FLAGS = 'GCC="/usr/bin/gcc"';
     end
+    if OS_MAC
+       CC_FLAGS = '';
+    end
     
     OP_FLAGS='-O';
     PRINT_FLAGS='-silent';

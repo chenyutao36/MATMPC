@@ -7,6 +7,7 @@ OS_WIN = 0;
 
 if ismac
     OS_MAC = 1;
+    PREFIX = '/Users/chenyutao';
 elseif isunix
     OS_LINUX = 1;
 elseif ispc
@@ -28,6 +29,11 @@ elseif OS_WIN
                    PREFIX,'\opt\hpipm\lib\libhpipm.a ', ...
                    PREFIX,'\opt\blasfeo\lib\libblasfeo.a ',...
                    ];
+elseif OS_MAC
+    mexfiles_sp = ['hpipm_sparse.c ', ...
+                    PREFIX,'/Documents/blasfeo_lib/blasfeo/lib/libblasfeo.a ', ...
+                    PREFIX,'/Documents/blasfeo_lib/hpipm/lib/libhpipm.a ',...
+                       ];
 end
                    
        
@@ -43,18 +49,27 @@ elseif OS_WIN
                    PREFIX,'\opt\hpipm\lib\libhpipm.a ', ...
                    PREFIX,'\opt\blasfeo\lib\libblasfeo.a ',...
                    ];
+elseif OS_MAC
+    mexfiles_pcondsol = ['hpipm_pcond.c ', ...
+                    PREFIX,'/Documents/blasfeo_lib/blasfeo/lib/libblasfeo.a ', ...
+                    PREFIX,'/Documents/blasfeo_lib/hpipm/lib/libhpipm.a ',...
+                       ];
 end
 
 %% blasfeo condensing
 
 if OS_LINUX
     mexfiles_bcond = ['Condensing_Blasfeo.c ', ...
-                ' /opt/blasfeo/lib/libblasfeo.a ',...
-                   ];
+                      ' /opt/blasfeo/lib/libblasfeo.a ',...
+                      ];
 elseif OS_WIN
     mexfiles_bcond = ['Condensing_Blasfeo.c ', ...
-                   PREFIX,'\opt\blasfeo\lib\libblasfeo.a ',...
-                   ];
+                      PREFIX,'\opt\blasfeo\lib\libblasfeo.a ',...
+                      ];
+elseif OS_MAC
+    mexfiles_bcond = ['Condensing_Blasfeo.c ', ...
+                      PREFIX,'/Documents/blasfeo_lib/blasfeo/lib/libblasfeo.a ',...
+                      ];
 end
 
 %% Build mex command
@@ -67,6 +82,9 @@ if OS_LINUX
 elseif OS_WIN
     mexcmd = [mexcmd, ' -O -DINT64 CFLAGS="$CFLAGS -std=c99" '];
     mexcmd = [mexcmd, ' -I.. -I' PREFIX '\opt\hpipm\include -I' PREFIX '\opt\blasfeo\include'];
+elseif OS_MAC
+    mexcmd = [mexcmd, ' -O -DINT64 CFLAGS="\$CFLAGS -std=c99"'];
+    mexcmd = [mexcmd, ' -I.. -I' PREFIX, '/Documents/blasfeo_lib/hpipm/include -I' PREFIX '/Documents/blasfeo_lib/blasfeo/include'];
 end
 
 %%
