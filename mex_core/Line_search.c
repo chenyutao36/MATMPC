@@ -379,7 +379,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double sigma, pd, grad, mu_lb=0, obj, obj_new, dir_grad, obj_tmp;
     int newpoint = 0;
     alpha[0] = 1;
-    if (sqp_maxit > 1){
+    if (sqp_maxit > 1 && sqp_it > 0){
         cons_res = eval_cons_res(x, u, od, z, x0, lb, ub, lc, uc,
                                  lbx, ubx, lbu, ubu, nx, nu, nz, nc, ncN,
                                  N, np, nbx, nbx_idx, eq_res_vec, sim_method, opts, in, out,
