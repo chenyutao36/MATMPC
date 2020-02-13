@@ -19,6 +19,15 @@ addpath([pwd,'/nmpc']);
 addpath([pwd,'/model_src']);
 addpath([pwd,'/mex_core']);
 addpath(genpath([pwd,'/data']));
+if ismac
+    addpath(genpath([pwd,'/solver/mac']));
+elseif isunix
+    addpath(genpath([pwd,'/solver/linux']));
+elseif ispc
+    addpath(genpath([pwd,'/solver/win64']));
+else
+    disp('Platform not supported')
+end
 
 cd data;
 if exist('settings','file')==2
@@ -73,6 +82,8 @@ opt.RTI             = 'yes'; % if use Real-time Iteration
 %'ipopt_partial_sparse'(set opt.condensing='partial_condensing'; only for state and control bounded problems)
 %'osqp_sparse' (set opt.condensing='no')
 %'osqp_partial_sparse' (set opt.condensing='partial_condensing')
+%'qpalm_cond' (condensing is needed)
+%'qpalm_sparse'(set opt.condensing='no')
 
 %% Initialize Data (all users have to do this)
 if opt.nonuniform_grid
@@ -195,6 +206,9 @@ end
 if strcmp(opt.qpsolver, 'qpoases')
     qpOASES_sequence( 'c', mem.warm_start);
 end
+% if strcmp(opt.qpsolver, 'qpalm')
+%     mem.qpalm_solver.delete();
+% end
 clear mex;
 
 %% draw pictures (optional)

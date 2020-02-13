@@ -288,6 +288,31 @@ function [mem] = InitMemory(settings, opt, input)
             mem.mem2.sparse_A_idx = osqp_A_pattern~=0;
 
             mem.mem2.qp_obj.setup(osqp_H_pattern, [], osqp_A_pattern, -inf(size(osqp_A_pattern,1),1), inf(size(osqp_A_pattern,1),1), mem.mem2.osqp_options);
+            
+        case 'qpalm_sparse'
+            nw = (N+1)*nx+N*nu;
+            neq = (N+1)*nx;
+            nineq = N*nc+ncN;
+                
+            mem.sparse_H = zeros(nw,nw);
+            mem.sparse_g = zeros(nw,1);
+            mem.sparse_dG = zeros(neq,nw);  
+            mem.sparse_dG(1:nx,1:nx) = eye(nx);
+            mem.sparse_minus_eye = -eye(nx);
+            mem.sparse_dB = zeros(nineq,nw);
+            mem.sparse_dBx = zeros(N*nbx,nw);
+            mem.sparse_dBu = zeros(N*nu,nw);
+            mem.sparse_G = zeros(neq,1);
+            mem.sparse_ub = inf(nineq+N*nbx+N*nu,1);
+            mem.sparse_lb = -inf(nineq+N*nbx+N*nu,1);
+            
+            for i=0:N-1
+                for j=1:nbx
+                    mem.sparse_dBx(i*nbx+1:(i+1)*nbx, (i+1)*nx+nbx_idx(j)) = 1;
+                end
+            end
+            mem.sparse_dBu(:,neq+1:end) = eye(N*nu,N*nu);
+            
     end
     
     switch opt.hessian

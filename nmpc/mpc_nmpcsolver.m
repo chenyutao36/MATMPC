@@ -91,6 +91,12 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 
             case 'osqp_partial_sparse'
                 [tQP, mem] = mpc_qp_solve_osqp_partial(settings,mem.settings2,mem,mem.mem2);
+                
+            case 'qpalm_cond'
+                [tQP, mem] = mpc_qp_solve_qpalm_cond(settings,mem);
+                
+            case 'qpalm_sparse'
+                [tQP, mem] = mpc_qp_solve_qpalm_sparse(settings,mem);
         end
         
 
