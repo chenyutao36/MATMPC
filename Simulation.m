@@ -132,7 +132,7 @@ while time(end) < Tf
     input.x0 = state_sim(end,:)';
     
     % call the NMPC solver 
-    [output, mem] = mpc_nmpcsolver(input, settings, mem, opt);
+    [output, mem] = mhe_nmpcsolver(input, settings, mem, opt);
         
     % obtain the solution and update the data
     switch opt.shifting
