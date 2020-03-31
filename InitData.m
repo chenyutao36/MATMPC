@@ -222,8 +222,8 @@ function [input, data] = InitData(settings)
     input.lbu = repmat(lbu,1,N);
     input.ubu = repmat(ubu,1,N);
     
-    input.lbx = repmat(lb_x,1,N);
-    input.ubx = repmat(ub_x,1,N);
+    input.lbx = repmat(lb_x,1,N+1);
+    input.ubx = repmat(ub_x,1,N+1);
         
     x = repmat(input.x0,1,N+1);  % initialize all shooting points with the same initial state
     u = repmat(input.u0,1,N);    % initialize all controls with the same initial control
@@ -237,10 +237,10 @@ function [input, data] = InitData(settings)
     input.W=Q;           % (ny by N)
     input.WN=QN;         % (nyN by 1)
      
-    input.lambda=zeros(nx,N+1);   % langrangian multiplier w.r.t. equality constraints
+    input.lambda=zeros(nx,N);   % langrangian multiplier w.r.t. equality constraints
     input.mu=zeros(N*nc+ncN,1);   % langrangian multipliers w.r.t. general inequality constraints
     input.mu_u = zeros(N*nu,1);   % langrangian multipliers w.r.t. input bounds
-    input.mu_x = zeros(N*nbx,1);  % langrangian multipliers w.r.t. state bounds
+    input.mu_x = zeros((N+1)*nbx,1);  % langrangian multipliers w.r.t. state bounds
     
     %% Reference generation
 

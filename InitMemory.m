@@ -78,13 +78,13 @@ function [mem] = InitMemory(settings, opt, input)
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
-            mem.solver_mode = 1;
+            mem.solver_mode = 2;
         case 'hpipm_pcond'
             mem.mu0=1e3;
             mem.max_qp_it = 100;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
-            mem.solver_mode = 1;
+            mem.solver_mode = 2;
         case 'ipopt_dense'
             ipopt_opts=ipoptset('constr_viol_tol',1e-3,'acceptable_tol',1e-3,'hessian_constant','yes',...
                         'mehrotra_algorithm','yes','mu_oracle','probing','jac_c_constant','yes',...
@@ -426,17 +426,17 @@ function [mem] = InitMemory(settings, opt, input)
     mem.uc = zeros(N*nc+ncN,1);
     mem.lb_du = zeros(N*nu,1);
     mem.ub_du = zeros(N*nu,1);
-    mem.lb_dx = zeros(N*nbx,1);
-    mem.ub_dx = zeros(N*nbx,1);
+    mem.lb_dx = zeros((N+1)*nbx,1);
+    mem.ub_dx = zeros((N+1)*nbx,1);
     
     mem.Hc = zeros(N*nu,N*nu);
-    mem.Ccx = zeros(N*nbx,N*nu);
+    mem.Ccx = zeros((N+1)*nbx,N*nu);
     mem.Ccg = zeros(N*nc+ncN,N*nu);
     mem.gc = zeros(N*nu,1);
     mem.lcc = zeros(N*nc+ncN,1);
     mem.ucc = zeros(N*nc+ncN,1);
-    mem.lxc = zeros(N*nbx,1);
-    mem.uxc = zeros(N*nbx,1);
+    mem.lxc = zeros((N+1)*nbx,1);
+    mem.uxc = zeros((N+1)*nbx,1);
     
     if strcmp(opt.qpsolver, 'qpoases_mb')
         mem.r = r;
@@ -470,14 +470,14 @@ function [mem] = InitMemory(settings, opt, input)
     
     mem.dx = zeros(nx,N+1);
     mem.du = zeros(nu,N);
-    mem.lambda_new = zeros(nx,N+1);
+    mem.lambda_new = zeros(nx,N);
     mem.mu_new = zeros(N*nc+ncN,1);
-    mem.mu_x_new = zeros(N*nbx,1);
+    mem.mu_x_new = zeros((N+1)*nbx,1);
     mem.mu_u_new = zeros(N*nu,1);
     mem.z_out = zeros(nz,N);
     
-    mem.q_dual = zeros(nx,N+1);
-    mem.dmu = zeros(N*nu+N*nbx+N*nc+ncN,1);
+    mem.q_dual = zeros(nx,N);
+    mem.dmu = zeros(N*nu+(N+1)*nbx+N*nc+ncN,1);
     
     for i=1:nbx
         mem.Cx(i,nbx_idx(i)) = 1.0;

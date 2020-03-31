@@ -63,13 +63,13 @@ settings.r = r;      % No. of input blocks (go to InitMemory.m, line 418 to conf
 
 opt.hessian         = 'Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
 opt.integrator      = 'ERK4'; % 'ERK4','IRK3','IRK3-DAE'
-opt.condensing      = 'default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
-opt.qpsolver        = 'qpoases'; 
+opt.condensing      = 'no';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
+opt.qpsolver        = 'hpipm_sparse'; 
 opt.hotstart        = 'no'; %'yes','no' (only for qpoases, use 'no' for nonlinear systems)
 opt.shifting        = 'no'; % 'yes','no'
 opt.ref_type        = 0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
 opt.nonuniform_grid = 0; % if use non-uniform grid discretization (go to InitMemory.m, line 436 to configure)
-opt.RTI             = 'yes'; % if use Real-time Iteration
+opt.RTI             = 'no'; % if use Real-time Iteration
 %% available qpsolver
 
 %'qpoases' (condensing is needed)
