@@ -119,6 +119,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
     size_t ns = mxGetScalar( mxGetField(prhs[2], 0, "num_steps") );
+    double h = mxGetScalar( mxGetField(prhs[2], 0, "h") );
     int hessian_type = mxGetScalar( mxGetField(prhs[2], 0, "hessian") );
     
     for (i=0;i<nx;i++)
@@ -209,7 +210,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             ub_dx[i*nbx+j] = ubx[i*nbx+j]-x[(i+1)*nx+idx];
         }
         
-        // integration                      
+        // integration    
+        opts->h = h*(index_T[i+1]-index_T[i]);                  
         switch(sim_method){
             case 1:
                 in->x = x+i*nx;
@@ -275,14 +277,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
                             
         }
-        
-        for (j=0;j<nx*nx;j++)
-            Q[i*nx*nx+j]*=index_T[i+1]-index_T[i];
-        for (j=0;j<nu*nu;j++)
-            R[i*nu*nu+j]*=index_T[i+1]-index_T[i];
-        for (j=0;j<nx*nu;j++)
-            S[i*nx*nu+j]*=index_T[i+1]-index_T[i];
-        
+                
         regularization(nx, Q+i*nx*nx, reg);
         regularization(nu, R+i*nu*nu, reg);
 
@@ -290,12 +285,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_out[0] = gx+i*nx;
         casadi_out[1] = gu+i*nu;
         gi_Fun(casadi_in, casadi_out);
-        
-        for (j=0;j<nx;j++)
-            *(gx+i*nx+j)=*(gx+i*nx+j)*(index_T[i+1]-index_T[i]);  
-        for (j=0;j<nu;j++)
-            *(gu+i*nu+j)=*(gu+i*nu+j)*(index_T[i+1]-index_T[i]); 
-                
+                        
         // constraint residual
         if (nc>0){  
             casadi_in[0]=x+i*nx;
@@ -336,17 +326,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             break;
             
     }
-    
-    for (j=0;j<nx*nx;j++)
-        Q[N*nx*nx+j]*=index_T[r]-index_T[r-1];
-   
+       
     regularization(nx, Q+N*nx*nx, reg);
     
         
     casadi_out[0] = gx+N*nx;
     gN_Fun(casadi_in, casadi_out);
-    for (j=0;j<nx;j++)
-        *(gx+r*nx+j)=*(gx+r*nx+j)*(index_T[r]-index_T[r-1]);  
 
     if (ncN>0){
         casadi_out[0] = lc + N*nc;
