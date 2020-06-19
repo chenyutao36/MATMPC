@@ -74,14 +74,14 @@ function [mem] = InitMemory(settings, opt, input)
             mem.quadprog_opt.ConstraintTolerance = 1e-6;
             mem.quadprog_opt.StepTolerance = 1e-6;
         case 'hpipm_sparse'
-            mem.mu0=1e2;
-            mem.max_qp_it = 100;
+            mem.mu0=1e4;
+            mem.max_qp_it = 30;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
             mem.solver_mode = 1;
         case 'hpipm_pcond'
-            mem.mu0=1e3;
-            mem.max_qp_it = 100;
+            mem.mu0=1e4;
+            mem.max_qp_it = 30;
             mem.pred_corr = 1;
             mem.cond_pred_corr = 1;
             mem.solver_mode = 1;

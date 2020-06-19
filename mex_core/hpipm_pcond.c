@@ -30,10 +30,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "blasfeo_d_aux_ext_dep.h"
+
+#include "hpipm_d_ocp_qp_ipm.h"
 #include "hpipm_d_ocp_qp_dim.h"
 #include "hpipm_d_ocp_qp.h"
 #include "hpipm_d_ocp_qp_sol.h"
-#include "hpipm_d_ocp_qp_ipm.h"
 #include "hpipm_d_part_cond.h"
  
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
@@ -126,45 +128,52 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	for(ii=0; ii<=N; ii++)
 		ns_v[ii] = 0;
     
-    int nsbx_v[N+1];
-    int nsbu_v[N+1];
-    int nsbg_v[N+1];
+    int nsbx_v[N+1]; // number of softed constraints on state box constraints
+    int nsbu_v[N+1]; // number of softed constraints on input box constraints
+    int nsbg_v[N+1]; // number of softed constraints on general constraints
 	for(ii=0; ii<=N; ii++){
 		nsbx_v[ii] = 0;
         nsbu_v[ii] = 0;
         nsbg_v[ii] = 0;
     }
 
-	int *hidxb[N+1];
-    for(ii=0; ii<=N; ii++)
-		hidxb[ii] = (int *)mxCalloc(nb_v[ii],sizeof(int));
+	// index of state and control bounds for each stage
+	int *hidxbx[N+1];
+    int *hidxbu[N+1];
+    for(ii=0; ii<=N; ii++){
+		hidxbx[ii] = (int *)mxCalloc(nbx_v[ii],sizeof(int));
+        hidxbu[ii] = (int *)mxCalloc(nbu_v[ii],sizeof(int));
+    }
     
     for(jj=0; jj<nbu_v[0]; jj++)
-		hidxb[0][jj] = jj;
+		hidxbu[0][jj] = jj;
     for(jj=0; jj<nbx_v[0]; jj++)
-		hidxb[0][nbu_v[0]+jj] = nbu_v[0]+jj;
+		hidxbx[0][jj] = jj;
 	for(ii=1; ii<=N; ii++){		
 		for(jj=0; jj<nbu_v[ii]; jj++)
-			hidxb[ii][jj] = jj;
+			hidxbu[ii][jj] = jj;
         
         for(jj=0; jj<nbx_v[ii]; jj++){
             idx = (int)nbx_idx[jj]-1;
-			hidxb[ii][nbu_v[ii]+jj] = nbu_v[ii]+idx;
+			hidxbx[ii][jj] = idx;
         }
 	}	
 
+	// create arrays for all-stage variables
 	double *hA[N];
 	double *hB[N];
 	double *hb[N];
 	double *hQ[N+1];
-	double *hS[N];
-	double *hR[N];
+	double *hS[N+1];
+	double *hR[N+1];
 	double *hq[N+1];
-	double *hr[N];
-	double *hlb[N+1];
-	double *hub[N+1];
+	double *hr[N+1];
+	double *hlbx[N+1];
+	double *hubx[N+1];
+    double *hlbu[N+1];
+	double *hubu[N+1];
 	double *hC[N+1];
-	double *hD[N];
+	double *hD[N+1];
 	double *hlg[N+1];
 	double *hug[N+1];
 	double *hx[N+1];
@@ -199,26 +208,30 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	for(ii=0; ii<N; ii++)
 		hr[ii] = r+ii*nu;
 
-    hlb[0] = (double *)mxCalloc(nb_v[0],sizeof(double));
-    hub[0] = (double *)mxCalloc(nb_v[0],sizeof(double));
+    hlbx[0] = (double *)mxCalloc(nbx_v[0],sizeof(double));
+    hubx[0] = (double *)mxCalloc(nbx_v[0],sizeof(double));
+    hlbu[0] = (double *)mxCalloc(nbu_v[0],sizeof(double));
+    hubu[0] = (double *)mxCalloc(nbu_v[0],sizeof(double));
     for(ii=0; ii<nu; ii++){
-		hlb[0][ii] = lbu[ii];
-        hub[0][ii] = ubu[ii];
+		hlbu[0][ii] = lbu[ii];
+        hubu[0][ii] = ubu[ii];
     }
     for(ii=0; ii<nx; ii++){
-		hlb[0][nu+ii] = ds0[ii];
-        hub[0][nu+ii] = ds0[ii];
+		hlbx[0][ii] = ds0[ii];
+        hubx[0][ii] = ds0[ii];
     }
 	for(ii=1; ii<=N; ii++){
-        hlb[ii] = (double *)mxCalloc(nb_v[ii],sizeof(double));
-        hub[ii] = (double *)mxCalloc(nb_v[ii],sizeof(double));
+        hlbx[ii] = (double *)mxCalloc(nbx_v[ii],sizeof(double));
+        hubx[ii] = (double *)mxCalloc(nbx_v[ii],sizeof(double));
+        hlbu[ii] = (double *)mxCalloc(nbu_v[ii],sizeof(double));
+        hubu[ii] = (double *)mxCalloc(nbu_v[ii],sizeof(double));
         for(jj=0;jj<nbu_v[ii];jj++){
-            hlb[ii][jj] = lbu[ii*nu+jj];
-            hub[ii][jj] = ubu[ii*nu+jj];
+            hlbu[ii][jj] = lbu[ii*nu+jj];
+            hubu[ii][jj] = ubu[ii*nu+jj];
         }
         for(jj=0;jj<nbx_v[ii];jj++){
-            hlb[ii][nbu_v[ii]+jj] = lbx[(ii-1)*nbx+jj];
-            hub[ii][nbu_v[ii]+jj] = ubx[(ii-1)*nbx+jj];
+            hlbx[ii][jj] = lbx[(ii-1)*nbx+jj];
+            hubx[ii][jj] = ubx[(ii-1)*nbx+jj];
         }
     }
 
@@ -252,152 +265,144 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     
 	// ocp qp dim
-	int ocp_qp_dim_size = d_memsize_ocp_qp_dim(N);
-	void *ocp_qp_dim_mem = mxCalloc(ocp_qp_dim_size,1);
+    int dim_size = d_ocp_qp_dim_memsize(N);
+    void *dim_mem = mxMalloc(dim_size);
 
-	struct d_ocp_qp_dim ocp_qp_dim;
-	d_create_ocp_qp_dim(N, &ocp_qp_dim, ocp_qp_dim_mem);
-	d_cvt_int_to_ocp_qp_dim(N, nx_v, nu_v, nbx_v, nbu_v, ng_v, nsbx_v, nsbu_v, nsbg_v, &ocp_qp_dim);
+	struct d_ocp_qp_dim dim;
+    d_ocp_qp_dim_create(N, &dim, dim_mem);
+    d_ocp_qp_dim_set_all(nx_v, nu_v, nbx_v, nbu_v, ng_v, nsbx_v, nsbu_v, nsbg_v, &dim);
 
 	// ocp qp
-	int ocp_qp_size = d_memsize_ocp_qp(&ocp_qp_dim);
-	void *ocp_qp_mem = mxCalloc(ocp_qp_size,1);
-	struct d_ocp_qp ocp_qp;
-	d_create_ocp_qp(&ocp_qp_dim, &ocp_qp, ocp_qp_mem);
-	d_cvt_colmaj_to_ocp_qp(hA, hB, hb, hQ, hS, hR, hq, hr, hidxb, hlb, hub, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &ocp_qp);
+	int qp_size = d_ocp_qp_memsize(&dim);
+    void *qp_mem = mxMalloc(qp_size);
+	struct d_ocp_qp qp;
+    d_ocp_qp_create(&dim, &qp, qp_mem);
+    d_ocp_qp_set_all(hA, hB, hb, hQ, hS, hR, hq, hr, hidxbx, hlbx, hubx, hidxbu, hlbu, hubu, hC, hD, hlg, hug, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &qp);
 
     // partial ocp qp dim
-    int nx2[N2+1];
-	int nu2[N2+1];
-	int nb2[N2+1];
-	int nbx2[N2+1];
-	int nbu2[N2+1];
-	int ng2[N2+1];
-	int ns2[N2+1];
-    int nsbx2[N2+1];
-	int nsbu2[N2+1];
-	int nsbg2[N2+1];
     
-    int ocp_qp_dim_size2 = d_memsize_ocp_qp_dim(N2);
-	void *ocp_qp_dim_mem2 = mxCalloc(ocp_qp_dim_size2,1);
+    int dim_size2 = d_ocp_qp_dim_memsize(N2);
+	void *dim_mem2 = mxMalloc(dim_size2);
 
-	struct d_ocp_qp_dim ocp_qp_dim2;
-	d_create_ocp_qp_dim(N2, &ocp_qp_dim2, ocp_qp_dim_mem2);
-	d_cvt_int_to_ocp_qp_dim(N2, nx2, nu2, nbx2, nbu2, ng2, nsbx2, nsbu2, nsbg2, &ocp_qp_dim2);
-    
-    int block_size[N2+1];
-    
-    d_compute_block_size_cond_qp_ocp2ocp(N, N2, block_size);
-    d_compute_qp_dim_ocp2ocp(&ocp_qp_dim, block_size, &ocp_qp_dim2);
-        
+	struct d_ocp_qp_dim dim2;
+	d_ocp_qp_dim_create(N2, &dim2, dim_mem2);
+
+    int *block_size = mxMalloc((N+1)*sizeof(int));
+	d_part_cond_qp_compute_block_size(N, N2, block_size);
+    d_part_cond_qp_compute_dim(&dim, block_size, &dim2);
+            
     // partial ocp qp
-    int ocp_qp_size2 = d_memsize_ocp_qp(&ocp_qp_dim2);
-	void *ocp_qp_mem2 = mxCalloc(ocp_qp_size2,1);
-	struct d_ocp_qp ocp_qp2;
-	d_create_ocp_qp(&ocp_qp_dim2, &ocp_qp2, ocp_qp_mem2);
+    int qp_size2 = d_ocp_qp_memsize(&dim2);
+	void *qp_mem2 = mxMalloc(qp_size2);
+	struct d_ocp_qp qp2;
+	d_ocp_qp_create(&dim2, &qp2, qp_mem2);
     
     // partial condensing arg
-    int part_cond_arg_size = d_memsize_cond_qp_ocp2ocp_arg(N2);
-    void *part_cond_arg_mem = mxCalloc(part_cond_arg_size,1);
-    struct d_cond_qp_ocp2ocp_arg part_cond_arg;
-    d_create_cond_qp_ocp2ocp_arg(N2, &part_cond_arg, part_cond_arg_mem);
-    d_set_default_cond_qp_ocp2ocp_arg(N2, &part_cond_arg);
+    int part_cond_arg_size = d_part_cond_qp_arg_memsize(dim2.N);
+    void *part_cond_arg_mem = mxMalloc(part_cond_arg_size);
+    struct d_part_cond_qp_arg part_cond_arg;
+	d_part_cond_qp_arg_create(dim2.N, &part_cond_arg, part_cond_arg_mem);
+    d_part_cond_qp_arg_set_default(&part_cond_arg);
 
     // partial condensing workspace
-	int part_cond_size = d_memsize_cond_qp_ocp2ocp(&ocp_qp_dim, block_size, &ocp_qp_dim2, &part_cond_arg);
-	void *part_cond_mem = mxCalloc(part_cond_size,1);
-	struct d_cond_qp_ocp2ocp_workspace part_cond_ws;
-	d_create_cond_qp_ocp2ocp(&ocp_qp_dim, block_size, &ocp_qp_dim2, &part_cond_arg, &part_cond_ws, part_cond_mem);
-    
+	int part_cond_size = d_part_cond_qp_ws_memsize(&dim, block_size, &dim2, &part_cond_arg);
+	void *part_cond_mem = mxMalloc(part_cond_size);
+	struct d_part_cond_qp_ws part_cond_ws;
+	d_part_cond_qp_ws_create(&dim, block_size, &dim2, &part_cond_arg, &part_cond_ws, part_cond_mem);
+
     // call partial condensing
-    d_cond_qp_ocp2ocp(&ocp_qp, &ocp_qp2, &part_cond_arg, &part_cond_ws);
+    d_part_cond_qp_cond(&qp, &qp2, &part_cond_arg, &part_cond_ws);
+
+    // ocp qp sol
+    int qp_sol_size = d_ocp_qp_sol_memsize(&dim);
+	void *qp_sol_mem = mxMalloc(qp_sol_size);
+	struct d_ocp_qp_sol qp_sol;
+	d_ocp_qp_sol_create(&dim, &qp_sol, qp_sol_mem);
     
-	// partial qp sol
-	int ocp_qp_sol_size2 = d_memsize_ocp_qp_sol(&ocp_qp_dim2);
-	void *ocp_qp_sol_mem2 = mxCalloc(ocp_qp_sol_size2,1);
-	struct d_ocp_qp_sol ocp_qp_sol2;
-	d_create_ocp_qp_sol(&ocp_qp_dim2, &ocp_qp_sol2, ocp_qp_sol_mem2);
+	// part cond ocp qp sol
+	int qp_sol_size2 = d_ocp_qp_sol_memsize(&dim2);
+	void *qp_sol_mem2 = mxMalloc(qp_sol_size2);
+	struct d_ocp_qp_sol qp_sol2;
+	d_ocp_qp_sol_create(&dim2, &qp_sol2, qp_sol_mem2);
 
 	// ipm arg
-	int ipm_arg_size = d_memsize_ocp_qp_ipm_arg(&ocp_qp_dim2);
-	void *ipm_arg_mem = mxCalloc(ipm_arg_size,1);
+	int ipm_arg_size = d_ocp_qp_ipm_arg_memsize(&dim);
+	void *ipm_arg_mem = mxMalloc(ipm_arg_size);
+
 	struct d_ocp_qp_ipm_arg arg;
-	d_create_ocp_qp_ipm_arg(&ocp_qp_dim2, &arg, ipm_arg_mem);
-	enum hpipm_mode mode;
-    switch (solver_mode)
-    {
-        case 0: 
-            mode = SPEED_ABS; 
-            break;
-        case 1:
-            mode = SPEED; 
-            break;
-        case 2:
-            mode = BALANCE; 
-            break;
-        case 3:
-            mode = ROBUST; 
-            break;
-        default:
-            mode = SPEED; 
-    }   
-	d_set_default_ocp_qp_ipm_arg(mode, &arg);
+	d_ocp_qp_ipm_arg_create(&dim, &arg, ipm_arg_mem);
 
-    arg.alpha_min = 1e-12;
-	arg.res_g_max = 1e-4;
-	arg.res_b_max = 1e-6;
-	arg.res_d_max = 1e-6;
-	arg.res_m_max = 1e-6;
-	arg.mu0 = mu0;
-	arg.iter_max = max_qp_it;
-	arg.stat_max = max_qp_it;
-	arg.pred_corr = pred_corr;
-	arg.cond_pred_corr = cond_pred_corr;
+	d_ocp_qp_ipm_arg_set_default(solver_mode, &arg);
 
-	// ipm
-	int ipm_size = d_memsize_ocp_qp_ipm(&ocp_qp_dim2, &arg);
-	void *ipm_mem = mxCalloc(ipm_size,1);
+    double alpha_min = 1e-8;
+    double tol_stat = 1e-4;
+    double tol_eq = 1e-5;
+    double tol_ineq = 1e-5;
+    double tol_comp = 1e-5;
+    double reg_prim = 1e-12;
+    int warm_start = 0;
+    int ric_alg = 0;
 
-	struct d_ocp_qp_ipm_workspace workspace;
-	d_create_ocp_qp_ipm(&ocp_qp_dim2, &arg, &workspace, ipm_mem);
+	d_ocp_qp_ipm_arg_set_iter_max(&max_qp_it, &arg);
+	d_ocp_qp_ipm_arg_set_alpha_min(&alpha_min, &arg);
+	d_ocp_qp_ipm_arg_set_mu0(&mu0, &arg);
+	d_ocp_qp_ipm_arg_set_tol_stat(&tol_stat, &arg);
+	d_ocp_qp_ipm_arg_set_tol_eq(&tol_eq, &arg);
+	d_ocp_qp_ipm_arg_set_tol_ineq(&tol_ineq, &arg);
+	d_ocp_qp_ipm_arg_set_tol_comp(&tol_comp, &arg);
+	d_ocp_qp_ipm_arg_set_reg_prim(&reg_prim, &arg);
+	d_ocp_qp_ipm_arg_set_warm_start(&warm_start, &arg);
+	d_ocp_qp_ipm_arg_set_pred_corr(&pred_corr, &arg);
+	d_ocp_qp_ipm_arg_set_cond_pred_corr(&cond_pred_corr, &arg);
+	d_ocp_qp_ipm_arg_set_ric_alg(&ric_alg, &arg);
+
+	// ipm workspace
+	int ipm_size = d_ocp_qp_ipm_ws_memsize(&dim2, &arg);
+	void *ipm_mem = mxMalloc(ipm_size);
+
+	struct d_ocp_qp_ipm_ws workspace;
+	d_ocp_qp_ipm_ws_create(&dim2, &arg, &workspace, ipm_mem);
+
 
 	// call solver
-	int hpipm_return = d_solve_ocp_qp_ipm(&ocp_qp2, &ocp_qp_sol2, &arg, &workspace);
+    int hpipm_status;
+	d_ocp_qp_ipm_solve(&qp2, &qp_sol2, &arg, &workspace);
+	d_ocp_qp_ipm_get_status(&workspace, &hpipm_status);
     
     // print stats
     int err = 0;
-    if (workspace.qp_res[0]>arg.res_g_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[0], arg.res_g_max);
+    if(hpipm_status == 0)
+		{
+        // mexPrintf("\n -> QP solved!\n");
+		}
+	else if(hpipm_status==1)
+		{
+        mexPrintf("\n -> Solver failed! Maximum number of iterations reached\n");
         err++;
-    }
-    if (workspace.qp_res[1]>arg.res_b_max){
-        mexPrintf("res_b:%5.3e   res_b_max:%5.3e\n", workspace.qp_res[1], arg.res_b_max);
+		}
+	else if(hpipm_status==2)
+		{
+        mexPrintf("\n -> Solver failed! Minimum step lenght reached\n");
         err++;
-    }
-    if (workspace.qp_res[2]>arg.res_d_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[2], arg.res_d_max);
+		}
+	else if(hpipm_status==3)
+		{
+        mexPrintf("\n -> Solver failed! NaN in computations\n");
         err++;
-    }
-    if (workspace.qp_res[3]>arg.res_m_max){
-        mexPrintf("res_g:%5.3e   res_g_max:%5.3e\n", workspace.qp_res[3], arg.res_m_max);
+		}
+	else
+		{
+        mexPrintf("\n -> Solver failed! Unknown return flag\n");
         err++;
-    }   
+		}   
     if (err > 0)
-        mexErrMsgTxt("QP solver does not converge!");
+        mexErrMsgTxt("Stop: HPIPM solver reports error!");
     
-    if (hpipm_return==1)
-        mexErrMsgTxt("QP solver reaches maximum number of iterations!");
-    
-    // expand
-    int ocp_qp_sol_size = d_memsize_ocp_qp_sol(&ocp_qp_dim);
-	void *ocp_qp_sol_mem = mxCalloc(ocp_qp_sol_size,1);
-	struct d_ocp_qp_sol ocp_qp_sol;
-	d_create_ocp_qp_sol(&ocp_qp_dim, &ocp_qp_sol, ocp_qp_sol_mem);  
-    
-    d_expand_sol_ocp2ocp(&ocp_qp, &ocp_qp2, &ocp_qp_sol2, &ocp_qp_sol, &part_cond_arg, &part_cond_ws);
+    // part cond sol expand      
+    d_part_cond_qp_expand_sol(&qp, &qp2, &qp_sol2, &qp_sol, &part_cond_arg, &part_cond_ws);
 
 	// convert back solution
-	d_cvt_ocp_qp_sol_to_colmaj(&ocp_qp_sol, hu, hx, NULL, NULL, hpi, hlam_lb, hlam_ub, hlam_lg, hlam_ug, NULL, NULL);
+	d_ocp_qp_sol_get_all(&qp_sol, hu, hx, NULL, NULL, hpi, hlam_lb, hlam_ub, hlam_lg, hlam_ug, NULL, NULL);
   
     // extrac multipliers
     for(jj=0;jj<nx;jj++)
@@ -422,27 +427,28 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 
     // Free memory
 	for(ii=0;ii<=N;ii++){
-        mxFree(hidxb[ii]);
-        mxFree(hlb[ii]);
-        mxFree(hub[ii]);
+        mxFree(hidxbx[ii]);
+        mxFree(hidxbu[ii]);
+        mxFree(hlbx[ii]);
+        mxFree(hubx[ii]);
+        mxFree(hlbu[ii]);
+        mxFree(hubu[ii]);
         mxFree(hlam_lb[ii]);
         mxFree(hlam_ub[ii]);
         mxFree(hlam_lg[ii]);
         mxFree(hlam_ug[ii]);
     }
     
-	mxFree(ocp_qp_dim_mem);
-	mxFree(ocp_qp_mem);
-    mxFree(ocp_qp_dim_mem2);
-    mxFree(ocp_qp_mem2);
-    
-    mxFree(part_cond_arg_mem);
-    mxFree(part_cond_mem);
- 
-    mxFree(ocp_qp_sol_mem);
-	mxFree(ocp_qp_sol_mem2);
-    
+	mxFree(dim_mem);
+    mxFree(dim_mem2);
+    mxFree(block_size);
+    mxFree(qp_mem);
+    mxFree(qp_mem2);
+	mxFree(qp_sol_mem);
+	mxFree(qp_sol_mem2);
+	mxFree(part_cond_arg_mem);
 	mxFree(ipm_arg_mem);
+	mxFree(part_cond_mem);
 	mxFree(ipm_mem);
 
 }
