@@ -13,7 +13,7 @@ Please install Matlab supported MinGW compiler at https://www.mathworks.com/matl
 
 ### Linux:
 
-Install gcc by running "sudo install apt-get gcc"
+Install gcc by running "sudo apt-get install gcc"
 
 ### MacOS:
 
