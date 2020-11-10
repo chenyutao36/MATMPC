@@ -13,7 +13,13 @@ Please install Matlab supported MinGW compiler at https://www.mathworks.com/matl
 
 ### Linux:
 
-Install gcc by running "sudo install apt-get gcc"
+Install gcc by running "sudo apt-get install gcc"
+
+**Note:** MATLAB is incompatible with the latest releases of gcc, even using the 2019b or 2020a releases of MATLAB (the latest versions of MATLAB at the time of this work). MATLAB needs this compiler to generate the mex64 files it needs to with the MATMPC toolbox. A workaround for this problem is [described at this link](https://www.mathworks.com/matlabcentral/answers/407502-incompatible-gcc-version-with-mex) and below.
+
+1. Download the 6.3.x release of gcc from [this link](https://drive.google.com/file/d/1VYb08z7BQH6LQDimcob_jsDHFjjNO8dY/view?usp=sharing)
+2. Move to the folder where the file is contained and run this command from the terminal line `sudo dpkg -i gcc-6-3-0_6.3.0_amd64.deb`
+3. Answer yes when asked to change the compiler to gcc-6.3 in MATLAB
 
 ### MacOS:
 
