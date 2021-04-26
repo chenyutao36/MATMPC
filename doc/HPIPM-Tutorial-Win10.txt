@@ -1,0 +1,64 @@
+This is a tutorial for installing BLASFEO and HPIPM on Windows system. 
+BLASFEO is a linear algebra library and HPIPM is a sparse QP solver.
+
+A. Since they are developed in Linux systems, first you need to install Windows Subsystem for Linux.
+
+1. follow the official doc to install WSL at https://docs.microsoft.com/en-us/windows/wsl/install-win10
+2. install Ubuntu 18.04 LTS (https://www.microsoft.com/it-it/p/ubuntu-1804-lts/9n9tngvndl3q?rtc=1&activetab=pivot:overviewtab)
+3. launch Ubuntu and follow the instructions to setup your user
+
+Note: if you get the following error when running Ubuntu
+      "Error: 0x80370102 The virtual machine could not be started because a required feature is not installed."
+      you need to enable Virtualizarion in BIOS settings of the motherboard
+      follow the instructions in https://2nwiki.2n.cz/pages/viewpage.action?pageId=75202968
+      then you should be able to activate Hyper-V in Control Panel -> Unistall a program -> Turn Windows features on or off
+
+
+B. Update the Ubuntu distro and get the needed packages
+
+In the terminal, run the following lines
+1. sudo apt update
+2. sudo apt install make
+3. sudo apt-get install gcc-mingw-w64
+4. sudo apt-get install binutils
+
+
+C. Now we can install BLASFEO and HPIPM.
+
+1. download BLASFEO and HPIPM from https://github.com/chenyutao36/blasfeo and https://github.com/chenyutao36/hpipm
+2. go to BLASFEO directory, open Makefile.rule using a text editor (recommend VS code https://code.visualstudio.com/)
+3. select target architecture according to your CPU type (if not sure, use X64_INTEL_CORE if you have a INTEL CPU)
+4. uncomment OS=WINDOWS when choosing operating system
+5. choose C Compiler as CC=x86_64-w64-mingw32-gcc instead of CC=gcc
+6. open an Ubuntu Terminal using Shift+right click -> Open Linux shell here
+7. type "make" (take a while)
+
+9. go to HPIPM directory, open Makefile.rule using text editor
+10. do the same thing as in steps 4 and 5
+11. do the same thing as in steps 7 
+
+
+D. OK we are done! Let's compile mexFunction in MATLAB
+
+1. open Matlab
+2. type "mex -setup" and set 'MinGW64 Compiler (C)' as compiler (if not installed, Apps -> Get More Apps -> MATLAB Support for MinGW-w64 C/C++ Compiler)
+3. go to MATMPC/mex_core and open compile_hpipm.m
+4. make sure the mexfiles_* contain the right path to the Blasfeo and hpipm libraries
+   e.g.: mexfiles_sp = ['hpipm_sparse.c ', ...
+                        PREFIX,'\hpipm-master\lib\libhpipm.a ', ...
+                        PREFIX,'\blasfeo-master\lib\libblasfeo.a ',...
+                        ];
+5. make sure the mex_cmd command contains the right path to the Blasfeo and hpipm include
+   e.g.: mexcmd = [mexcmd, ' -I.. -I' PREFIX '\hpipm-master\include -I' PREFIX '\blasfeo-master\include'];
+6. run the script and you should have hpipm_sparse.mexw64, hpipm_pcond.mexw64 and Condensing_Blasfeo.mexw64
+
+E. In Simulation.m, try
+
+1. opt.condensing = 'blasfeo_full', run simulations and it should be faster in terms of COND time than 'default_full'
+2. opt.condensing = 'no', opt.qpsolver = 'hpipm_sparse' or 'hpipm_pcond', the time for solving QP should be much less.
+
+Note: HPIPM is not so stable, so you may have NaN from it. In this case, try to scale better your problem. 
+
+Good luck!
+
+Yutao & Enrico
