@@ -1,45 +1,42 @@
-This is a tutorial for installing BLASFEO and HPIPM on Windows system. BLASFEO is a linear algebra library and HPIPM is a sparse QP solver.
+This is a tutorial for installing BLASFEO and HPIPM on Windows 64-bit system. BLASFEO is a linear algebra library and HPIPM is a sparse QP solver.
 
-Since they are developed in Linux systems, first you need to install MINGW and MSYS.
+Since they are developed in Linux systems, first you need to install mingw64.
 
-1. start with no mingw or msys on your system (otherwise, please uninstall them)
-2. download msys2 at https://www.msys2.org/ (choose x86_64 for 64-bit system)
-3. run the MSYS2 installer, install MSYS2 at default path (e.g. C:\msys64)
-4. open MSYS2 at C:\msys64\msys2_shell.bat
-5. type "pacman -Syuu" (may take a while, if get stucked at end, then just close this window)
-6. close and reopen msys2_shell.bat, type "pacman -S base-devel mingw-w64-x86_64-toolchain" (take some time)
-7. add "C:\msys64\usr\bin" and "C:\msys64\mingw64\bin" into system environment path (not user path)
-8. open a windows command window by using "cmd", type "gcc -v", if you get information about your gcc version, then you have installed MINGW successfully.
+1. Download mingw64 from http://www.mingw-w64.org/doku.php/download/mingw-builds. The website will lead you to Sourceforge repository where the installer will be automatically downloaded.
+2. Open the installer. It is recommended to install mingw64 in disk D: or above (disk C: may have problem with the Administration account). Choose the configuration as follows: 1) GCC version=compatible with the MATLAB version (e.g. 6.3.0 for MATLAB R2020); 2) threads=posix; 3) exceptions=seh; 4) arch = x86_64; 5) rev = latest (biggest number). 
+3. add "D:\msys64\bin" and "C:\msys64\x86_64-w64-mingw32\bin" into system's environment path (not user path)
+8. open a windows command window by using "cmd", type "gcc -v", if you get information about your gcc version, then you have installed mingw64 successfully.
 
 
 Now we can install BLASFEO and HPIPM.
 
 1. download BLASFEO and HPIPM from https://github.com/chenyutao36/blasfeo and https://github.com/chenyutao36/hpipm
-2. go to BLASFEO directory, open Makefile.rule using a text editor (recommend VS code https://code.visualstudio.com/)
+2. go to BLASFEO directory, open Makefile.rule using a text editor
 3. select target architecture according to your CPU type (if not sure, use X64_INTEL_CORE if you have a INTEL CPU)
 4. uncomment OS=WINDOWS when choosing operating system
 5. choose C Compiler as CC=x86_64-w64-mingw32-gcc instead of CC=gcc
-6. open Integrated Terminal in VS code in View->Integrated Terminal at the current location
-7. type "make" (take a while)
-8. type "make install_static"
+6. Change the Installation directory to your desired path
+7. open a command terminal at the current location
+8. type "make" and run
+9. type "make install_static" and run
 
-9. go to HPIPM directory, open Makefile.rule using VS code
-10. do the same thing as in steps 4 and 5
-11. do the same thing as in steps 7 and 8
+9. go to HPIPM directory, open Makefile.rule using a text editor
+10. Change the BLASFEO installation directory to the exact path in which BLASFEO has been installed
+11. do the same thing as in steps 4 to 8
 
 OK we are done! Let's compile mexFunction in MATMPC
 
 1. Open Matlab and go to MATMPC/mex_core
 2. open compile_hpipm.m
-3. Click Run and you should have hpipm_sparse.mexw64, hpipm_pcond.mexw64 and Condensing_Blasfeo.mexw64
+3. Click Run and you should have hpipm_sparse.mexw64, hpipm_pcond.mexw64
 
 In Simulation.m, try
 
 1. opt.condensing = 'blasfeo_full', run simulations and it should be faster in terms of COND time than 'default_full'
 2. opt.condensing = 'no', opt.qpsolver = 'hpipm_sparse' or 'hpipm_pcond', the time for solving QP should be much less.
 
-Note: HPIPM is not so stable, so you may have NaN from it. In this case, try to scale better of your problem. 
-
 Good luck!
 
-Yutao
+Yutao Chen
+
+April 2021
