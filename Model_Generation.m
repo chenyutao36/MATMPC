@@ -157,8 +157,6 @@ adjN_fun = Function('adjN_fun',{states,params,refN, QN, mu_x,muN_g},{dobjN, adj_
 
 generate=input('Would you like to generate the source code?(y/n)','s');
 
-gcc_version==input('Would you like to compile the 6.3 release of gcc?(y/n)','s');
-
 if strcmp(generate,'y')
 
     disp('                           ');
@@ -237,11 +235,7 @@ if strcmp(compile,'y')
        CC_FLAGS='CXXFLAGS="$CXXFLAGS -Wall"'; % use MinGW not VS studio
     end
     if OS_LINUX 
-       	if strcmp(gcc_version, 'y')
-	    CC_FLAGS = 'GCC="/usr/bin/gcc-6.3"';
-	else
 	    CC_FLAGS = 'GCC="/usr/bin/gcc"';
-	end
     end
     if OS_MAC
        CC_FLAGS = '';
