@@ -7,6 +7,9 @@ The tool supports fixed step (explicit/implicit) Runge-Kutta (RK) integrator for
 
 **The most unique feature of MATMPC is that it does not require to install any external libraries. The users need not to understand how to make, compile and link any library. Except for external QP solvers, all algorithmic routines are written directly using MATLAB C API and can be compiled into independent MEX functions using compilers that belong to GCC class (e.g. GCC, MinGW and Clang). MATMPC employs MATLAB built-in linear algebra library provided by Intel MKL. Therefore, MATMPC is able to provide compatible runtime performance as other libraries written directly in C/C++.**
 
+The mathematics and parameter tuning of MATMPC is explained at 
+[matmpc-docs.readthedocs.io/en/latest/](https://matmpc-docs.readthedocs.io/en/latest/ "https://matmpc-docs.readthedocs.io/en/latest/")
+
 ### Windows:
 
 Please install Matlab supported MinGW compiler at https://www.mathworks.com/matlabcentral/fileexchange/52848-matlab-support-for-mingw-w64-c-c-compiler
@@ -38,3 +41,6 @@ Install Xcode from app store
 7. In Draw.m, write your own plot functions to display your results.
 
 8. Run Simulation.m and see the results!
+
+### To use HPIPM as the QP solver
+please read /doc/HPIPM-tutorial for the detailed installation process
