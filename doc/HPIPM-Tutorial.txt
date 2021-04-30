@@ -18,8 +18,8 @@ Now we can install BLASFEO and HPIPM.
 2. go to the BLASFEO directory, open Makefile.rule using a text editor
 3. select "TARGET="  according to your CPU architecture (if not sure, use X64_INTEL_CORE if you have a INTEL CPU)
 4. uncomment "OS=WINDOWS" for the operating system
-5. choose C Compiler as "CC=x86_64-w64-mingw32-gcc instead"
-6. Change the Installation directory to your desired path (recommend not to install in Disk C:)
+5. choose C Compiler as "CC=x86_64-w64-mingw32-gcc"
+6. Change the Installation directory to your desired path (recommend NOT to install in Disk C:)
 7. open a command terminal at the current location
 8. type "make" and run
 9. type "make install_static" and run
