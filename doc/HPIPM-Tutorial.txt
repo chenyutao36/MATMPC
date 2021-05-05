@@ -8,7 +8,7 @@ Since they are developed in Linux systems, first you need to install the GCC com
 3. add "D:\msys64\bin" and "C:\msys64\x86_64-w64-mingw32\bin" into system's environment path (not user path)
 4. open a windows command window by using "cmd", type "gcc -v", if you get information about your gcc version, then you have installed mingw64 successfully.
 5. Open the MATMPC folder in MATLAB, run "configuremingw" and select the mingw64 folder you just installed. You must see mingw64 successfully configured for MATLAB.
-6. Download "msys" from https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20%28Win64%20hosted%29/MSYS%20%2832-bit%29/. Choose the latest version.
+6. Download "msys" from https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20%28Win64%20hosted%29/MSYS%20%2832-bit%29/. Choose the "MSYS-20111123.zip".
 7. Unzip the downloaded "msys" folder and add "msys/bin" to system's environment path.
 
 
