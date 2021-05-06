@@ -59,7 +59,7 @@ N2 = N/5;
 settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
 
 r = 10;
-settings.r = r;      % No. of input blocks (go to InitMemory.m, line 418 to configure)
+settings.r = r;      % No. of input blocks (go to InitMemory.m, line 441 to configure)
 
 opt.hessian         = 'Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
 opt.integrator      = 'ERK4'; % 'ERK4','IRK3','IRK3-DAE'
@@ -68,7 +68,7 @@ opt.qpsolver        = 'qpoases';
 opt.hotstart        = 'no'; %'yes','no' (only for qpoases, use 'no' for nonlinear systems)
 opt.shifting        = 'no'; % 'yes','no'
 opt.ref_type        = 0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
-opt.nonuniform_grid = 0; % if use non-uniform grid discretization (go to InitMemory.m, line 436 to configure)
+opt.nonuniform_grid = 0; % if use non-uniform grid discretization (go to InitMemory.m, line 459 to configure)
 opt.RTI             = 'yes'; % if use Real-time Iteration
 %% available qpsolver
 

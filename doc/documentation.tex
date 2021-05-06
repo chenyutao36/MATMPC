@@ -42,12 +42,12 @@
 \subsection{Advanced functionality installation}
 
 \subsubsection{Linear Algebra Library}
-By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) library \software{lapack} and \software{blas} from INTEL MKL. For the full condensing routine, \software{MATMPC} also supports using \software{BLASFEO} \cite{frison2018blasfeo}. For how to install \software{BLASFEO}, please visit \href{https://github.com/giaf/blasfeo}{here}. Note that, in WINDOWS, installing \software{BLASFEO} requires to install MinGW for WINDOWS (not for MATLAB), which is described in detail in the ``HPIPM tutorial''.
+By default, \software{MATMPC} employs MATLAB built-in linear algebra (LA) library \software{lapack} and \software{blas} from INTEL MKL. For the full condensing routine, \software{MATMPC} also supports using \software{BLASFEO} \cite{frison2018blasfeo}. Note that, in WINDOWS, installing \software{BLASFEO} requires to install MinGW for WINDOWS (not for MATLAB), which is described in detail in the ``HPIPM-tutorial''.
 
 \subsubsection{QP Solver}
 \software{MATMPC} comes with MATLAB built-in QP solver \emph{quadprog} but other QP solvers can also be used. By default, \software{MATMPC} provides compiled binaries of \software{qpOASES} \cite{ferreau2014qpoases} and \software{OSQP} \cite{stellato2018osqp} both for WINDOWS and LINUX. If users want to compile \software{qpOASES} themselves, please visit \href{https://projects.coin-or.org/qpOASES/wiki/QpoasesInstallation}{here} and install its MATLAB interface only. If users want to compile \software{OSQP}, please visit \href{https://osqp.org/}{here} and install its MATLAB interface only.
 
-\software{MATMPC} provides more QP solvers, including \software{HPIPM} and \software{IPOPT} \cite{wachter2006implementation}, both using interior point method (IPM) for solving sparse QP problems. In order to use \software{HPIPM}, either for sparse or partially condensed QP, users should run \emph{/mex\_core/compile\_hpipm.m} to obtain compatible MEX functions. Such compilation requires to install \software{BLASFEO} and \software{HPIPM}. For how to obtain \software{HPIPM}, please visit \href{https://github.com/giaf/hpipm}{here}. The \software{IPOPT} binary is delivered by \software{OPTI Toolbox} at \href{https://www.inverseproblem.co.nz/OPTI/}{this site}. Hence, it is required to install \software{OPTI Toolbox} first. Note that \software{OPTI Toolbox} is only compatible with WINDOWS system.
+\software{MATMPC} provides more QP solvers, including \software{HPIPM} and \software{IPOPT} \cite{wachter2006implementation}, both using interior point method (IPM) for solving sparse QP problems. In order to use \software{HPIPM}, either for sparse or partially condensed QP, users should run \emph{/mex\_core/compile\_hpipm.m} to obtain compatible MEX functions. Such compilation requires to install \software{BLASFEO} and \software{HPIPM}. Details are given in the ``HPIPM-tutorial''. The \software{IPOPT} binary is delivered by \software{OPTI Toolbox} at \href{https://www.inverseproblem.co.nz/OPTI/}{this site}. Hence, it is required to install \software{OPTI Toolbox} first. Note that \software{OPTI Toolbox} is only compatible with WINDOWS system.
 
 \section{Data Structure}
 
@@ -208,17 +208,17 @@ There are four main data structs in \software{MATMPC}, namely \alert{settings}, 
 	\hline
 		hessian          & Gauss\_Newton, Generalized\_Gauss\_Newton
 		\\
-		integrator       & ERK4, IRK3, EKR4-CASADI                                                                                                                                      \\
+		integrator       & ERK4, IRK3, IRK3-DAE EKR4-CASADI                                                                                                                                      \\
 		hessian          & gauss\_newton                                                                                                                                                \\
 		condensing       & default\_full, no, blasfeo\_full, partial\_condensing                                                                                                        \\ \hline
 		\multirow{3}{*}{qpsolver} & qpoases, qpoases\_mb, quadprog\_dense, hpipm\_sparse        \\
 		& hpipm\_pcond, ipopt\_dense, ipopt\_sparse                   \\
 		& ipopt\_partial\_sparse, osqp\_sparse, osqp\_partial\_sparse \\ \hline
 		hotstart         & yes, no (only for qpoases)                                                                                                                                                     \\
-		shifting         & yes, no (naive one interval backward shifting)                                                                                                                                                      \\
-		lin\_obj         & yes, no (whether objective functions $h,h_N$ are linear in states and controls)                                                                                                                                                     \\
-		ref\_type        & 0-time invariant, 1-time varying(no preview), 2-time varying (preview)                                                                                                                                                     \\
-		nonuniform\_grid & 0-deactivate, 1-activate\\ \hline        		
+		shifting         & yes, no (naive one interval backward shifting)     \\                                                                                                                                                 		                                                                                                                                                     
+		ref\_type        & 0-time invariant, 1-time varying(no preview), 2-time varying(preview)                                                                                                                                                     \\
+		nonuniform\_grid & 0-deactivate, 1-activate\\ 
+		RTI              & yes, no \\ \hline        		
 	\caption{variables in \alert{opts} struct}
 	\label{table:opts}                                                        
 \end{longtable}
@@ -297,7 +297,7 @@ In this section, a brief introduction of how to run a simulation is given.
 \subsection{MATLAB Simulation}
 \begin{enumerate}
 	\item For the first step, users should refer to \software{MATMPC} examples for how to write their models. Double check the dimensions of all data are correct.
-	\item In ``Model\_Generation.m'', choose your model by setting ``settings.model=...''. Change the number of integration steps per sample interval and shooting interval, respectively, by setting ``s=...''. Run this script.
+	\item In ``Model\_Generation.m'', choose your model by setting ``settings.model=...''. Run this script.
 	\item Once model codes are generated, open ``Simulation.m''. Change a variety of options that may fit your application. Run this script.
 	\item Open ``draw.m'' and write your own plotting codes. Run this script to see your results.
 \end{enumerate}
@@ -305,7 +305,7 @@ In this section, a brief introduction of how to run a simulation is given.
 \subsection{Simulink Simulation}
 \begin{enumerate}
 	\item For the first step, users should refer to \software{MATMPC} examples for how to write their models. Double check the dimensions of all data are correct.
-	\item In ``Model\_Generation.m'', choose your model by setting ``settings.model=...''. Change the number of integration steps per sample interval and shooting interval, respectively, by setting ``s=...''. Run this script.
+	\item In ``Model\_Generation.m'', choose your model by setting ``settings.model=...''. Run this script.
 	\item Once model codes are generated, open ``Initialization\_Simulink.m''. Change a variety of options that may fit your application. Also configure the initial conditions. Run this script.
 	\item Open ``MATMPC\_SIMULINK''. Run the simulation for the ``Inverted Pendulum'' example. Get an idea of how the simulation works.
 	\item Re-write or create a new Simulink simulation for your application.
@@ -315,10 +315,13 @@ In this section, a brief introduction of how to run a simulation is given.
 Currently, \software{MATMPC} supports two advanced and unique functions:
 \begin{enumerate}
 	\item The curvature-like measure of nonlinearity (CMoN) NMPC schemes \cite{chen2017fast, chen2018adaptive}.
-	\item The input move blocking NMPC scheme (to be published). 
+	\item Sparse discretization. 
 \end{enumerate}
 
-For more illustrations and advanced functionalities, please contact me via email.
+\subsection{Input move blocking}
+Sparse discretization can reduce the computational burden of solving an NLP online by reducing the number of decision variables. In MATMPC, there are two ways of doing this: 1) input move blocking and 2) non-uniform grid. The difference of these to ways are shown in \cite{chen2019efficient}, Fig.~1. As compared in \cite{chen2019efficient}, we strongly recommend to use input move blocking, rather than the non-uniform grid strategy.
+
+In MATMPC, users can activate the input move blocking by choosing the QP solver as ``qpoases\_mb''. As a result, MATMPC will automatically use Algorithm 1 and 2 in \cite{chen2019efficient} to condense the NLP. By using this QP solver, users must provide their own move blocking structure in ``Init\_Memory.m'', at line 443. In particular, ``mem.$r$'' is the number of blocks. ``mem.index\_T'' is the indexing vector, where each element denotes the starting index of each input block. Note that this vector always starts from $0$ hence is of length $r+1$. Also note that, as remarked in \cite{chen2019efficient}, an inpropoer move blocking structure may lead to infeasibility and instability. Hence, the tuning of ``mem.index\_T'' is often a trial-and-error procedure and has no theoretical guarantees in most cases.
 
 \bibliographystyle{abbrv}
 \bibliography{ref}
