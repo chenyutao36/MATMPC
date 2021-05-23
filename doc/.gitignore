@@ -1,0 +1,17 @@
+#### LaTeX  #### 
+
+*.pdf
+!**/figures/*.pdf
+*.aux
+*.log
+*.tex.bak
+*.bak
+*.gz
+*.out
+*.dvi
+*.bst
+*.blg
+*.tdo
+*.toc
+documentation.pdf
+documentation.bbl
