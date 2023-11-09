@@ -44,3 +44,29 @@ Install Xcode from app store
 
 ### To use HPIPM as the QP solver
 please read /doc/HPIPM-tutorial for the detailed installation process
+
+### References
+
+```
+@ARTICLE{8451938,
+  author={Chen, Yutao and Bruschetta, Mattia and Cuccato, Davide and Beghi, Alessandro},
+  journal={IEEE Transactions on Automatic Control}, 
+  title={An Adaptive Partial Sensitivity Updating Scheme for Fast Nonlinear Model Predictive Control}, 
+  year={2019},
+  volume={64},
+  number={7},
+  pages={2712-2726},
+  doi={10.1109/TAC.2018.2867916}}
+```
+
+```
+@INPROCEEDINGS{8795788,
+  author={Chen, Yutao and Bruschetta, Mattia and Picotti, Enrico and Beghi, Alessandro},
+  booktitle={2019 18th European Control Conference (ECC)}, 
+  title={MATMPC - A MATLAB Based Toolbox for Real-time Nonlinear Model Predictive Control}, 
+  year={2019},
+  volume={},
+  number={},
+  pages={3365-3370},
+  doi={10.23919/ECC.2019.8795788}}
+```
