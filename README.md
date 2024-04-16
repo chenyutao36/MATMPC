@@ -44,3 +44,6 @@ Install Xcode from app store
 
 ### To use HPIPM as the QP solver
 please read /doc/HPIPM-tutorial for the detailed installation process
+
+### Open in MATLAB Online
+[![Open in MATLAB Online](https://www.mathworks.com/images/responsive/global/open-in-matlab-online.svg)](https://matlab.mathworks.com/open/github/v1?repo=chenyutao36/MATMPC)
