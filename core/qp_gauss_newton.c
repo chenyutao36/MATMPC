@@ -4,11 +4,13 @@
 
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 typedef struct {
     size_t x, u, parameters, references, state_bounds, path_bounds;
     size_t A, B, a, Q, R, Cgx, Cgu, CgN;
     size_t Jx, Ju, J_terminal, integration, count;
+    size_t blocks, R_block, gu_block;
 } qp_layout;
 
 static bool multiply(size_t a, size_t b, size_t *count)
@@ -55,6 +57,21 @@ static matmpc_qp_status layout_for(const matmpc_qp_config *config, qp_layout *la
         !multiply(config->ny, nu, &layout->Ju) || !multiply(config->ny_terminal, nx, &layout->J_terminal) ||
         !add(layout->Jx, layout->Ju, &jacobians))
         return MATMPC_QP_SIZE_OVERFLOW;
+
+    const matmpc_erk_view blocks = config->control_blocks;
+    if (blocks.count != 0) {
+        if (config->stage_grid.count != 0 || nu == 0 || blocks.data == NULL || blocks.count < 2 || blocks.count > states ||
+            blocks.data[0] != 0.0 || blocks.data[blocks.count - 1] != (double)N)
+            return MATMPC_QP_INVALID_ARGUMENT;
+        for (size_t k = 1; k < blocks.count; ++k) {
+            const double boundary = blocks.data[k];
+            if (!(boundary > blocks.data[k - 1] && boundary <= (double)N) || floor(boundary) != boundary)
+                return MATMPC_QP_INVALID_ARGUMENT;
+        }
+        layout->blocks = blocks.count - 1;
+        layout->R_block = layout->blocks * (nu * nu);
+        layout->gu_block = layout->blocks * nu;
+    }
 
     const matmpc_erk_status integration = matmpc_erk_workspace_size(&config->integration.shape, &layout->integration);
     if (integration == MATMPC_ERK_SIZE_OVERFLOW)
@@ -108,7 +125,8 @@ static bool output_matches(const matmpc_qp_config *config, const qp_layout *layo
            valid_output(output->Cgx, layout->Cgx) && valid_output(output->Cgu, layout->Cgu) && valid_output(output->CgN, layout->CgN) &&
            valid_output(output->lc, layout->path_bounds) && valid_output(output->uc, layout->path_bounds) &&
            valid_output(output->lb_du, layout->u) && valid_output(output->ub_du, layout->u) &&
-           valid_output(output->lb_dx, layout->state_bounds) && valid_output(output->ub_dx, layout->state_bounds);
+           valid_output(output->lb_dx, layout->state_bounds) && valid_output(output->ub_dx, layout->state_bounds) &&
+           valid_output(output->R_block, layout->R_block) && valid_output(output->gu_block, layout->gu_block);
 }
 
 static bool valid_stage_grid(const matmpc_qp_config *config)
@@ -148,6 +166,28 @@ static void floor_diagonal(double *matrix, size_t n, double minimum)
     for (size_t i = 0; i < n; ++i) {
         if (matrix[i * (n + 1)] < minimum)
             matrix[i * (n + 1)] = minimum;
+    }
+}
+
+static void aggregate_controls(const matmpc_qp_config *config, const qp_layout *layout, const matmpc_qp_output *output)
+{
+    const size_t nu = config->integration.shape.nu;
+    const size_t width = nu * nu;
+    const double *boundaries = config->control_blocks.data;
+    for (size_t block = 0; block < layout->blocks; ++block) {
+        const size_t first = (size_t)boundaries[block];
+        const size_t end = (size_t)boundaries[block + 1];
+        double *R = output->R_block.data + block * width;
+        double *gu = output->gu_block.data + block * nu;
+        memcpy(R, output->R.data + first * width, width * sizeof(*R));
+        memcpy(gu, output->gu.data + first * nu, nu * sizeof(*gu));
+        for (size_t stage = first + 1; stage < end; ++stage) {
+            for (size_t j = 0; j < width; ++j)
+                R[j] += output->R.data[stage * width + j];
+            for (size_t j = 0; j < nu; ++j)
+                gu[j] += output->gu.data[stage * nu + j];
+        }
+        floor_diagonal(R, nu, config->diagonal_floor);
     }
 }
 
@@ -219,7 +259,8 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
         gram(nx, nu, config->ny, Jx, Ju, S);
         gram(nu, nu, config->ny, Ju, Ju, R);
         floor_diagonal(Q, nx, config->diagonal_floor);
-        floor_diagonal(R, nu, config->diagonal_floor);
+        if (layout.blocks == 0)
+            floor_diagonal(R, nu, config->diagonal_floor);
 
         for (size_t j = 0; j < nu; ++j) {
             const size_t k = i * nu + j;
@@ -261,5 +302,6 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
             output->lc.data[j] = input->lower_path.data[j] - output->lc.data[j];
         }
     }
+    aggregate_controls(config, &layout, output);
     return MATMPC_QP_OK;
 }

@@ -58,6 +58,8 @@ Full condensing exposes the gradient and bounds separately from the Hessian and 
 
 The ERK4 Gauss–Newton MEX path returns the linearized dynamics, cost, and constraints as `qp = qp_generation(input, settings, mem)` for both uniform and nonuniform shooting. The nonuniform path scales the ERK substep by the interval width in `mem.index_T` and uses the same configured substep count in every interval. Compare these blocks before condensing when investigating differences in the control solution.
 
+For uniform shooting with move blocking, `qp = qp_generation(input, settings, mem, mem.index_T)` also returns the block control gradients and Hessians in `gu_block` and `R_block`. Each `R_block` receives the diagonal floor after summing the raw stage Hessians. The per-stage `R` and `gu` remain available for the merit calculation.
+
 ## MATLAB controller sessions
 
 Use a controller object to manage one solve sequence and inspect its numeric state in the workspace.

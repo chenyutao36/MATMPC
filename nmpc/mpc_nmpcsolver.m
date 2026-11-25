@@ -5,7 +5,8 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
     mem.alpha =1;
     mem.obj=0;
     mem.nonuniform_grid = logical(opt.nonuniform_grid);
-    if mem.nonuniform_grid && strcmp(opt.qpsolver, 'qpoases_mb')
+    moveBlocking = strcmp(opt.qpsolver, 'qpoases_mb');
+    if mem.nonuniform_grid && moveBlocking
         error('MATMPC:IncompatibleGrid', 'Move blocking requires a uniform shooting grid.');
     end
     StopCrit = 2*mem.kkt_lim;
@@ -21,18 +22,14 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ----------- QP Preparation
         
         tshoot = tic;
-        if strcmp(opt.qpsolver, 'qpoases_mb')
-            qp_generation_mb(input, settings, mem);
-        else
-            mem = prepare_shooting_qp(input, settings, mem);
-        end
+        mem = prepare_shooting_qp(input, settings, mem, moveBlocking);
       
         tSHOOT = toc(tshoot)*1e3; 
         
         switch opt.condensing
             case 'default_full'              
                 tcond=tic;
-                if ~strcmp(opt.qpsolver, 'qpoases_mb')
+                if ~moveBlocking
                     mem = condense_default_qp(mem, settings);
                 else
                     Condensing_mb(mem, settings);

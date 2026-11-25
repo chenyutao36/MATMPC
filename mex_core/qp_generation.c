@@ -193,7 +193,8 @@ static void check_model_dimensions(const matmpc_qp_config *config)
     }
 }
 
-static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settings, const mxArray *mem)
+static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settings, const mxArray *mem,
+                                     const mxArray *block_boundaries)
 {
     if (!mxIsStruct(input) || !mxIsStruct(settings) || !mxIsStruct(mem) ||
         mxGetNumberOfElements(input) != 1 || mxGetNumberOfElements(settings) != 1 || mxGetNumberOfElements(mem) != 1) {
@@ -209,6 +210,9 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
     const size_t nx = dimension(settings, "nx");
     const size_t nu = dimension(settings, "nu");
     const size_t N = dimension(settings, "N");
+    config.stage_grid.data = sim_grid_indices(mem, N, false);
+    if (config.stage_grid.data != NULL)
+        config.stage_grid.count = N + 1;
     config.integration.shape.nx = nx;
     config.integration.shape.nu = nu;
     config.integration.shape.stages = 4;
@@ -223,6 +227,21 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
     config.nc_terminal = dimension(settings, "ncN");
     config.nbx = dimension(settings, "nbx");
     config.diagonal_floor = scalar_field(mem, "reg");
+    size_t blocks = 0;
+    if (block_boundaries != NULL) {
+        if (config.stage_grid.count != 0) {
+            mexErrMsgIdAndTxt("MATMPC:IncompatibleGrid", "Move blocking requires a uniform shooting grid.");
+        }
+        blocks = dimension(mem, "r");
+        if (blocks == 0 || blocks > N || !mxIsDouble(block_boundaries) || mxIsComplex(block_boundaries) ||
+            mxIsSparse(block_boundaries) || mxGetNumberOfDimensions(block_boundaries) != 2 ||
+            (mxGetM(block_boundaries) != 1 && mxGetN(block_boundaries) != 1) ||
+            mxGetNumberOfElements(block_boundaries) != blocks + 1) {
+            mexErrMsgIdAndTxt("MATMPC:QPGeneration:ControlBlocks", "Expected r + 1 real double control-block boundaries.");
+        }
+        config.control_blocks.data = mxGetPr(block_boundaries);
+        config.control_blocks.count = blocks + 1;
+    }
 
     check_model_dimensions(&config);
     size_t count;
@@ -232,9 +251,6 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
     }
     config.integration.a = input_field(mem, "A_tab", 4, 4, false);
     config.integration.b = input_field(mem, "B_tab", 1, 4, true);
-    config.stage_grid.data = sim_grid_indices(mem, N, false);
-    if (config.stage_grid.data != NULL)
-        config.stage_grid.count = N + 1;
     config.state_seed = input_field(mem, "Sx", nx, nx, false);
     config.control_seed = input_field(mem, "Su", nx, nu, false);
 
@@ -264,8 +280,10 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
     }
 
     const char *fields[] = {"A", "B", "a", "ds0", "Q", "S", "R", "gx", "gu", "Cgx", "Cgu", "CgN", "lc", "uc",
-                            "lb_du", "ub_du", "lb_dx", "ub_dx"};
-    mxArray *arrays = mxCreateStructMatrix(1, 1, (int)(sizeof(fields) / sizeof(fields[0])), fields);
+                            "lb_du", "ub_du", "lb_dx", "ub_dx", "R_block", "gu_block"};
+    const int field_count = (int)(sizeof(fields) / sizeof(fields[0])) - (blocks == 0 ? 2 : 0);
+    mxArray *arrays = mxCreateStructMatrix(1, 1, field_count, fields);
+    const matmpc_erk_buffer empty = {NULL, 0};
     const matmpc_qp_output output = {
         output_field(arrays, "A", nx, N * nx), output_field(arrays, "B", nx, N * nu),
         output_field(arrays, "a", nx, N), output_field(arrays, "ds0", nx, 1),
@@ -274,7 +292,9 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
         output_field(arrays, "Cgx", nc, N * nx), output_field(arrays, "Cgu", nc, N * nu),
         output_field(arrays, "CgN", ncN, nx), output_field(arrays, "lc", path_rows, 1), output_field(arrays, "uc", path_rows, 1),
         output_field(arrays, "lb_du", N * nu, 1), output_field(arrays, "ub_du", N * nu, 1),
-        output_field(arrays, "lb_dx", N * nbx, 1), output_field(arrays, "ub_dx", N * nbx, 1)
+        output_field(arrays, "lb_dx", N * nbx, 1), output_field(arrays, "ub_dx", N * nbx, 1),
+        blocks != 0 ? output_field(arrays, "R_block", nu, blocks * nu) : empty,
+        blocks != 0 ? output_field(arrays, "gu_block", nu, blocks) : empty
     };
 
     if (native_qp_workspace_count != count) {
@@ -301,11 +321,11 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
-    if (nrhs != 3 || nlhs > 1) {
-        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Arguments", "Call qp = qp_generation(input, settings, mem).");
+    if ((nrhs != 3 && (nrhs != 4 || nlhs != 1)) || nlhs > 1) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Arguments", "Call qp = qp_generation(input, settings, mem) with optional control-block boundaries.");
     }
     if (nlhs == 1) {
-        plhs[0] = generate_explicit_qp(prhs[0], prhs[1], prhs[2]);
+        plhs[0] = generate_explicit_qp(prhs[0], prhs[1], prhs[2], nrhs == 4 ? prhs[3] : NULL);
         return;
     }
     /* Retained for legacy no-output calls and the other integration/Hessian modes. */

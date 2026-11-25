@@ -25,6 +25,7 @@ typedef struct {
     /* N+1 boundary indices or an empty view for a uniform grid. Each interval scales
      * the base microstep without changing the integration step count. */
     matmpc_erk_view stage_grid;
+    matmpc_erk_view control_blocks; /* Uniform grid only: integer stage boundaries from 0 to horizon. */
 } matmpc_qp_config;
 
 /* Callbacks return zero on success. Jacobians are column-major; objective Jacobians
@@ -56,6 +57,7 @@ typedef struct {
     matmpc_erk_buffer Q, S, R, gx, gu;
     matmpc_erk_buffer Cgx, Cgu, CgN, lc, uc;
     matmpc_erk_buffer lb_du, ub_du, lb_dx, ub_dx;
+    matmpc_erk_buffer R_block, gu_block; /* With blocks, stage R stays raw and the diagonal floor applies once per block. */
 } matmpc_qp_output;
 
 /* Workspace size in doubles. No allocations or backend initialization occur in this kernel. */

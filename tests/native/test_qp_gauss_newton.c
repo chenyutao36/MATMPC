@@ -121,7 +121,7 @@ int main(void)
     const size_t indices[] = {1, 0};
     matmpc_qp_config config = {
         {{2, 2, 4, 2, true, false}, 0.125, {tableau, 16}, {weights, 4}},
-        2, 1, 2, 1, 2, 1, indices, 2, {state_seed, 4}, {control_seed, 4}, 2.0, {NULL, 0}
+        2, 1, 2, 1, 2, 1, indices, 2, {state_seed, 4}, {control_seed, 4}, 2.0, {NULL, 0}, {NULL, 0}
     };
     const matmpc_qp_model model = {
         {NULL, rhs, forward, NULL}, NULL, stage_cost, terminal_cost, path_constraint, terminal_constraint
@@ -139,7 +139,8 @@ int main(void)
     double Cgx[8], Cgu[8], CgN[2], lc[5], uc[5], lb_du[4], ub_du[4], lb_dx[4], ub_dx[4];
     matmpc_qp_output output = {
         {A, 8}, {B, 8}, {a, 4}, {ds0, 2}, {Q, 12}, {S, 8}, {R, 8}, {gx, 6}, {gu, 4},
-        {Cgx, 8}, {Cgu, 8}, {CgN, 2}, {lc, 5}, {uc, 5}, {lb_du, 4}, {ub_du, 4}, {lb_dx, 4}, {ub_dx, 4}
+        {Cgx, 8}, {Cgu, 8}, {CgN, 2}, {lc, 5}, {uc, 5}, {lb_du, 4}, {ub_du, 4}, {lb_dx, 4}, {ub_dx, 4},
+        {NULL, 0}, {NULL, 0}
     };
     size_t count;
     double scratch[128];
@@ -230,6 +231,42 @@ int main(void)
     require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
             "workspace could not be reused for a uniform grid");
     check_array(B, expected_B, 8, "uniform B after grid change");
+
+    const double blocks[] = {0, 2};
+    const double invalid_blocks[] = {0, 1.5, 2};
+    const matmpc_erk_view block_map = {blocks, 2}, invalid_block_map = {invalid_blocks, 3};
+    config.control_blocks = invalid_block_map;
+    size_t blocked_count;
+    require(matmpc_qp_workspace_size(&config, &blocked_count) == MATMPC_QP_INVALID_ARGUMENT,
+            "fractional block boundary was accepted");
+
+    config.control_blocks = block_map;
+    config.stage_grid = nonuniform_grid;
+    require(matmpc_qp_workspace_size(&config, &blocked_count) == MATMPC_QP_INVALID_ARGUMENT,
+            "combined nonuniform grid and control blocks were accepted");
+    config.stage_grid = uniform_grid;
+    config.diagonal_floor = 14.0;
+    double R_block[4] = {-1, -1, -1, -1}, gu_block[2] = {-1, -1};
+    const matmpc_erk_buffer block_hessian = {R_block, 4}, block_gradient = {gu_block, 2};
+    require(matmpc_qp_workspace_size(&config, &blocked_count) == MATMPC_QP_OK && blocked_count == count,
+            "unexpected work space allocation for control blocks");
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_INVALID_ARGUMENT,
+            "missing block outputs were accepted");
+    output.R_block = block_hessian;
+    output.gu_block = block_gradient;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
+            "move-blocking QP assembly failed");
+    const double expected_R_block[] = {20, 0, 0, 14};
+    const double expected_gu_block[] = {61, -82};
+    check_array(R, expected_R, 8, "raw stage R");
+    check_array(gu, expected_gu, 4, "stage gu");
+    check_array(R_block, expected_R_block, 4, "R_block");
+    check_array(gu_block, expected_gu_block, 2, "gu_block");
+    const matmpc_erk_view empty_blocks = {NULL, 0};
+    const matmpc_erk_buffer empty_blocks_output = {NULL, 0};
+    config.control_blocks = empty_blocks;
+    config.diagonal_floor = 2.0;
+    output.R_block = output.gu_block = empty_blocks_output;
 
     const size_t invalid_indices[] = {1, 2};
     config.bounded_states = invalid_indices;

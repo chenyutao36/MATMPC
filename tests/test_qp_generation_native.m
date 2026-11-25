@@ -11,12 +11,20 @@ core = fullfile(projectRoot, 'core');
 mexCore = fullfile(projectRoot, 'mex_core');
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(projectRoot));
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(projectRoot, 'nmpc')));
+if ismac
+    platform = 'mac';
+elseif ispc
+    platform = 'win64';
+else
+    platform = 'linux';
+end
+testCase.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(projectRoot, 'solver', platform, 'qpoases')));
 tmp = testCase.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture);
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(tmp.Folder));
 testCase.addTeardown(@unloadFixture);
 sources = fullfile(mexCore, {'sim.c', 'erk.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
 portable = fullfile(core, {'qp_gauss_newton.c', 'erk_kernel.c', 'matmpc_la.c'});
-for entry = {'qp_generation', 'qp_generation_ngrid'}
+for entry = {'qp_generation', 'qp_generation_ngrid', 'qp_generation_mb'}
     name = entry{1};
     mex('-outdir', tmp.Folder, ['-I' core], ['-I' mexCore], '-output', name, ...
         fullfile(mexCore, [name '.c']), sources{:}, portable{:}, ...
@@ -25,7 +33,7 @@ end
 end
 
 function unloadFixture
-clear qp_generation qp_generation_ngrid
+clear qp_generation qp_generation_ngrid qp_generation_mb
 end
 
 function testExplicitOutputsMatchLegacyBlockByBlock(testCase)
@@ -103,6 +111,56 @@ badSettings.nbx_idx = 2;
 testCase.verifyError(@() explicitQp(input, badSettings, mem), 'MATMPC:QPGeneration:StateBounds');
 qp = qp_generation(input, settings, mem);
 testCase.verifyEqual(qp.B, settings.Ts_st * ones(1, settings.N), 'AbsTol', 1e-12);
+end
+
+function testMoveBlockingOutputsMatchLegacy(testCase)
+[input, settings, opt] = scalarProblem();
+settings.r = 2;
+settings.index_T = [0, 2, 3];
+opt.qpsolver = 'qpoases_mb';
+mem = InitMemory(settings, opt, input);
+mem.reg = 4;
+legacy = InitMemory(settings, opt, input);
+legacy.reg = mem.reg;
+qp_generation_mb(input, settings, legacy);
+qp = qp_generation(input, settings, mem, mem.index_T);
+fields = fieldnames(qp);
+testCase.verifyNumElements(fields, 20);
+updated = prepare_shooting_qp(input, settings, mem, true);
+for i = 1:numel(fields)
+    name = fields{i};
+    testCase.verifyEqual(qp.(name), legacy.(name), 'AbsTol', 1e-12, name);
+    testCase.verifyEqual(updated.(name), qp.(name), 'AbsTol', 1e-12, name);
+end
+testCase.verifyEqual(qp.R, [5, 2, 3], 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.R_block, [7, 4], 'AbsTol', 1e-12);
+testCase.verifyEqual(mem.R_block, zeros(size(mem.R_block)));
+testCase.verifyError(@() blockedQp(input, settings, mem, [0 1]), 'MATMPC:QPGeneration:ControlBlocks');
+testCase.verifyError(@() blockedQp(input, settings, mem, [0 0 3]), 'MATMPC:QPGeneration:Configuration');
+end
+
+function testMoveBlockingRetainsGgnAndIrk(testCase)
+[input, settings, opt] = scalarProblem();
+settings.r = 2;
+settings.index_T = [0, 2, 3];
+opt.qpsolver = 'qpoases_mb';
+for selected = {'hessian', 'integrator'}
+    options = opt;
+    switch selected{1}
+        case 'hessian'
+            options.hessian = 'Generalized_Gauss_Newton';
+        case 'integrator'
+            options.integrator = 'IRK3';
+    end
+    mem = InitMemory(settings, options, input);
+    updated = prepare_shooting_qp(input, settings, mem, true);
+    testCase.verifyEqual(updated.B, settings.Ts_st * ones(1, settings.N), 'AbsTol', 1e-12);
+    testCase.verifyEqual(updated.R_block, [7, 3], 'AbsTol', 1e-12);
+end
+end
+
+function blockedQp(input, settings, mem, boundaries)
+unused = qp_generation(input, settings, mem, boundaries); %#ok<NASGU>
 end
 
 function testGgnAndIrkKeepTheirExistingPaths(testCase)
