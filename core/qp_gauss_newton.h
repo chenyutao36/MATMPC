@@ -16,12 +16,15 @@ typedef enum {
 } matmpc_qp_status;
 
 typedef struct {
-    matmpc_erk_config integration; /* Uniform, four-stage explicit integration with forward sensitivities. */
+    matmpc_erk_config integration; /* Four-stage explicit integration with forward sensitivities. */
     size_t horizon, np, ny, ny_terminal, nc, nc_terminal;
     const size_t *bounded_states; /* Zero-based indices of length nbx. */
     size_t nbx;
     matmpc_erk_view state_seed, control_seed;
     double diagonal_floor;
+    /* N+1 boundary indices or an empty view for a uniform grid. Each interval scales
+     * the base microstep without changing the integration step count. */
+    matmpc_erk_view stage_grid;
 } matmpc_qp_config;
 
 /* Callbacks return zero on success. Jacobians are column-major; objective Jacobians

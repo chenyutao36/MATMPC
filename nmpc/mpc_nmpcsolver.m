@@ -21,15 +21,10 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ----------- QP Preparation
         
         tshoot = tic;
-        if mem.nonuniform_grid
-            qp_generation_ngrid(input, settings, mem);
+        if strcmp(opt.qpsolver, 'qpoases_mb')
+            qp_generation_mb(input, settings, mem);
         else
-            if strcmp(opt.qpsolver, 'qpoases_mb')
-                qp_generation_mb(input, settings, mem);
-            else
-                mem = prepare_uniform_qp(input, settings, mem);
-%                 qp_generation_tac(input, settings, mem);
-            end
+            mem = prepare_shooting_qp(input, settings, mem);
         end
       
         tSHOOT = toc(tshoot)*1e3; 

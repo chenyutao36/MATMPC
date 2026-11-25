@@ -1,5 +1,6 @@
 #include "qp_gauss_newton.h"
 
+#include <float.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,10 +24,21 @@ static void check_array(const double *actual, const double *expected, size_t cou
     }
 }
 
+typedef struct {
+    size_t count;
+    double states[16][2];
+} integration_trace;
+
 static int rhs(void *context, const double *x, const double *u, const double *p, double *rate)
 {
-    (void)context;
-    (void)x;
+    if (context != NULL) {
+        integration_trace *trace = context;
+        if (trace->count == sizeof(trace->states) / sizeof(trace->states[0]))
+            return 1;
+        trace->states[trace->count][0] = x[0];
+        trace->states[trace->count][1] = x[1];
+        ++trace->count;
+    }
     rate[0] = u[0] + p[0];
     rate[1] = 2 * u[1] - p[0];
     return 0;
@@ -109,7 +121,7 @@ int main(void)
     const size_t indices[] = {1, 0};
     matmpc_qp_config config = {
         {{2, 2, 4, 2, true, false}, 0.125, {tableau, 16}, {weights, 4}},
-        2, 1, 2, 1, 2, 1, indices, 2, {state_seed, 4}, {control_seed, 4}, 2.0
+        2, 1, 2, 1, 2, 1, indices, 2, {state_seed, 4}, {control_seed, 4}, 2.0, {NULL, 0}
     };
     const matmpc_qp_model model = {
         {NULL, rhs, forward, NULL}, NULL, stage_cost, terminal_cost, path_constraint, terminal_constraint
@@ -165,6 +177,59 @@ int main(void)
     check_array(ub_du, expected_ub_du, 4, "ub_du");
     check_array(lb_dx, expected_lb_dx, 4, "lb_dx");
     check_array(ub_dx, expected_ub_dx, 4, "ub_dx");
+
+    const double grid[] = {0, 3, 5};
+    const matmpc_erk_view nonuniform_grid = {grid, 3};
+    config.stage_grid = nonuniform_grid;
+    size_t nonuniform_count;
+    require(matmpc_qp_workspace_size(&config, &nonuniform_count) == MATMPC_QP_OK && nonuniform_count == count,
+            "prediction grid changed the fixed workspace and horizon");
+    integration_trace trace = {0};
+    matmpc_qp_model traced_model = model;
+    traced_model.dynamics.context = &trace;
+    require(matmpc_qp_gauss_newton(&config, &traced_model, &input, &output, workspace) == MATMPC_QP_OK,
+            "nonuniform QP assembly failed");
+    require(trace.count == 16, "nonuniform integration changed the microstep count");
+    const double rk_nodes[] = {0, 0.5, 0.5, 1, 1, 1.5, 1.5, 2};
+    const double microsteps[] = {0.375, 0.25};
+    const double stage_rates[][2] = {{6, -6}, {-1.5, 3.5}};
+    for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 8; ++j) {
+            const double elapsed = microsteps[i] * rk_nodes[j];
+            const double stage_state[] = {x[2 * i] + elapsed * stage_rates[i][0], x[2 * i + 1] + elapsed * stage_rates[i][1]};
+            check_array(trace.states[8 * i + j], stage_state, 2, "nonuniform RK stage state");
+        }
+    }
+    const double nonuniform_a[] = {4, -4, -1.25, 2.25};
+    const double nonuniform_B[] = {0.75, 0, 0, 1.5, 0.5, 0, 0, 1};
+    check_array(a, nonuniform_a, 4, "nonuniform a");
+    check_array(A, expected_A, 8, "nonuniform A");
+    check_array(B, nonuniform_B, 8, "nonuniform B");
+    check_array(Q, expected_Q, 12, "nonuniform Q");
+    check_array(lb_dx, expected_lb_dx, 4, "nonuniform lb_dx");
+    check_array(ub_dx, expected_ub_dx, 4, "nonuniform ub_dx");
+    check_array(lc, expected_lc, 5, "nonuniform lc");
+
+    config.stage_grid.count = 2;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_INVALID_ARGUMENT,
+            "accepted a grid with the wrong number of stages");
+    const double repeated_boundary[] = {0, 3, 3};
+    const matmpc_erk_view invalid_grid = {repeated_boundary, 3};
+    config.stage_grid = invalid_grid;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_INVALID_ARGUMENT,
+            "accepted a zero-width shooting interval");
+    const double enormous_boundary[] = {0, 1, DBL_MAX};
+    const matmpc_erk_view overflowing_grid = {enormous_boundary, 3};
+    config.stage_grid = overflowing_grid;
+    config.integration.step = 2.0;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_INVALID_ARGUMENT,
+            "accepted an overflowing microstep");
+    config.integration.step = 0.125;
+    const matmpc_erk_view uniform_grid = {NULL, 0};
+    config.stage_grid = uniform_grid;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
+            "workspace could not be reused for a uniform grid");
+    check_array(B, expected_B, 8, "uniform B after grid change");
 
     const size_t invalid_indices[] = {1, 2};
     config.bounded_states = invalid_indices;

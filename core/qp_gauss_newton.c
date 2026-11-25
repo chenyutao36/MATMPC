@@ -111,6 +111,25 @@ static bool output_matches(const matmpc_qp_config *config, const qp_layout *layo
            valid_output(output->lb_dx, layout->state_bounds) && valid_output(output->ub_dx, layout->state_bounds);
 }
 
+static bool valid_stage_grid(const matmpc_qp_config *config)
+{
+    const double base_step = config->integration.step;
+    const matmpc_erk_view grid = config->stage_grid;
+    if (!isfinite(base_step) || base_step <= 0.0)
+        return false;
+    if (grid.count == 0)
+        return true;
+    if (grid.data == NULL || grid.count != config->horizon + 1)
+        return false;
+
+    for (size_t i = 0; i < config->horizon; ++i) {
+        const double step = base_step * (grid.data[i + 1] - grid.data[i]);
+        if (!isfinite(step) || step <= 0.0)
+            return false;
+    }
+    return true;
+}
+
 static void gram(size_t rows, size_t columns, size_t residuals, const double *left, const double *right, double *result)
 {
     if (rows == 0 || columns == 0)
@@ -153,7 +172,7 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
         !valid_input(config->control_seed, nx * nu) || (config->nbx != 0 && config->bounded_states == NULL) ||
         model->stage_cost == NULL || model->terminal_cost == NULL || (nc != 0 && model->path_constraint == NULL) ||
         (config->nc_terminal != 0 && model->terminal_constraint == NULL) ||
-        !input_matches(config, &layout, input) || !output_matches(config, &layout, output))
+        !valid_stage_grid(config) || !input_matches(config, &layout, input) || !output_matches(config, &layout, output))
         return MATMPC_QP_INVALID_ARGUMENT;
     for (size_t j = 0; j < config->nbx; ++j) {
         if (config->bounded_states[j] >= nx)
@@ -161,6 +180,8 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
     }
 
     const matmpc_erk_buffer integration_workspace = {workspace.data, layout.integration};
+    matmpc_erk_config integration = config->integration;
+    const matmpc_erk_view grid = config->stage_grid;
     double *Jx = workspace.data + layout.integration;
     double *Ju = Jx + layout.Jx;
     for (size_t j = 0; j < nx; ++j)
@@ -178,7 +199,9 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
             {a, nx}, {output->A.data + i * nx * nx, nx * nx},
             {nu != 0 ? output->B.data + i * nx * nu : NULL, nx * nu}, {NULL, 0}
         };
-        const matmpc_erk_status step_status = matmpc_erk_integrate(&config->integration, &model->dynamics,
+        if (grid.count != 0)
+            integration.step = config->integration.step * (grid.data[i + 1] - grid.data[i]);
+        const matmpc_erk_status step_status = matmpc_erk_integrate(&integration, &model->dynamics,
                                                                   &step_input, &step_output, integration_workspace);
         if (step_status != MATMPC_ERK_OK)
             return step_status == MATMPC_ERK_MODEL_ERROR ? MATMPC_QP_MODEL_ERROR : MATMPC_QP_INVALID_ARGUMENT;

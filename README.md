@@ -44,7 +44,7 @@ Run `addpath('tests'); smoke_simulink_inverted_pendulum` to build and check both
 
 ## Shared C kernels
 
-The explicit Runge–Kutta integrator, uniform-grid ERK4 Gauss–Newton QP generation, default full condensing, and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers.
+The explicit Runge–Kutta integrator, ERK4 Gauss–Newton QP generation, default full condensing, and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers.
 
 ```sh
 cmake -S core -B build/shared-core
@@ -56,7 +56,7 @@ Use `-DBUILD_TESTING=OFF` when building the library alone. The ERK caller suppli
 
 Full condensing exposes the gradient and bounds separately from the Hessian and constraint matrices in C. In MATLAB, `qp = Condensing(mem, settings)` returns all eight condensed arrays for inspection or comparison.
 
-The uniform-grid ERK4 Gauss–Newton MEX path returns the linearized dynamics, cost, and constraints as `qp = qp_generation(input, settings, mem)`. Compare these blocks before condensing when investigating differences in the control solution.
+The ERK4 Gauss–Newton MEX path returns the linearized dynamics, cost, and constraints as `qp = qp_generation(input, settings, mem)` for both uniform and nonuniform shooting. The nonuniform path scales the ERK substep by the interval width in `mem.index_T` and uses the same configured substep count in every interval. Compare these blocks before condensing when investigating differences in the control solution.
 
 ## MATLAB controller sessions
 

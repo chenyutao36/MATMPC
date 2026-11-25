@@ -200,10 +200,9 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
         mexErrMsgIdAndTxt("MATMPC:QPGeneration:Configuration", "input, settings and mem must be scalar structures.");
     }
 
-    const mxArray *nonuniform = mxGetField(mem, 0, "nonuniform_grid");
     if (dimension(settings, "nz") != 0 || dimension(mem, "sim_method") != 1 || dimension(mem, "hessian") != 0 ||
-        dimension(mem, "num_stages") != 4 || (nonuniform != NULL && mxGetScalar(nonuniform) != 0.0)) {
-        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Mode", "Explicit QP output requires uniform-grid ERK4 and Gauss-Newton.");
+        dimension(mem, "num_stages") != 4) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Mode", "Explicit QP output requires ERK4 and Gauss-Newton.");
     }
 
     matmpc_qp_config config = {0};
@@ -233,6 +232,9 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
     }
     config.integration.a = input_field(mem, "A_tab", 4, 4, false);
     config.integration.b = input_field(mem, "B_tab", 1, 4, true);
+    config.stage_grid.data = sim_grid_indices(mem, N, false);
+    if (config.stage_grid.data != NULL)
+        config.stage_grid.count = N + 1;
     config.state_seed = input_field(mem, "Sx", nx, nx, false);
     config.control_seed = input_field(mem, "Su", nx, nu, false);
 

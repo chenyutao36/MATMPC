@@ -21,12 +21,10 @@ function [input,mem,cpt,StopCrit,OBJ,lineSearchAccepted] = mpc_nmpcsolver_simuli
     tic;
     while(mem.sqp_it < mem.sqp_maxit  &&  StopCrit > mem.kkt_lim && mem.alpha>1E-8 )
                
-        if mem.nonuniform_grid
-            qp_generation_ngrid(input, settings, mem);
-        elseif strcmp(opt.qpsolver, 'qpoases_mb')
+        if strcmp(opt.qpsolver, 'qpoases_mb')
             qp_generation_mb(input, settings, mem);
         else
-            mem = prepare_uniform_qp(input, settings, mem);
+            mem = prepare_shooting_qp(input, settings, mem);
         end
 
         switch opt.condensing

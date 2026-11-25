@@ -14,14 +14,18 @@ testCase.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(projectRoot,
 tmp = testCase.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture);
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(tmp.Folder));
 testCase.addTeardown(@unloadFixture);
-sources = fullfile(mexCore, {'qp_generation.c', 'sim.c', 'erk.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
+sources = fullfile(mexCore, {'sim.c', 'erk.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
 portable = fullfile(core, {'qp_gauss_newton.c', 'erk_kernel.c', 'matmpc_la.c'});
-mex('-outdir', tmp.Folder, ['-I' core], ['-I' mexCore], '-output', 'qp_generation', ...
-    sources{:}, portable{:}, fullfile(testDir, 'fixtures', 'scalar_ode.c'), '-lmwblas', '-lmwlapack');
+for entry = {'qp_generation', 'qp_generation_ngrid'}
+    name = entry{1};
+    mex('-outdir', tmp.Folder, ['-I' core], ['-I' mexCore], '-output', name, ...
+        fullfile(mexCore, [name '.c']), sources{:}, portable{:}, ...
+        fullfile(testDir, 'fixtures', 'scalar_ode.c'), '-lmwblas', '-lmwlapack');
+end
 end
 
 function unloadFixture
-clear qp_generation
+clear qp_generation qp_generation_ngrid
 end
 
 function testExplicitOutputsMatchLegacyBlockByBlock(testCase)
@@ -50,6 +54,39 @@ for i = 1:numel(fields)
 end
 testCase.verifyEqual(mem.A, zeros(size(mem.A)));
 testCase.verifyEqual(updated.warm_start, mem.warm_start);
+end
+
+function testNonuniformOutputsMatchLegacyAndKeepThePredictionHorizon(testCase)
+[input, settings, opt] = scalarProblem();
+settings.index_T = [0, 1, 4, 9];
+opt.nonuniform_grid = true;
+mem = InitMemory(settings, opt, input);
+legacy = InitMemory(settings, opt, input);
+qp = qp_generation(input, settings, mem);
+qp_generation_ngrid(input, settings, legacy);
+updated = prepare_shooting_qp(input, settings, mem);
+fields = fieldnames(qp);
+for i = 1:numel(fields)
+    name = fields{i};
+    testCase.verifyEqual(qp.(name), legacy.(name), 'AbsTol', 1e-12, name);
+    testCase.verifyEqual(updated.(name), qp.(name), 'AbsTol', 1e-12, name);
+end
+
+duration = settings.Ts_st * diff(settings.index_T);
+testCase.verifyEqual(qp.B, duration, 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.a, input.x(1:end-1) + input.u .* duration - input.x(2:end), 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.lb_dx, input.lbx(:) - input.x(2:end).', 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.ub_dx, input.ubx(:) - input.x(2:end).', 'AbsTol', 1e-12);
+testCase.verifySize(qp.A, [1, settings.N]);
+testCase.verifySize(qp.gx, [1, settings.N + 1]);
+testCase.verifyEqual(mem.A, zeros(size(mem.A)));
+
+invalid = mem;
+invalid.index_T = [0, 1, 1, 9];
+testCase.verifyError(@() explicitQp(input, settings, invalid), 'MATMPC:Integrator:Grid');
+mem.nonuniform_grid = false;
+uniform = prepare_shooting_qp(input, settings, mem);
+testCase.verifyEqual(uniform.B, settings.Ts_st * ones(1, settings.N), 'AbsTol', 1e-12);
 end
 
 function testInvalidInputsLeaveDefaultQpUsable(testCase)
@@ -82,6 +119,27 @@ for selected = {'Generalized_Gauss_Newton', 'IRK3'}
     updated = prepare_uniform_qp(input, settings, mem);
     testCase.verifyEqual(updated.A, ones(1, settings.N), 'AbsTol', 1e-12);
     testCase.verifyEqual(updated.B, settings.Ts_st * ones(1, settings.N), 'AbsTol', 1e-12);
+    testCase.verifyEqual(updated.R, input.W, 'AbsTol', 1e-12);
+end
+end
+
+function testNonuniformGgnAndIrkKeepTheirExistingPaths(testCase)
+[input, settings, opt] = scalarProblem();
+settings.index_T = [0, 1, 4, 9];
+opt.nonuniform_grid = true;
+duration = settings.Ts_st * diff(settings.index_T);
+for selected = {'Generalized_Gauss_Newton', 'IRK3'}
+    options = opt;
+    if strcmp(selected{1}, 'IRK3')
+        options.integrator = 'IRK3';
+    else
+        options.hessian = selected{1};
+    end
+    mem = InitMemory(settings, options, input);
+    testCase.verifyError(@() explicitQp(input, settings, mem), 'MATMPC:QPGeneration:Mode');
+    updated = prepare_shooting_qp(input, settings, mem);
+    testCase.verifyEqual(updated.A, ones(1, settings.N), 'AbsTol', 1e-12);
+    testCase.verifyEqual(updated.B, duration, 'AbsTol', 1e-12);
     testCase.verifyEqual(updated.R, input.W, 'AbsTol', 1e-12);
 end
 end
