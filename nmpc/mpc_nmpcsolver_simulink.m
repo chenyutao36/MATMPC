@@ -32,7 +32,7 @@ function [input,mem,cpt,StopCrit,OBJ,lineSearchAccepted] = mpc_nmpcsolver_simuli
         switch opt.condensing
              case 'default_full'  
                  if ~strcmp(opt.qpsolver, 'qpoases_mb')
-                    Condensing(mem, settings);
+                    mem = condense_default_qp(mem, settings);
                  else
                     Condensing_mb(mem, settings);
                  end

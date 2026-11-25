@@ -24,13 +24,14 @@ sharedCore = fullfile(coreDir, '..', 'core');
 sharedInclude = ['-I', sharedCore];
 erkKernel = {sharedInclude, fullfile(sharedCore, 'erk_kernel.c')};
 recoverKernel = {sharedInclude, fullfile(sharedCore, 'recover_kernel.c')};
-condenseAffine = {sharedInclude, fullfile(sharedCore, 'condense_affine.c'), ...
+condenseKernels = {sharedInclude, fullfile(sharedCore, 'condense_affine.c'), ...
+    fullfile(sharedCore, 'condense_matrix.c'), ...
     fullfile(coreDir, 'matmpc_la_mex.c')};
 modelSupport = {'casadi_wrapper.c', 'sim.c', 'erk.c', 'irk_ode.c', ...
     'irk_dae.c', 'casadi_src.c', 'mpc_common.c'};
 
 compile(coreDir, [{'qp_generation.c'}, modelSupport], lapack, erkKernel{:});
-compile(coreDir, [{'Condensing.c'}, common], blas, condenseAffine{:});
+compile(coreDir, {'Condensing.c'}, blas, condenseKernels{:});
 compile(coreDir, [{'sparse2full.c'}, common], {});
 compile(coreDir, [{'partial_condensing_default.c', 'partial_condensing_routines.c'}, common], blas);
 compile(coreDir, {'Recover.c'}, {}, recoverKernel{:});

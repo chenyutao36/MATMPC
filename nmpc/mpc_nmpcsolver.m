@@ -38,7 +38,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
             case 'default_full'              
                 tcond=tic;
                 if ~strcmp(opt.qpsolver, 'qpoases_mb')
-                    Condensing(mem, settings);
+                    mem = condense_default_qp(mem, settings);
                 else
                     Condensing_mb(mem, settings);
                 end
