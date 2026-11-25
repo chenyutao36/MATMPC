@@ -44,7 +44,7 @@ Run `addpath('tests'); smoke_simulink_inverted_pendulum` to build and check both
 
 ## Shared C kernels
 
-The explicit Runge–Kutta integrator, default full condensing, and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers.
+The explicit Runge–Kutta integrator, uniform-grid ERK4 Gauss–Newton QP generation, default full condensing, and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers.
 
 ```sh
 cmake -S core -B build/shared-core
@@ -55,6 +55,8 @@ cmake -E chdir build/shared-core ctest -C Release --output-on-failure
 Use `-DBUILD_TESTING=OFF` when building the library alone. The ERK caller supplies model callbacks and the queried scratch storage. Recovery reads the QP data and writes into separate trajectory and multiplier buffers. The standalone build uses column-major C linear algebra for the condensing kernels. MATLAB uses an adapter to its existing BLAS. The MATLAB setup above rebuilds the MEX gateways when using these sources.
 
 Full condensing exposes the gradient and bounds separately from the Hessian and constraint matrices in C. In MATLAB, `qp = Condensing(mem, settings)` returns all eight condensed arrays for inspection or comparison.
+
+The uniform-grid ERK4 Gauss–Newton MEX path returns the linearized dynamics, cost, and constraints as `qp = qp_generation(input, settings, mem)`. Compare these blocks before condensing when investigating differences in the control solution.
 
 ## MATLAB controller sessions
 

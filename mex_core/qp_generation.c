@@ -5,12 +5,18 @@
 #include "sim_workspace.h"
 #include "casadi_wrapper.h"
 #include "mpc_common.h"
+#include "qp_gauss_newton.h"
+
+#include <math.h>
+#include <stdint.h>
 
 #include "blas.h"
 
 static sim_workspace integrator;
 static bool mem_alloc = false;
 static size_t workspace_shape[4];
+static double *native_qp_workspace;
+static size_t native_qp_workspace_count;
 static double *Hes[1];
 static double *HesN[1];
 static double *Jac[2];
@@ -54,13 +60,254 @@ static void free_scratch(void){
 }
 
 static void exitFcn(void){
+    if (native_qp_workspace != NULL)
+        mxFree(native_qp_workspace);
     free_scratch();
     sim_workspace_free(&integrator);
+}
+
+static double scalar_field(const mxArray *value, const char *name)
+{
+    const mxArray *field = mxGetField(value, 0, name);
+    if (field == NULL || !mxIsNumeric(field) || mxIsComplex(field) || mxIsSparse(field) ||
+        mxGetNumberOfElements(field) != 1 || !mxIsFinite(mxGetScalar(field))) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Configuration", "Invalid QP configuration field '%s'.", name);
+    }
+    return mxGetScalar(field);
+}
+
+static size_t dimension(const mxArray *value, const char *name)
+{
+    const double scalar = scalar_field(value, name);
+    if (scalar < 0.0 || scalar > (double)(PTRDIFF_MAX / sizeof(double)) || floor(scalar) != scalar)
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Configuration", "Invalid QP dimension '%s'.", name);
+    return (size_t)scalar;
+}
+
+static matmpc_erk_view input_field(const mxArray *value, const char *name, size_t rows, size_t columns, bool allow_vector)
+{
+    const size_t count = rows * columns;
+    if (count == 0) {
+        const matmpc_erk_view empty = {NULL, 0};
+        return empty;
+    }
+    const mxArray *field = mxGetField(value, 0, name);
+    if (field == NULL || !mxIsDouble(field) || mxIsComplex(field) || mxIsSparse(field) ||
+        mxGetNumberOfElements(field) != count || mxGetNumberOfDimensions(field) != 2 ||
+        !((mxGetM(field) == rows && mxGetN(field) == columns) ||
+          (allow_vector && (mxGetM(field) == 1 || mxGetN(field) == 1)))) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Input", "Invalid real double array for '%s'.", name);
+    }
+    const matmpc_erk_view result = {mxGetPr(field), count};
+    return result;
+}
+
+static matmpc_erk_buffer output_field(mxArray *value, const char *name, size_t rows, size_t columns)
+{
+    mxArray *matrix = mxCreateDoubleMatrix(rows, columns, mxREAL);
+    mxSetField(value, 0, name, matrix);
+    const matmpc_erk_buffer result = {mxGetPr(matrix), rows * columns};
+    return result;
+}
+
+/* CasADi's legacy wrapper argument arrays are mutable C pointers; the model only reads them. */
+static int qp_rhs(void *context, const double *x, const double *u, const double *p, double *rate)
+{
+    (void)context;
+    double *in[] = {(double *)x, (double *)u, (double *)p, NULL};
+    double *out[] = {rate};
+    f_Fun(in, out);
+    return 0;
+}
+
+static int qp_forward(void *context, const double *x, const double *u, const double *p,
+                      const double *Sx, const double *Su, double *dSx, double *dSu)
+{
+    (void)context;
+    double *in[] = {(double *)x, (double *)u, (double *)p, (double *)Sx, (double *)Su, NULL};
+    double *out[] = {dSx, dSu};
+    vde_Fun(in, out);
+    return 0;
+}
+
+static int qp_stage_cost(void *context, const double *x, const double *u, const double *p,
+                         const double *reference, const double *weight,
+                         double *Jx, double *Ju, double *gx, double *gu)
+{
+    (void)context;
+    double *in[] = {(double *)x, (double *)u, (double *)p, (double *)reference, (double *)weight};
+    double *jacobian[] = {Jx, Ju};
+    double *gradient[] = {gx, gu};
+    Ji_Fun(in, jacobian);
+    gi_Fun(in, gradient);
+    return 0;
+}
+
+static int qp_terminal_cost(void *context, const double *x, const double *p,
+                            const double *reference, const double *weight, double *J, double *gx)
+{
+    (void)context;
+    double *in[] = {(double *)x, (double *)p, (double *)reference, (double *)weight};
+    double *jacobian[] = {J};
+    double *gradient[] = {gx};
+    JN_Fun(in, jacobian);
+    gN_Fun(in, gradient);
+    return 0;
+}
+
+static int qp_path_constraint(void *context, const double *x, const double *u, const double *p,
+                              double *value, double *Cx, double *Cu)
+{
+    (void)context;
+    double *in[] = {(double *)x, (double *)u, (double *)p};
+    double *constraint[] = {value};
+    double *jacobian[] = {Cx, Cu};
+    path_con_Fun(in, constraint);
+    Ci_Fun(in, jacobian);
+    return 0;
+}
+
+static int qp_terminal_constraint(void *context, const double *x, const double *p, double *value, double *C)
+{
+    (void)context;
+    double *in[] = {(double *)x, (double *)p};
+    double *constraint[] = {value};
+    double *jacobian[] = {C};
+    path_con_N_Fun(in, constraint);
+    CN_Fun(in, jacobian);
+    return 0;
+}
+
+static void check_model_dimensions(const matmpc_qp_config *config)
+{
+    size_t dimensions[4];
+    const int dynamics = matmpc_model_dimensions(dimensions);
+    if (dynamics < 0 || (dynamics > 0 && (dimensions[0] != config->integration.shape.nx ||
+            dimensions[1] != config->integration.shape.nu || dimensions[2] != config->np || dimensions[3] != 0))) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:ModelDimensions", "QP dimensions do not match the compiled dynamics.");
+    }
+    const int costs = matmpc_qp_model_dimensions(dimensions);
+    if (costs < 0 || (costs > 0 && (dimensions[0] != config->ny || dimensions[1] != config->ny_terminal ||
+            dimensions[2] != config->nc || dimensions[3] != config->nc_terminal))) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:ModelDimensions", "QP dimensions do not match the compiled objective and constraints.");
+    }
+}
+
+static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settings, const mxArray *mem)
+{
+    if (!mxIsStruct(input) || !mxIsStruct(settings) || !mxIsStruct(mem) ||
+        mxGetNumberOfElements(input) != 1 || mxGetNumberOfElements(settings) != 1 || mxGetNumberOfElements(mem) != 1) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Configuration", "input, settings and mem must be scalar structures.");
+    }
+
+    const mxArray *nonuniform = mxGetField(mem, 0, "nonuniform_grid");
+    if (dimension(settings, "nz") != 0 || dimension(mem, "sim_method") != 1 || dimension(mem, "hessian") != 0 ||
+        dimension(mem, "num_stages") != 4 || (nonuniform != NULL && mxGetScalar(nonuniform) != 0.0)) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Mode", "Explicit QP output requires uniform-grid ERK4 and Gauss-Newton.");
+    }
+
+    matmpc_qp_config config = {0};
+    const size_t nx = dimension(settings, "nx");
+    const size_t nu = dimension(settings, "nu");
+    const size_t N = dimension(settings, "N");
+    config.integration.shape.nx = nx;
+    config.integration.shape.nu = nu;
+    config.integration.shape.stages = 4;
+    config.integration.shape.steps = dimension(mem, "num_steps");
+    config.integration.shape.forward = true;
+    config.integration.step = scalar_field(mem, "h");
+    config.horizon = N;
+    config.np = dimension(settings, "np");
+    config.ny = dimension(settings, "ny");
+    config.ny_terminal = dimension(settings, "nyN");
+    config.nc = dimension(settings, "nc");
+    config.nc_terminal = dimension(settings, "ncN");
+    config.nbx = dimension(settings, "nbx");
+    config.diagonal_floor = scalar_field(mem, "reg");
+
+    check_model_dimensions(&config);
+    size_t count;
+    if (dimension(mem, "nx") != nx || dimension(mem, "nu") != nu || dimension(mem, "nz") != 0 ||
+        matmpc_qp_workspace_size(&config, &count) != MATMPC_QP_OK) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Configuration", "Invalid QP workspace dimensions.");
+    }
+    config.integration.a = input_field(mem, "A_tab", 4, 4, false);
+    config.integration.b = input_field(mem, "B_tab", 1, 4, true);
+    config.state_seed = input_field(mem, "Sx", nx, nx, false);
+    config.control_seed = input_field(mem, "Su", nx, nu, false);
+
+    const size_t ny = config.ny, nyN = config.ny_terminal;
+    const size_t nc = config.nc, ncN = config.nc_terminal;
+    const size_t nbx = config.nbx;
+    const size_t path_rows = N * nc + ncN;
+    const matmpc_qp_input problem = {
+        input_field(input, "x0", nx, 1, true), input_field(input, "x", nx, N + 1, false),
+        input_field(input, "u", nu, N, false), input_field(input, "od", config.np, N + 1, false),
+        input_field(input, "y", ny, N, false), input_field(input, "yN", nyN, 1, true),
+        input_field(input, "W", ny, N, false), input_field(input, "WN", nyN, 1, true),
+        input_field(input, "lbu", nu, N, true), input_field(input, "ubu", nu, N, true),
+        input_field(input, "lbx", nbx, N, true), input_field(input, "ubx", nbx, N, true),
+        input_field(input, "lb", path_rows, 1, true), input_field(input, "ub", path_rows, 1, true)
+    };
+    if (nbx != 0) {
+        const matmpc_erk_view indices = input_field(settings, "nbx_idx", nbx, 1, true);
+        size_t *native_indices = mxMalloc(nbx * sizeof(size_t));
+        for (size_t j = 0; j < nbx; ++j) {
+            const double index = indices.data[j];
+            if (!(index >= 1.0 && index <= (double)nx) || floor(index) != index)
+                mexErrMsgIdAndTxt("MATMPC:QPGeneration:StateBounds", "State-bound indices must lie within the model's state vector.");
+            native_indices[j] = (size_t)index - 1;
+        }
+        config.bounded_states = native_indices;
+    }
+
+    const char *fields[] = {"A", "B", "a", "ds0", "Q", "S", "R", "gx", "gu", "Cgx", "Cgu", "CgN", "lc", "uc",
+                            "lb_du", "ub_du", "lb_dx", "ub_dx"};
+    mxArray *arrays = mxCreateStructMatrix(1, 1, (int)(sizeof(fields) / sizeof(fields[0])), fields);
+    const matmpc_qp_output output = {
+        output_field(arrays, "A", nx, N * nx), output_field(arrays, "B", nx, N * nu),
+        output_field(arrays, "a", nx, N), output_field(arrays, "ds0", nx, 1),
+        output_field(arrays, "Q", nx, (N + 1) * nx), output_field(arrays, "S", nx, N * nu),
+        output_field(arrays, "R", nu, N * nu), output_field(arrays, "gx", nx, N + 1), output_field(arrays, "gu", nu, N),
+        output_field(arrays, "Cgx", nc, N * nx), output_field(arrays, "Cgu", nc, N * nu),
+        output_field(arrays, "CgN", ncN, nx), output_field(arrays, "lc", path_rows, 1), output_field(arrays, "uc", path_rows, 1),
+        output_field(arrays, "lb_du", N * nu, 1), output_field(arrays, "ub_du", N * nu, 1),
+        output_field(arrays, "lb_dx", N * nbx, 1), output_field(arrays, "ub_dx", N * nbx, 1)
+    };
+
+    if (native_qp_workspace_count != count) {
+        double *next = mxMalloc(count * sizeof(double));
+        mexAtExit(exitFcn);
+        mexMakeMemoryPersistent(next);
+        if (native_qp_workspace != NULL)
+            mxFree(native_qp_workspace);
+        native_qp_workspace = next;
+        native_qp_workspace_count = count;
+    }
+    const matmpc_qp_model model = {
+        {NULL, qp_rhs, qp_forward, NULL}, NULL, qp_stage_cost, qp_terminal_cost, qp_path_constraint, qp_terminal_constraint
+    };
+    const matmpc_erk_buffer workspace = {native_qp_workspace, native_qp_workspace_count};
+    const matmpc_qp_status status = matmpc_qp_gauss_newton(&config, &model, &problem, &output, workspace);
+    if (config.bounded_states != NULL)
+        mxFree((void *)config.bounded_states);
+    if (status != MATMPC_QP_OK)
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Assembly", "Native QP assembly failed (status %d).", (int)status);
+    return arrays;
 }
 
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {
+    if (nrhs != 3 || nlhs > 1) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Arguments", "Call qp = qp_generation(input, settings, mem).");
+    }
+    if (nlhs == 1) {
+        plhs[0] = generate_explicit_qp(prhs[0], prhs[1], prhs[2]);
+        return;
+    }
+    /* Retained for legacy no-output calls and the other integration/Hessian modes. */
+
     double *x = mxGetPr( mxGetField(prhs[0], 0, "x") );
     double *u = mxGetPr( mxGetField(prhs[0], 0, "u") );
     double *z = mxGetPr( mxGetField(prhs[0], 0, "z") );

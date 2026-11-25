@@ -7,6 +7,9 @@
  * 1: available, 0: unavailable test model, -1: incompatible generated ABI. */
 int matmpc_model_dimensions(size_t dims[4]);
 
+/* Compiled QP reference and constraint dimensions in ny, nyN, nc, ncN order. */
+int matmpc_qp_model_dimensions(size_t dims[4]);
+
 void f_Fun(double **in, double **out);
 void g_Fun(double **in, double **out);
 void vde_Fun(double **in, double **out);

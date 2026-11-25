@@ -26,7 +26,7 @@ function [input,mem,cpt,StopCrit,OBJ,lineSearchAccepted] = mpc_nmpcsolver_simuli
         elseif strcmp(opt.qpsolver, 'qpoases_mb')
             qp_generation_mb(input, settings, mem);
         else
-            qp_generation(input, settings, mem);
+            mem = prepare_uniform_qp(input, settings, mem);
         end
 
         switch opt.condensing

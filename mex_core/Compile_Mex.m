@@ -27,10 +27,12 @@ recoverKernel = {sharedInclude, fullfile(sharedCore, 'recover_kernel.c')};
 condenseKernels = {sharedInclude, fullfile(sharedCore, 'condense_affine.c'), ...
     fullfile(sharedCore, 'condense_matrix.c'), ...
     fullfile(coreDir, 'matmpc_la_mex.c')};
+gaussNewtonKernel = {fullfile(sharedCore, 'qp_gauss_newton.c'), ...
+    fullfile(coreDir, 'matmpc_la_mex.c')};
 modelSupport = {'casadi_wrapper.c', 'sim.c', 'erk.c', 'irk_ode.c', ...
     'irk_dae.c', 'casadi_src.c', 'mpc_common.c'};
 
-compile(coreDir, [{'qp_generation.c'}, modelSupport], lapack, erkKernel{:});
+compile(coreDir, [{'qp_generation.c'}, modelSupport], lapack, erkKernel{:}, gaussNewtonKernel{:});
 compile(coreDir, {'Condensing.c'}, blas, condenseKernels{:});
 compile(coreDir, [{'sparse2full.c'}, common], {});
 compile(coreDir, [{'partial_condensing_default.c', 'partial_condensing_routines.c'}, common], blas);

@@ -27,7 +27,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
             if strcmp(opt.qpsolver, 'qpoases_mb')
                 qp_generation_mb(input, settings, mem);
             else
-                qp_generation(input, settings, mem);
+                mem = prepare_uniform_qp(input, settings, mem);
 %                 qp_generation_tac(input, settings, mem);
             end
         end

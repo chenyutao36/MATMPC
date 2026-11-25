@@ -14,6 +14,29 @@ int matmpc_model_dimensions(size_t dims[4])
     return 1;
 }
 
+int matmpc_qp_model_dimensions(size_t dims[4])
+{
+    size_t state_dims[4];
+    if (matmpc_model_dimensions(state_dims) != 1)
+        return -1;
+
+    const int *Jx = Ji_fun_sparsity_out(0);
+    const int *Ju = Ji_fun_sparsity_out(1);
+    const int *JN = JN_fun_sparsity_out(0);
+    const int *path = path_con_fun_sparsity_out(0);
+    const int *terminal = path_con_N_fun_sparsity_out(0);
+    if (!Jx || !Ju || !JN || !path || !terminal || Jx[0] < 0 || Ju[0] != Jx[0] || JN[0] < 0 ||
+        Jx[1] < 0 || Ju[1] < 0 || JN[1] != Jx[1] || (size_t)Jx[1] != state_dims[0] ||
+        (size_t)Ju[1] != state_dims[1] || path[0] < 0 || terminal[0] < 0 ||
+        (path[0] > 0 && path[1] != 1) || (terminal[0] > 0 && terminal[1] != 1))
+        return -1;
+    dims[0] = (size_t)Jx[0];
+    dims[1] = (size_t)JN[0];
+    dims[2] = (size_t)path[0];
+    dims[3] = (size_t)terminal[0];
+    return 1;
+}
+
 void f_Fun(double **in, double **out){
     const double *x = in[0];
     const double *u = in[1];
