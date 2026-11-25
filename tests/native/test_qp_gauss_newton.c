@@ -24,6 +24,20 @@ static void check_array(const double *actual, const double *expected, size_t cou
     }
 }
 
+static void check_diagonal_shift(const double *actual, const double *base, size_t n, size_t blocks,
+                                 double lambda, const char *name)
+{
+    for (size_t i = 0; i < blocks; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+            for (size_t k = 0; k < n; ++k) {
+                const size_t offset = i * n * n + j * n + k;
+                const double expected = base[offset] + (j == k ? lambda : 0.0);
+                check_array(actual + offset, &expected, 1, name);
+            }
+        }
+    }
+}
+
 typedef struct {
     size_t count;
     double states[16][2];
@@ -121,7 +135,7 @@ int main(void)
     const size_t indices[] = {1, 0};
     matmpc_qp_config config = {
         {{2, 2, 4, 2, true, false}, 0.125, {tableau, 16}, {weights, 4}},
-        2, 1, 2, 1, 2, 1, indices, 2, {state_seed, 4}, {control_seed, 4}, 2.0, {NULL, 0}, {NULL, 0}
+        2, 1, 2, 1, 2, 1, indices, 2, {state_seed, 4}, {control_seed, 4}, 2.0, {NULL, 0}, {NULL, 0}, 0.0
     };
     const matmpc_qp_model model = {
         {NULL, rhs, forward, NULL}, NULL, stage_cost, terminal_cost, path_constraint, terminal_constraint
@@ -179,6 +193,28 @@ int main(void)
     check_array(lb_dx, expected_lb_dx, 4, "lb_dx");
     check_array(ub_dx, expected_ub_dx, 4, "ub_dx");
 
+    /* The first coupled state/control channel has a rank-one Gram matrix. */
+    require(Q[0] * R[0] == S[0] * S[0], "expected an undamped singular Hessian subblock");
+    config.levenberg_marquardt = 0.25;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
+            "uniform Levenberg-Marquardt assembly failed");
+    check_diagonal_shift(Q, expected_Q, 2, 3, 0.25, "uniform LM Q and Q_N");
+    check_diagonal_shift(R, expected_R, 2, 2, 0.25, "uniform LM R");
+    check_array(S, expected_S, 8, "LM must preserve S");
+    check_array(gx, expected_gx, 6, "LM must preserve gx");
+    require(Q[0] * R[0] > S[0] * S[0], "LM did not remove the coupled rank deficiency");
+    config.levenberg_marquardt = 0.0;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
+            "could not return from LM to zero shift");
+    check_array(Q, expected_Q, 12, "zero LM Q");
+    check_array(R, expected_R, 8, "zero LM R");
+    config.diagonal_floor = DBL_MAX;
+    config.levenberg_marquardt = DBL_MAX;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_INVALID_ARGUMENT,
+            "LM accepted an overflowing shifted diagonal");
+    config.diagonal_floor = 2.0;
+    config.levenberg_marquardt = 0.0;
+
     const double grid[] = {0, 3, 5};
     const matmpc_erk_view nonuniform_grid = {grid, 3};
     config.stage_grid = nonuniform_grid;
@@ -210,6 +246,15 @@ int main(void)
     check_array(lb_dx, expected_lb_dx, 4, "nonuniform lb_dx");
     check_array(ub_dx, expected_ub_dx, 4, "nonuniform ub_dx");
     check_array(lc, expected_lc, 5, "nonuniform lc");
+
+    config.levenberg_marquardt = 0.5;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
+            "nonuniform Levenberg-Marquardt assembly failed");
+    check_diagonal_shift(Q, expected_Q, 2, 3, 0.5, "nonuniform LM Q and Q_N");
+    check_diagonal_shift(R, expected_R, 2, 2, 0.5, "nonuniform LM R");
+    check_array(a, nonuniform_a, 4, "nonuniform LM a");
+    check_array(B, nonuniform_B, 8, "nonuniform LM B");
+    config.levenberg_marquardt = 0.0;
 
     config.stage_grid.count = 2;
     require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_INVALID_ARGUMENT,
@@ -262,6 +307,25 @@ int main(void)
     check_array(gu, expected_gu, 4, "stage gu");
     check_array(R_block, expected_R_block, 4, "R_block");
     check_array(gu_block, expected_gu_block, 2, "gu_block");
+
+    config.levenberg_marquardt = 0.5;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
+            "move-blocking Levenberg-Marquardt assembly failed");
+    const double expected_blocked_Q[] = {14, 0, 0, 81, 14, 0, 0, 36, 14, 0.5, 0.5, 14};
+    check_diagonal_shift(Q, expected_blocked_Q, 2, 3, 0.5, "move-blocking LM Q and Q_N");
+    check_diagonal_shift(R, expected_R, 2, 2, 0.5, "move-blocking LM raw stage R");
+    check_diagonal_shift(R_block, expected_R_block, 2, 1, 1.0, "move-blocking LM R_block after floor");
+    check_array(gu_block, expected_gu_block, 2, "move-blocking LM gu_block");
+    config.levenberg_marquardt = DBL_MAX;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_INVALID_ARGUMENT,
+            "LM accepted an overflowing block shift");
+    const double invalid_shifts[] = {-1.0, INFINITY, NAN};
+    for (size_t i = 0; i < sizeof(invalid_shifts) / sizeof(invalid_shifts[0]); ++i) {
+        config.levenberg_marquardt = invalid_shifts[i];
+        require(matmpc_qp_workspace_size(&config, &blocked_count) == MATMPC_QP_INVALID_ARGUMENT,
+                "LM accepted an invalid shift");
+    }
+    config.levenberg_marquardt = 0.0;
     const matmpc_erk_view empty_blocks = {NULL, 0};
     const matmpc_erk_buffer empty_blocks_output = {NULL, 0};
     config.control_blocks = empty_blocks;

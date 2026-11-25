@@ -62,6 +62,10 @@ For uniform shooting with move blocking, `qp = qp_generation(input, settings, me
 
 `qp = Condensing_mb(mem, settings)` returns the eight reduced arrays. Its C kernel forms one block's state response at a time and writes directly to the reduced matrices. The reduced Hessian includes both contributions from the state–control cross term when several stages share one control increment.
 
+## Hessian damping
+
+Set `opt.levenberg_marquardt` to a finite nonnegative scalar when initializing a solver or constructing a `MATMPCController`. The default, `0`, uses the existing Hessian diagonal floor alone. A positive value adds that scalar to the state and control Hessian diagonals at each stage and to the terminal state Hessian diagonal. The value is per stage, including on a nonuniform grid. Each move block accumulates one control shift for each stage in the block. The function interface also accepts a new value in `mem.levenberg_marquardt` before the next solve.
+
 ## MATLAB controller sessions
 
 Use a controller object to manage one solve sequence and inspect its numeric state in the workspace.

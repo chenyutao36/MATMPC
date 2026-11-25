@@ -159,6 +159,60 @@ for selected = {'hessian', 'integrator'}
 end
 end
 
+function testLevenbergMarquardtIsUnscaledAndZeroRetainsTheDefault(testCase)
+[input, settings, opt] = scalarProblem();
+settings.index_T = [0, 1, 4, 9];
+for nonuniform = [false, true]
+    opt.nonuniform_grid = nonuniform;
+    mem = InitMemory(settings, opt, input);
+    mem.reg = 4;
+    baseline = qp_generation(input, settings, mem);
+    mem.levenberg_marquardt = 0;
+    testCase.verifyEqual(qp_generation(input, settings, mem), baseline);
+    mem.levenberg_marquardt = 0.5;
+    qp = qp_generation(input, settings, mem);
+    testCase.verifyEqual(qp.Q, baseline.Q + 0.5, 'AbsTol', 1e-12);
+    testCase.verifyEqual(qp.R, baseline.R + 0.5, 'AbsTol', 1e-12);
+    assertUnshiftedFields(testCase, qp, baseline, {'Q', 'R'});
+    for invalid = {-1, Inf, NaN, [0, 1], complex(1, 1)}
+        mem.levenberg_marquardt = invalid{1};
+        testCase.verifyError(@() explicitQp(input, settings, mem), 'MATMPC:QPGeneration:LevenbergMarquardt');
+    end
+    mem.reg = realmax;
+    mem.levenberg_marquardt = realmax;
+    testCase.verifyError(@() explicitQp(input, settings, mem), 'MATMPC:QPGeneration:Assembly');
+end
+end
+
+function testLevenbergMarquardtUsesBlockLengthAfterTheLegacyFloor(testCase)
+[input, settings, opt] = scalarProblem();
+settings.r = 2;
+settings.index_T = [0, 2, 3];
+opt.qpsolver = 'qpoases_mb';
+mem = InitMemory(settings, opt, input);
+mem.reg = 4;
+baseline = qp_generation(input, settings, mem, mem.index_T);
+mem.levenberg_marquardt = 0;
+testCase.verifyEqual(qp_generation(input, settings, mem, mem.index_T), baseline);
+mem.levenberg_marquardt = 0.5;
+qp = qp_generation(input, settings, mem, mem.index_T);
+testCase.verifyEqual(qp.Q, baseline.Q + 0.5, 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.R, [5.5, 2.5, 3.5], 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.R_block, [8, 4.5], 'AbsTol', 1e-12);
+assertUnshiftedFields(testCase, qp, baseline, {'Q', 'R', 'R_block'});
+
+mem.levenberg_marquardt = realmax;
+testCase.verifyError(@() blockedQp(input, settings, mem, mem.index_T), 'MATMPC:QPGeneration:Configuration');
+end
+
+function assertUnshiftedFields(testCase, qp, baseline, shifted)
+fields = setdiff(fieldnames(baseline), shifted);
+for i = 1:numel(fields)
+    name = fields{i};
+    testCase.verifyEqual(qp.(name), baseline.(name), name);
+end
+end
+
 function blockedQp(input, settings, mem, boundaries)
 unused = qp_generation(input, settings, mem, boundaries); %#ok<NASGU>
 end

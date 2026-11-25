@@ -39,7 +39,8 @@ static bool stages(size_t rows, size_t columns, size_t count, size_t *elements)
 static matmpc_qp_status layout_for(const matmpc_qp_config *config, qp_layout *layout)
 {
     if (config == NULL || config->horizon == 0 || config->integration.shape.stages != 4 ||
-        !config->integration.shape.forward || config->integration.shape.adjoint)
+        !config->integration.shape.forward || config->integration.shape.adjoint ||
+        !isfinite(config->levenberg_marquardt) || config->levenberg_marquardt < 0.0)
         return MATMPC_QP_INVALID_ARGUMENT;
 
     const size_t nx = config->integration.shape.nx;
@@ -66,6 +67,8 @@ static matmpc_qp_status layout_for(const matmpc_qp_config *config, qp_layout *la
         for (size_t k = 1; k < blocks.count; ++k) {
             const double boundary = blocks.data[k];
             if (!(boundary > blocks.data[k - 1] && boundary <= (double)N) || floor(boundary) != boundary)
+                return MATMPC_QP_INVALID_ARGUMENT;
+            if (!isfinite((boundary - blocks.data[k - 1]) * config->levenberg_marquardt))
                 return MATMPC_QP_INVALID_ARGUMENT;
         }
         layout->blocks = blocks.count - 1;
@@ -169,7 +172,21 @@ static void floor_diagonal(double *matrix, size_t n, double minimum)
     }
 }
 
-static void aggregate_controls(const matmpc_qp_config *config, const qp_layout *layout, const matmpc_qp_output *output)
+static bool shift_diagonal(double *matrix, size_t n, double lambda)
+{
+    if (lambda == 0.0)
+        return true;
+    for (size_t i = 0; i < n; ++i) {
+        const size_t diagonal = i * (n + 1);
+        const double shifted = matrix[diagonal] + lambda;
+        if (!isfinite(shifted))
+            return false;
+        matrix[diagonal] = shifted;
+    }
+    return true;
+}
+
+static bool aggregate_controls(const matmpc_qp_config *config, const qp_layout *layout, const matmpc_qp_output *output)
 {
     const size_t nu = config->integration.shape.nu;
     const size_t width = nu * nu;
@@ -188,7 +205,10 @@ static void aggregate_controls(const matmpc_qp_config *config, const qp_layout *
                 gu[j] += output->gu.data[stage * nu + j];
         }
         floor_diagonal(R, nu, config->diagonal_floor);
+        if (!shift_diagonal(R, nu, (double)(end - first) * config->levenberg_marquardt))
+            return false;
     }
+    return true;
 }
 
 matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const matmpc_qp_model *model,
@@ -259,8 +279,13 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
         gram(nx, nu, config->ny, Jx, Ju, S);
         gram(nu, nu, config->ny, Ju, Ju, R);
         floor_diagonal(Q, nx, config->diagonal_floor);
-        if (layout.blocks == 0)
+        if (!shift_diagonal(Q, nx, config->levenberg_marquardt))
+            return MATMPC_QP_INVALID_ARGUMENT;
+        if (layout.blocks == 0) {
             floor_diagonal(R, nu, config->diagonal_floor);
+            if (!shift_diagonal(R, nu, config->levenberg_marquardt))
+                return MATMPC_QP_INVALID_ARGUMENT;
+        }
 
         for (size_t j = 0; j < nu; ++j) {
             const size_t k = i * nu + j;
@@ -294,6 +319,8 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
     double *Q = output->Q.data + N * nx * nx;
     gram(nx, nx, config->ny_terminal, Jx, Jx, Q);
     floor_diagonal(Q, nx, config->diagonal_floor);
+    if (!shift_diagonal(Q, nx, config->levenberg_marquardt))
+        return MATMPC_QP_INVALID_ARGUMENT;
     if (config->nc_terminal != 0) {
         if (model->terminal_constraint(model->context, x, p, output->lc.data + N * nc, output->CgN.data) != 0)
             return MATMPC_QP_MODEL_ERROR;
@@ -302,6 +329,14 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
             output->lc.data[j] = input->lower_path.data[j] - output->lc.data[j];
         }
     }
-    aggregate_controls(config, &layout, output);
+    if (!aggregate_controls(config, &layout, output))
+        return MATMPC_QP_INVALID_ARGUMENT;
+    /* The blocks use raw R. Shift the stage R afterwards for line-search curvature. */
+    if (layout.blocks != 0 && config->levenberg_marquardt != 0.0) {
+        for (size_t i = 0; i < N; ++i) {
+            if (!shift_diagonal(output->R.data + i * nu * nu, nu, config->levenberg_marquardt))
+                return MATMPC_QP_INVALID_ARGUMENT;
+        }
+    }
     return MATMPC_QP_OK;
 }

@@ -123,7 +123,16 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t r = mxGetScalar( mxGetField(prhs[2], 0, "r") );
     
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
+    const double lm = mpc_levenberg_marquardt(prhs[2]);
     int hessian_type = mxGetScalar( mxGetField(prhs[2], 0, "hessian") );
+    if (lm > 0.0) {
+        for (size_t block = 0; block < r; ++block) {
+            if (!mxIsFinite((index_T[block+1] - index_T[block]) * lm)) {
+                mexErrMsgIdAndTxt("MATMPC:QPGeneration:Configuration",
+                                  "Move-blocking LM shift exceeds the finite numeric range.");
+            }
+        }
+    }
     
     for (i=0;i<nx;i++)
         ds0[i] = x0[i] - x[i];
@@ -253,7 +262,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 mexErrMsgTxt("Please choose a supported Hessian type");
                 break;
         }
-        regularization(nx, Q+i*nx*nx, reg);
+        mpc_regularize_hessian_diagonal(nx, Q+i*nx*nx, reg, lm);
         
         double *block_hessian = R_block+k*nu*nu;
         double *block_gradient = gu_block+k*nu;
@@ -272,8 +281,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             for (j=0;j<nu;j++)
                 block_gradient[j] += gu[i*nu+j];
         }
-        if ((int)index_T[k+1] == i+1)
-            regularization(nu, block_hessian, reg);
+        if ((int)index_T[k+1] == i+1) {
+            const double block_length = index_T[k+1] - index_T[k];
+            mpc_regularize_hessian_diagonal(nu, block_hessian, reg, block_length * lm);
+        }
+        // Only the raw stage block contributes to the aggregate above.
+        mpc_add_diagonal(nu, R+i*nu*nu, lm);
           
                 
         // constraint residual
@@ -321,7 +334,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             mexErrMsgTxt("Please choose a supported Hessian type");
             break;                
     }
-    regularization(nx, Q+N*nx*nx, reg);
+    mpc_regularize_hessian_diagonal(nx, Q+N*nx*nx, reg, lm);
     
         
     casadi_out[0] = gx+N*nx;

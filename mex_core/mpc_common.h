@@ -2,6 +2,7 @@
 #define MPC_COMMON_H_
 
 #include "stdlib.h"
+#include "mex.h"
 
 void Block_Fill(size_t m, size_t n, double *Gi, double *G,
      size_t idm, size_t idn, size_t ldG);
@@ -18,6 +19,10 @@ void print_matrix(double *A, size_t m, size_t n);
 void print_vector(double *x, size_t m);
 
 void regularization(size_t n, double *A, double reg);
+
+double mpc_levenberg_marquardt(const mxArray *mem);
+void mpc_add_diagonal(size_t n, double *matrix, double shift);
+void mpc_regularize_hessian_diagonal(size_t n, double *matrix, double floor, double shift);
 
 // void product_mb(double *P,double *M, size_t a, double *index, size_t r,size_t nu);    // P = M*T,   M is (a x (N*nu))
 // 

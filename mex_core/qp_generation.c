@@ -227,6 +227,7 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
     config.nc_terminal = dimension(settings, "ncN");
     config.nbx = dimension(settings, "nbx");
     config.diagonal_floor = scalar_field(mem, "reg");
+    config.levenberg_marquardt = mpc_levenberg_marquardt(mem);
     size_t blocks = 0;
     if (block_boundaries != NULL) {
         if (config.stage_grid.count != 0) {
@@ -387,6 +388,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *z_out = mxGetPr( mxGetField(prhs[2], 0, "z_out") );
     
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
+    const double lm = mpc_levenberg_marquardt(prhs[2]);
     int hessian_type = mxGetScalar( mxGetField(prhs[2], 0, "hessian") );
     
     for (i=0;i<nx;i++)
@@ -516,8 +518,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
                 break;
                             
         }
-        regularization(nx, Q+i*nx*nx, reg);
-        regularization(nu, R+i*nu*nu, reg);
+        mpc_regularize_hessian_diagonal(nx, Q+i*nx*nx, reg, lm);
+        mpc_regularize_hessian_diagonal(nu, R+i*nu*nu, reg, lm);
         
         // gradient
         casadi_out[0] = gx+i*nx;
@@ -561,7 +563,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
             break;
             
     }
-    regularization(nx, Q+N*nx*nx, reg);
+    mpc_regularize_hessian_diagonal(nx, Q+N*nx*nx, reg, lm);
         
     casadi_out[0] = gx+N*nx;
     gN_Fun(casadi_in, casadi_out);

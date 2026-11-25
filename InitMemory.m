@@ -24,6 +24,16 @@ function [mem] = InitMemory(settings, opt, input)
     if strcmp(opt.hotstart, 'yes')
         mem.hot_start=1;
     end
+    mem.levenberg_marquardt = 0;
+    if isfield(opt, 'levenberg_marquardt')
+        damping = opt.levenberg_marquardt;
+        if ~isnumeric(damping) || ~isscalar(damping) || ~isreal(damping) || ...
+                issparse(damping) || ~isfinite(damping) || damping < 0
+            error('MATMPC:InvalidLevenbergMarquardt', ...
+                'opt.levenberg_marquardt must be a finite nonnegative scalar.');
+        end
+        mem.levenberg_marquardt = double(damping);
+    end
     
     if strcmp(opt.condensing,'partial_condensing')
         if ~(isnumeric(N2) && isscalar(N2) && isreal(N2) && isfinite(N2) ...

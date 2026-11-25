@@ -56,6 +56,21 @@ function testMoveBlockingUsesSeparateControlBlocks(testCase)
     verifyError(testCase,@() InitMemory(settings,opt,struct()),'MATMPC:IncompatibleGrid');
 end
 
+function testLevenbergMarquardtOption(testCase)
+    settings = exampleSettings();
+    opt = exampleOptions();
+    opt.nonuniform_grid = false;
+    mem = InitMemory(settings,opt,struct());
+    verifyEqual(testCase,mem.levenberg_marquardt,0);
+    opt.levenberg_marquardt = single(0.25);
+    mem = InitMemory(settings,opt,struct());
+    verifyEqual(testCase,mem.levenberg_marquardt,0.25);
+    for invalid = {-1, NaN, Inf, [0 1], 1i, sparse(1), '1', []}
+        opt.levenberg_marquardt = invalid{1};
+        verifyError(testCase,@() InitMemory(settings,opt,struct()),'MATMPC:InvalidLevenbergMarquardt');
+    end
+end
+
 function settings = exampleSettings()
     settings = struct('Ts_st',0.05,'nx',1,'nu',2,'nz',0,'ny',1,'nyN',1,'np',0, ...
         'nbx',0,'nbu',0,'nbx_idx',[],'nbu_idx',[],'nc',0,'ncN',0,'N',5,'N2',1,'r',2);

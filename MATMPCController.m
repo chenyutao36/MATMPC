@@ -178,7 +178,8 @@ end
 function opt = controllerOptions(passed)
     validateattributes(passed, {'struct'}, {'scalar'}, mfilename, 'options');
     opt = struct('hessian', 'Gauss_Newton', 'integrator', 'ERK4', 'qpsolver', 'qpoases', ...
-        'condensing', '', 'hotstart', 'no', 'nonuniform_grid', false, 'RTI', 'yes');
+        'condensing', '', 'hotstart', 'no', 'nonuniform_grid', false, 'RTI', 'yes', ...
+        'levenberg_marquardt', 0);
     keys = fieldnames(opt);
     for i = 1:numel(keys)
         key = keys{i};

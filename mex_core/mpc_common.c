@@ -71,6 +71,47 @@ void regularization(size_t n, double *A, double reg){
             A[i*n+i] = reg;
 }
 
+double mpc_levenberg_marquardt(const mxArray *mem)
+{
+    const mxArray *field = mxGetField(mem, 0, "levenberg_marquardt");
+    if (field == NULL) {
+        return 0.0;
+    }
+    if (!mxIsNumeric(field) || mxIsComplex(field) || mxIsSparse(field) ||
+        mxGetNumberOfElements(field) != 1) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:LevenbergMarquardt",
+                          "mem.levenberg_marquardt must be a finite nonnegative real scalar.");
+    }
+    const double shift = mxGetScalar(field);
+    if (!mxIsFinite(shift) || shift < 0.0) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:LevenbergMarquardt",
+                          "mem.levenberg_marquardt must be a finite nonnegative real scalar.");
+    }
+    return shift;
+}
+
+void mpc_add_diagonal(size_t n, double *matrix, double shift)
+{
+    if (shift == 0.0) {
+        return;
+    }
+    for (size_t i = 0; i < n; ++i) {
+        const size_t index = i * n + i;
+        const double shifted = matrix[index] + shift;
+        if (!mxIsFinite(shifted)) {
+            mexErrMsgIdAndTxt("MATMPC:QPGeneration:Assembly",
+                              "LM damping produced a nonfinite Hessian diagonal.");
+        }
+        matrix[index] = shifted;
+    }
+}
+
+void mpc_regularize_hessian_diagonal(size_t n, double *matrix, double floor, double shift)
+{
+    regularization(n, matrix, floor);
+    mpc_add_diagonal(n, matrix, shift);
+}
+
 // void product_mb(double *P,double *M, size_t a, double *index, size_t r, size_t nu){    // M*T,   M is (a x (N*nu))
 //     double *temp = mxCalloc(a*nu,sizeof(double));
 //     double *ris  = mxCalloc(a*r*nu,sizeof(double));

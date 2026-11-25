@@ -26,6 +26,7 @@ typedef struct {
      * the base microstep without changing the integration step count. */
     matmpc_erk_view stage_grid;
     matmpc_erk_view control_blocks; /* Uniform grid only: integer stage boundaries from 0 to horizon. */
+    double levenberg_marquardt; /* Unscaled diagonal shift after the legacy floor. Zero preserves the legacy QP. */
 } matmpc_qp_config;
 
 /* Callbacks return zero on success. Jacobians are column-major; objective Jacobians

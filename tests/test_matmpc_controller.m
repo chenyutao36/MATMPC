@@ -121,6 +121,25 @@ controller.reset();
 verifyEqual(testCase, controller.step(x0), firstControl, 'AbsTol', 1e-8);
 end
 
+function testControllerLevenbergMarquardtDampsTheQP(testCase)
+assumeTrue(testCase, testCase.TestData.qpOASES);
+settings = testCase.TestData.settings;
+base = MATMPCController(settings);
+damped = MATMPCController(settings, struct('levenberg_marquardt', 0.125));
+release = onCleanup(@() delete([base, damped])); %#ok<NASGU>
+x0 = [0; pi; 0; 0];
+base.step(x0);
+damped.step(x0);
+plain = base.snapshot(true);
+shifted = damped.snapshot(true);
+verifyEqual(testCase, shifted.options.levenberg_marquardt, 0.125);
+verifyEqual(testCase, shifted.qp.Q - plain.qp.Q, ...
+    repmat(0.125*eye(settings.nx), 1, settings.N+1), 'AbsTol', 1e-13);
+verifyEqual(testCase, shifted.qp.R - plain.qp.R, ...
+    repmat(0.125*eye(settings.nu), 1, settings.N), 'AbsTol', 1e-13);
+verifyEqual(testCase, shifted.qp.S, plain.qp.S);
+end
+
 function testOSQPOwnsBothWorkspaceForms(testCase)
 assumeTrue(testCase, testCase.TestData.OSQP);
 settings = testCase.TestData.settings;

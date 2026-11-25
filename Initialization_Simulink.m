@@ -56,6 +56,7 @@ settings.N2 = N2;
 settings.r = r;
 
 opt.hessian = 'Gauss_Newton';
+opt.levenberg_marquardt = 0;
 opt.integrator = 'ERK4';
 opt.condensing = 'default_full';
 opt.qpsolver = 'qpoases';

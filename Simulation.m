@@ -61,6 +61,7 @@ settings.r = r;      % No. of input blocks or nonuniform shooting intervals
 % settings.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
 
 opt.hessian         = 'Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
+opt.levenberg_marquardt = 0; % Optional nonnegative damping of QP increments.
 opt.integrator      = 'ERK4'; % 'ERK4','IRK3','IRK3-DAE'
 opt.condensing      = 'default_full';  %'default_full','no','blasfeo_full(require blasfeo installed)','partial_condensing'
 opt.qpsolver        = 'qpoases'; 
