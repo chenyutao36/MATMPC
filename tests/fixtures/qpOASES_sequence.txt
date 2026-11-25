@@ -1,0 +1,22 @@
+function varargout = qpOASES_sequence(action, varargin)
+persistent closedHandles;
+if isempty(closedHandles)
+    closedHandles = zeros(0, 1);
+end
+
+switch action
+    case 'c'
+        closedHandles(end + 1, 1) = varargin{1};
+        return;
+    case 'testClosedHandles'
+        varargout = {closedHandles};
+        return;
+end
+
+opts = varargin{end};
+results = {opts.solution, 0, opts.exitflag, 1, opts.multipliers, struct('cpuTime', 0.002)};
+if strcmp(action, 'i')
+    results = [{42}, results];
+end
+varargout = results(1:nargout);
+end
