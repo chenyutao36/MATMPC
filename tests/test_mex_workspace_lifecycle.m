@@ -14,8 +14,9 @@ testCase.applyFixture(matlab.unittest.fixtures.PathFixture(tmp.Folder));
 testCase.addTeardown(@unloadFixtures);
 options = {'-outdir', tmp.Folder, ['-I' coreDir]};
 
-mex(options{:}, '-output', 'workspace_condensing', ...
-    fullfile(coreDir, 'Condensing.c'), fullfile(coreDir, 'mpc_common.c'), '-lmwblas');
+mex(options{:}, ['-I' sharedCore], '-output', 'workspace_condensing', ...
+    fullfile(coreDir, 'Condensing.c'), fullfile(coreDir, 'mpc_common.c'), ...
+    fullfile(sharedCore, 'condense_affine.c'), fullfile(coreDir, 'matmpc_la_mex.c'), '-lmwblas');
 mex(options{:}, '-output', 'workspace_partial_condensing', ...
     fullfile(coreDir, 'partial_condensing_default.c'), ...
     fullfile(coreDir, 'partial_condensing_routines.c'), fullfile(coreDir, 'mpc_common.c'), '-lmwblas');
@@ -38,6 +39,41 @@ for horizon = [2, 5, 3, 5]
     expected = eye(horizon) + dynamics' * dynamics;
     testCase.verifyEqual(mem.Hc, expected, 'AbsTol', 1e-12);
 end
+end
+
+function testFullCondensingAffineMatchesDirectSubstitution(testCase)
+[mem, settings] = constrainedAffineQP();
+controls = zeros(settings.N * settings.nu, 1);
+[~, generalOffset, stateOffset] = fullQP(mem, settings, controls);
+expectedGradient = zeros(size(controls));
+for i = 1:numel(controls)
+    basis = controls;
+    basis(i) = 1;
+    % The central difference is exact for a quadratic objective.
+    expectedGradient(i) = (fullQP(mem, settings, basis) - fullQP(mem, settings, -basis)) / 2;
+end
+
+workspace_condensing(mem, settings);
+testCase.verifyEqual(mem.gc, expectedGradient, 'AbsTol', 1e-12);
+testCase.verifyEqual(mem.lcc, mem.lc - generalOffset, 'AbsTol', 1e-12);
+testCase.verifyEqual(mem.ucc, mem.uc - generalOffset, 'AbsTol', 1e-12);
+testCase.verifyEqual(mem.lxc, mem.lb_dx - stateOffset, 'AbsTol', 1e-12);
+testCase.verifyEqual(mem.uxc, mem.ub_dx - stateOffset, 'AbsTol', 1e-12);
+end
+
+function testFullCondensingAffineSingleStageWithoutConstraints(testCase)
+[mem, settings] = scalarQP(1);
+mem.Q = [1, 2];
+mem.S = 0.5;
+mem.A = 3;
+mem.B = 4;
+mem.gx = [5, 6];
+mem.gu = -3;
+mem.a = -2;
+mem.ds0 = 2;
+workspace_condensing(mem, settings);
+testCase.verifyEqual(mem.gc, 54, 'AbsTol', 1e-12);
+testCase.verifyEmpty([mem.lcc, mem.ucc, mem.lxc, mem.uxc]);
 end
 
 function testPartialCondensingChangesBlockSize(testCase)
@@ -165,4 +201,59 @@ emptyFields = {'Cx', 'Cgx', 'Cgu', 'CgN', 'lc', 'uc', 'lb_dx', 'ub_dx', ...
 for field = emptyFields
     mem.(field{1}) = [];
 end
+end
+
+function [mem, settings] = constrainedAffineQP()
+settings = struct('nx', 2, 'nu', 3, 'N', 2, 'nbx', 2, 'nc', 1, 'ncN', 2);
+mem.Q = [2 99 4 101 6 -91; 1 3 -1 2 2 5];
+mem.S = [1 2 0 0 1 2; -1 0 3 2 -1 0];
+mem.R = [eye(3), 2 * eye(3)];
+mem.A = [1 2 0.5 0; 0 -1 1 2];
+mem.B = [1 0 2 0 2 -2; -1 3 0 1 0 1];
+mem.Cx = [2 -1; 0.5 3];
+mem.Cgx = [1 2 -1 1.5];
+mem.Cgu = [1 0 1 0 -2 0.5];
+mem.CgN = [1 -2; 3 0.5];
+mem.gx = [1 -2 4; -1 3 1];
+mem.gu = [0.25 1; -0.5 -2; 2 3];
+mem.a = [0.5 1; -0.5 -2];
+mem.ds0 = [1; -2];
+mem.lc = [-10; -5; -2; -9];
+mem.uc = [10; 8; 6; 13];
+mem.lb_dx = [-4; -7; -3; -11];
+mem.ub_dx = [5; 10; 6; 7];
+mem.Hc = zeros(6);
+mem.Ccx = zeros(4, 6);
+mem.Ccg = zeros(4, 6);
+mem.gc = nan(6, 1);
+mem.lcc = nan(4, 1);
+mem.ucc = ones(4, 1);
+mem.lxc = -ones(4, 1);
+mem.uxc = 2 * ones(4, 1);
+end
+
+function [objective, general, states] = fullQP(mem, sizes, controls)
+x = mem.ds0;
+objective = 0;
+general = zeros(sizes.N * sizes.nc + sizes.ncN, 1);
+states = zeros(sizes.N * sizes.nbx, 1);
+for i = 1:sizes.N
+    stateColumns = (i-1)*sizes.nx + (1:sizes.nx);
+    inputColumns = (i-1)*sizes.nu + (1:sizes.nu);
+    generalRows = (i-1)*sizes.nc + (1:sizes.nc);
+    boundRows = (i-1)*sizes.nbx + (1:sizes.nbx);
+    u = controls(inputColumns);
+    Q = tril(mem.Q(:, stateColumns));
+    Q = Q + tril(Q, -1)';
+    objective = objective + 0.5 * (x' * Q * x + u' * mem.R(:, inputColumns) * u) + ...
+        x' * mem.S(:, inputColumns) * u + mem.gx(:, i)' * x + mem.gu(:, i)' * u;
+    general(generalRows) = mem.Cgx(:, stateColumns) * x + mem.Cgu(:, inputColumns) * u;
+    x = mem.a(:, i) + mem.A(:, stateColumns) * x + mem.B(:, inputColumns) * u;
+    states(boundRows) = mem.Cx * x;
+end
+terminalColumns = sizes.N*sizes.nx + (1:sizes.nx);
+Q = tril(mem.Q(:, terminalColumns));
+Q = Q + tril(Q, -1)';
+objective = objective + 0.5 * x' * Q * x + mem.gx(:, end)' * x;
+general(sizes.N*sizes.nc+1:end) = mem.CgN * x;
 end

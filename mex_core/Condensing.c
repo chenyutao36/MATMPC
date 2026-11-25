@@ -4,10 +4,11 @@
 #include "string.h"
 
 #include "mpc_common.h"
+#include "condense_affine.h"
 
 #include "blas.h"
 
-static double *L = NULL, *G=NULL, *W_mat=NULL, *w_vec=NULL;
+static double *G = NULL, *W_mat = NULL, *affine_workspace = NULL;
 static double *Hi = NULL, *Cci = NULL, *Ccxi = NULL, *CcN = NULL;
 static bool mem_alloc = false;
 static size_t workspace_shape[6];
@@ -16,8 +17,7 @@ static void exitFcn(void){
     if (mem_alloc){
         mxFree(G);
         mxFree(W_mat);
-        mxFree(w_vec);
-        mxFree(L);
+        mxFree(affine_workspace);
         mxFree(Hi);
         mxFree(Cci);   
         mxFree(CcN);
@@ -26,9 +26,38 @@ static void exitFcn(void){
     mem_alloc = false;
 }
 
+static const mxArray *affine_array(const mxArray *mem, const char *name, size_t count)
+{
+    const mxArray *array = mxGetField(mem, 0, name);
+
+    if (array == NULL || !mxIsDouble(array) || mxIsComplex(array) || mxIsSparse(array) ||
+        mxGetNumberOfElements(array) != count) {
+        mexErrMsgIdAndTxt("MATMPC:Condensing:AffineBuffer",
+                         "mem.%s must contain the expected number of full real double elements.", name);
+    }
+    return array;
+}
+
+static matmpc_condense_buffer affine_input(const mxArray *mem, const char *name, size_t count)
+{
+    matmpc_condense_buffer result = {mxGetPr(affine_array(mem, name, count)), count};
+    return result;
+}
+
+static matmpc_condense_output affine_output(const mxArray *mem, const char *name, size_t count)
+{
+    matmpc_condense_output result = {mxGetPr(affine_array(mem, name, count)), count};
+    return result;
+}
+
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {    
+    if (nlhs != 0 || nrhs != 2 || !mxIsStruct(prhs[0]) || !mxIsStruct(prhs[1]) ||
+        mxGetNumberOfElements(prhs[0]) != 1 || mxGetNumberOfElements(prhs[1]) != 1) {
+        mexErrMsgIdAndTxt("MATMPC:Condensing:Arguments", "Use Condensing(mem, settings) with scalar structures.");
+    }
+
     /*Inputs*/
     double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q") );
     double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
@@ -39,14 +68,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *Cgx = mxGetPr( mxGetField(prhs[0], 0, "Cgx") );
     double *Cgu = mxGetPr( mxGetField(prhs[0], 0, "Cgu") );
     double *CgN = mxGetPr( mxGetField(prhs[0], 0, "CgN") );
-    double *gx = mxGetPr( mxGetField(prhs[0], 0, "gx") );
-    double *gu = mxGetPr( mxGetField(prhs[0], 0, "gu") );   
-    double *a = mxGetPr( mxGetField(prhs[0], 0, "a") );
-    double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
-    double *lc = mxGetPr( mxGetField(prhs[0], 0, "lc") );
-    double *uc = mxGetPr( mxGetField(prhs[0], 0, "uc") );
-    double *lb_dx = mxGetPr( mxGetField(prhs[0], 0, "lb_dx") );
-    double *ub_dx = mxGetPr( mxGetField(prhs[0], 0, "ub_dx") );
         
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
@@ -56,19 +77,32 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
             
     /*Outputs*/
-    double  *Hc, *gc, *Ccg, *Ccx, *lcc, *ucc, *lxc, *uxc; 
+    double *Hc, *Ccg, *Ccx;
        
     Hc = mxGetPr( mxGetField(prhs[0], 0, "Hc")  );
-    gc = mxGetPr( mxGetField(prhs[0], 0, "gc")  );
     Ccg = mxGetPr( mxGetField(prhs[0], 0, "Ccg")  );
     Ccx = mxGetPr( mxGetField(prhs[0], 0, "Ccx")  );
-    lcc = mxGetPr( mxGetField(prhs[0], 0, "lcc")  );
-    ucc = mxGetPr( mxGetField(prhs[0], 0, "ucc")  );
-    lxc = mxGetPr( mxGetField(prhs[0], 0, "lxc")  );
-    uxc = mxGetPr( mxGetField(prhs[0], 0, "uxc")  );
-    
-    int iter = mxGetScalar( mxGetField(prhs[0], 0, "iter") );
-    int hot_start = mxGetScalar( mxGetField(prhs[0], 0, "hot_start") );
+    const matmpc_condense_dimensions dimensions = {nx, nu, N, nbx, nc, ncN};
+    matmpc_condense_affine_sizes sizes;
+    if (matmpc_condense_affine_get_sizes(&dimensions, &sizes) != MATMPC_CONDENSE_OK) {
+        mexErrMsgIdAndTxt("MATMPC:Condensing:AffineDimensions", "The affine workspace dimensions are invalid.");
+    }
+    const mxArray *mem = prhs[0];
+    const matmpc_condense_affine_inputs affine = {
+        affine_input(mem, "Q", sizes.q), affine_input(mem, "S", sizes.s),
+        affine_input(mem, "A", sizes.a), affine_input(mem, "B", sizes.s),
+        affine_input(mem, "Cx", sizes.cx), affine_input(mem, "Cgx", sizes.cgx),
+        affine_input(mem, "CgN", sizes.cgn), affine_input(mem, "gx", sizes.states),
+        affine_input(mem, "gu", sizes.controls), affine_input(mem, "a", sizes.defect),
+        affine_input(mem, "ds0", nx), affine_input(mem, "lc", sizes.general),
+        affine_input(mem, "uc", sizes.general), affine_input(mem, "lb_dx", sizes.state),
+        affine_input(mem, "ub_dx", sizes.state)
+    };
+    const matmpc_condense_affine_outputs shifted = {
+        affine_output(mem, "gc", sizes.controls),
+        affine_output(mem, "lcc", sizes.general), affine_output(mem, "ucc", sizes.general),
+        affine_output(mem, "lxc", sizes.state), affine_output(mem, "uxc", sizes.state)
+    };
        
     /*Allocate memory*/
     int i=0,j=0;
@@ -79,8 +113,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mexAtExit(exitFcn);
         G = (double *)mxMalloc(nx*N*N*nu * sizeof(double));
         W_mat = (double *)mxMalloc(nx*N*N*nu * sizeof(double));
-        w_vec = (double *)mxMalloc(nx*N * sizeof(double));
-        L = (double *)mxMalloc((N+1)*nx * sizeof(double));
+        affine_workspace = (double *)mxMalloc(sizes.workspace * sizeof(double));
         Hi = (double *)mxMalloc(nu*nu * sizeof(double));
         Cci = (double *)mxMalloc(nc*nu * sizeof(double));
         CcN = (double *)mxMalloc(ncN*nu * sizeof(double));
@@ -88,8 +121,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 
         mexMakeMemoryPersistent(G);
         mexMakeMemoryPersistent(W_mat);
-        mexMakeMemoryPersistent(w_vec);
-        mexMakeMemoryPersistent(L);
+        mexMakeMemoryPersistent(affine_workspace);
         mexMakeMemoryPersistent(Hi);
         mexMakeMemoryPersistent(Cci);
         mexMakeMemoryPersistent(CcN);
@@ -99,8 +131,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
    
     char *nTrans = "N", *Trans="T", *SIDE = "L", *UPLO = "L";
-    double one_d = 1.0, zero = 0.0, minus_one = -1.0;
-    size_t one_i = 1; 
+    double one_d = 1.0, zero = 0.0;
               
     /*Start the loop*/
         
@@ -158,58 +189,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }  
     }
          
-    /* compute L */
-    memcpy(L,ds0, nx*sizeof(double)); 
-    for(i=0;i<N;i++){
-        memcpy(L+(i+1)*nx, a+i*nx, nx*sizeof(double)); 
-        dgemv(nTrans,&nx,&nx,&one_d,A+i*nx*nx,&nx,L+i*nx,&one_i,&one_d,L+(i+1)*nx,&one_i);
+    const matmpc_condense_output scratch = {affine_workspace, sizes.workspace};
+    if (matmpc_condense_affine(&dimensions, &affine, &shifted, scratch) != MATMPC_CONDENSE_OK) {
+        mexErrMsgIdAndTxt("MATMPC:Condensing:AffineBuffer", "Unable to condense the affine terms.");
     }
-    
-    /* compute gc */
-    memcpy(w_vec+(N-1)*nx,gx+N*nx,nx*sizeof(double));
-    dsymv(UPLO, &nx, &one_d, Q+N*nx*nx, &nx, L+N*nx, &one_i, &one_d, w_vec+(N-1)*nx, &one_i);
-    for(i=N-1;i>0;i--){
-        memcpy(gc+i*nu,gu+i*nu,nu*sizeof(double));
-        dgemv(Trans,&nx,&nu,&one_d,S+i*nx*nu,&nx,L+i*nx,&one_i,&one_d,gc+i*nu,&one_i);
-        dgemv(Trans,&nx,&nu,&one_d,B+i*nx*nu,&nx,w_vec+i*nx,&one_i,&one_d,gc+i*nu,&one_i);
-         
-        memcpy(w_vec+(i-1)*nx, gx+i*nx, nx*sizeof(double));
-        dsymv(UPLO, &nx, &one_d, Q+i*nx*nx, &nx, L+i*nx, &one_i, &one_d, w_vec+(i-1)*nx, &one_i);
-        dgemv(Trans,&nx,&nx,&one_d,A+i*nx*nx,&nx,w_vec+i*nx,&one_i,&one_d,w_vec+(i-1)*nx,&one_i);
-    }   
-    memcpy(gc,gu,nu*sizeof(double));
-    dgemv(Trans,&nx,&nu,&one_d,S,&nx,L,&one_i,&one_d,gc,&one_i);
-    dgemv(Trans,&nx,&nu,&one_d,B,&nx,w_vec,&one_i,&one_d,gc,&one_i);
-   
-    /* Compute cc */
-    if (nc>0){                    
-        for(i=0;i<N;i++){
-            dgemv(nTrans,&nc,&nx,&minus_one,Cgx+i*nc*nx,&nc,L+i*nx,&one_i,&zero,lcc+i*nc,&one_i); 
-            for(j=0;j<nc;j++){
-                ucc[i*nc+j] = lcc[i*nc+j]+ uc[i*nc+j];
-                lcc[i*nc+j] += lc[i*nc+j];          
-            }
-        }        
-    }   
-    
-    /* Compute ccN */
-    if (ncN>0){    
-        dgemv(nTrans,&ncN,&nx,&minus_one,CgN,&ncN,L+N*nx,&one_i,&zero,lcc+N*nc,&one_i);
-        for(j=0;j<ncN;j++){
-            ucc[N*nc+j] = lcc[N*nc+j]+ uc[N*nc+j];
-            lcc[N*nc+j] += lc[N*nc+j];          
-        }
-    }
-    
-    /* Compute ccx */
-    if (nbx>0){                    
-        for(i=0;i<N;i++){
-            dgemv(nTrans,&nbx,&nx,&minus_one,Cx,&nbx,L+(i+1)*nx,&one_i,&zero,lxc+i*nbx,&one_i);
-            for(j=0;j<nbx;j++){
-                uxc[i*nbx+j] = lxc[i*nbx+j]+ ub_dx[i*nbx+j];
-                lxc[i*nbx+j] += lb_dx[i*nbx+j];          
-            }
-        }        
-    }   
-    
 }
