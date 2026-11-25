@@ -1,80 +1,107 @@
 #include "mex.h"
-#include "string.h"
+#include "recover.h"
 
-#include "blas.h"
+#include <math.h>
+#include <stdint.h>
 
-void
-mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
+static int is_full_real_double(const mxArray *value)
 {
+    return value != NULL && mxIsDouble(value) && !mxIsComplex(value) && !mxIsSparse(value);
+}
 
-    double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q") );
-    double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
-    double *R = mxGetPr( mxGetField(prhs[0], 0, "R") );
-    double *A = mxGetPr( mxGetField(prhs[0], 0, "A") );
-    double *B = mxGetPr( mxGetField(prhs[0], 0, "B") );
-    double *Cx = mxGetPr( mxGetField(prhs[0], 0, "Cx") );
-    double *Cgx = mxGetPr( mxGetField(prhs[0], 0, "Cgx") );
-    double *Cgu = mxGetPr( mxGetField(prhs[0], 0, "Cgu") );
-    double *CgN = mxGetPr( mxGetField(prhs[0], 0, "CgN") );
-    double *gx = mxGetPr( mxGetField(prhs[0], 0, "gx") );
-    double *a = mxGetPr( mxGetField(prhs[0], 0, "a") );
-    double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
-        
-    size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
-    size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
-    size_t nc = mxGetScalar( mxGetField(prhs[1], 0, "nc") );
-    size_t ncN = mxGetScalar( mxGetField(prhs[1], 0, "ncN") );
-    size_t nbx = mxGetScalar( mxGetField(prhs[1], 0, "nbx") );
-    size_t N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
-       
-    double *dx = mxGetPr( mxGetField(prhs[0], 0, "dx") );
-    double *du = mxGetPr( mxGetField(prhs[0], 0, "du") );
-    double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda_new") );
-    double *mu = mxGetPr( mxGetField(prhs[0], 0, "mu_new") );
-    double *mu_x = mxGetPr( mxGetField(prhs[0], 0, "mu_x_new") );
-   
-    int i,j;
-        
-    char *nTrans = "N", *Trans="T";
-    double one_d = 1.0, zero = 0.0, minus_one_d = -1.0;
-    size_t one_i = 1;
-       
-    memcpy(dx, ds0, nx*sizeof(double)); 
-    
-    for (i=0;i<N;i++){        
-        memcpy(dx+(i+1)*nx, a+i*nx, nx*sizeof(double));          
-        dgemv(nTrans,&nx,&nx,&one_d,A+i*nx*nx,&nx,dx+i*nx,&one_i,&one_d,dx+(i+1)*nx,&one_i);
-        dgemv(nTrans,&nx,&nu,&one_d,B+i*nx*nu,&nx,du+i*nu,&one_i,&one_d,dx+(i+1)*nx,&one_i);
+static size_t read_dimension(const mxArray *settings, const char *name)
+{
+    const mxArray *field = mxGetField(settings, 0, name);
+    double value;
+
+    if (!is_full_real_double(field) || mxGetNumberOfElements(field) != 1) {
+        mexErrMsgIdAndTxt("MATMPC:Recover:InvalidDimensions",
+                         "settings.%s must be a full real double scalar.", name);
     }
-    
-    memcpy(lambda+N*nx, gx+N*nx, nx*sizeof(double));
-    dgemv(nTrans,&nx,&nx,&one_d,Q+N*nx*nx,&nx,dx+N*nx,&one_i,&one_d,lambda+N*nx,&one_i);
-    
-    if (ncN>0)
-        dgemv(Trans,&ncN,&nx,&one_d,CgN,&ncN,mu+N*nc,&one_i,&one_d,lambda+N*nx,&one_i);
-    if (nbx>0)
-        dgemv(Trans,&nbx,&nx,&one_d,Cx,&nbx,mu_x+(N-1)*nbx,&one_i,&one_d,lambda+N*nx,&one_i);
-    
-    for (i=N-1;i>0;i--){
-        memcpy(lambda+i*nx,gx+i*nx, nx*sizeof(double));
-        dgemv(nTrans,&nx,&nx,&one_d,Q+i*nx*nx,&nx,dx+i*nx,&one_i,&one_d,lambda+i*nx,&one_i);
-        dgemv(nTrans,&nx,&nu,&one_d,S+i*nx*nu,&nx,du+i*nu,&one_i,&one_d,lambda+i*nx,&one_i);
-        dgemv(Trans,&nx,&nx,&one_d,A+i*nx*nx,&nx,lambda+(i+1)*nx,&one_i,&one_d,lambda+i*nx,&one_i);
-        
-        if (nc>0)
-            dgemv(Trans,&nc,&nx,&one_d,Cgx+i*nc*nx,&nc,mu+i*nc,&one_i,&one_d,lambda+i*nx,&one_i);
-        if (nbx>0)
-            dgemv(Trans,&nbx,&nx,&one_d,Cx,&nbx,mu_x+(i-1)*nbx,&one_i,&one_d,lambda+i*nx,&one_i);
+    value = mxGetScalar(field);
+    if (!mxIsFinite(value) || value < 0.0 || value >= (double)SIZE_MAX || floor(value) != value) {
+        mexErrMsgIdAndTxt("MATMPC:Recover:InvalidDimensions",
+                         "settings.%s must be a representable nonnegative integer.", name);
     }
-    
-    // lambda_0 has a different sign
-    for (j=0;j<nx;j++)
-        lambda[j] = -1.0*gx[j];
-    dgemv(nTrans,&nx,&nx,&minus_one_d,Q,&nx,dx,&one_i,&one_d,lambda,&one_i);
-    dgemv(nTrans,&nx,&nu,&minus_one_d,S+i*nx*nu,&nx,du+i*nu,&one_i,&one_d,lambda+i*nx,&one_i);
-    dgemv(Trans,&nx,&nx,&minus_one_d,A+i*nx*nx,&nx,lambda+(i+1)*nx,&one_i,&one_d,lambda+i*nx,&one_i);
-        
-    if (nc>0)
-        dgemv(Trans,&nc,&nx,&minus_one_d,Cgx,&nc,mu,&one_i,&one_d,lambda,&one_i);  
-      
+    return (size_t)value;
+}
+
+static matmpc_recover_buffer read_buffer(const mxArray *mem, const char *name,
+                                         size_t count, size_t rows, int allow_vector)
+{
+    const mxArray *field = mxGetField(mem, 0, name);
+    matmpc_recover_buffer buffer;
+
+    if (!is_full_real_double(field) || mxGetNumberOfDimensions(field) != 2 ||
+        mxGetNumberOfElements(field) != count ||
+        (count != 0 && mxGetM(field) != rows &&
+         !(allow_vector && (mxGetM(field) == 1 || mxGetN(field) == 1)))) {
+        mexErrMsgIdAndTxt("MATMPC:Recover:InvalidBuffer",
+                         "mem.%s must be a full real double matrix with the expected size.", name);
+    }
+
+    buffer.data = mxGetPr(field);
+    buffer.count = count;
+    return buffer;
+}
+
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+{
+    const mxArray *mem;
+    const mxArray *settings;
+    matmpc_recover_dimensions dimensions;
+    matmpc_recover_sizes sizes;
+    matmpc_recover_inputs inputs;
+    mxArray *dx;
+    mxArray *lambda;
+    matmpc_recover_status status;
+
+    if (nrhs != 2 || nlhs != 2) {
+        mexErrMsgIdAndTxt("MATMPC:Recover:InvalidArgumentCount",
+                         "Use [dx, lambda_new] = Recover(mem, settings).");
+    }
+    mem = prhs[0];
+    settings = prhs[1];
+    if (!mxIsStruct(mem) || mxGetNumberOfElements(mem) != 1 ||
+        !mxIsStruct(settings) || mxGetNumberOfElements(settings) != 1) {
+        mexErrMsgIdAndTxt("MATMPC:Recover:InvalidStructure",
+                         "mem and settings must be scalar structures.");
+    }
+
+    dimensions.nx = read_dimension(settings, "nx");
+    dimensions.nu = read_dimension(settings, "nu");
+    dimensions.horizon = read_dimension(settings, "N");
+    dimensions.state_bounds = read_dimension(settings, "nbx");
+    dimensions.path_constraints = read_dimension(settings, "nc");
+    dimensions.terminal_constraints = read_dimension(settings, "ncN");
+    if (matmpc_recover_get_sizes(&dimensions, &sizes) != MATMPC_RECOVER_OK) {
+        mexErrMsgIdAndTxt("MATMPC:Recover:InvalidDimensions",
+                         "The state dimension and horizon must be positive, and buffer sizes must be representable.");
+    }
+
+    inputs.q = read_buffer(mem, "Q", sizes.q, dimensions.nx, 0);
+    inputs.s = read_buffer(mem, "S", sizes.s, dimensions.nx, 0);
+    inputs.a = read_buffer(mem, "A", sizes.a, dimensions.nx, 0);
+    inputs.b = read_buffer(mem, "B", sizes.s, dimensions.nx, 0);
+    inputs.cx = read_buffer(mem, "Cx", sizes.cx, dimensions.state_bounds, 0);
+    inputs.cgx = read_buffer(mem, "Cgx", sizes.cgx, dimensions.path_constraints, 0);
+    inputs.cgn = read_buffer(mem, "CgN", sizes.cgn, dimensions.terminal_constraints, 0);
+    inputs.gx = read_buffer(mem, "gx", sizes.dx, dimensions.nx, 0);
+    inputs.defect = read_buffer(mem, "a", sizes.defect, dimensions.nx, 0);
+    inputs.ds0 = read_buffer(mem, "ds0", dimensions.nx, dimensions.nx, 1);
+    inputs.du = read_buffer(mem, "du", sizes.du, dimensions.nu, 1);
+    inputs.mu = read_buffer(mem, "mu_new", sizes.mu, sizes.mu, 1);
+    inputs.mu_x = read_buffer(mem, "mu_x_new", sizes.mu_x, sizes.mu_x, 1);
+
+    dx = mxCreateDoubleMatrix(dimensions.nx, dimensions.horizon + 1, mxREAL);
+    lambda = mxCreateDoubleMatrix(dimensions.nx, dimensions.horizon + 1, mxREAL);
+    status = matmpc_recover(&dimensions, &inputs, mxGetPr(dx), sizes.dx, mxGetPr(lambda), sizes.dx);
+    if (status != MATMPC_RECOVER_OK) {
+        mxDestroyArray(dx);
+        mxDestroyArray(lambda);
+        mexErrMsgIdAndTxt("MATMPC:Recover:InvalidBuffer", "Unable to recover the state increments and costates.");
+    }
+
+    plhs[0] = dx;
+    plhs[1] = lambda;
 }

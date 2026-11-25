@@ -1,6 +1,9 @@
 #include "casadi_wrapper.h"
 #include <math.h>
 
+/* The same analytic fixture exercises both ODE and DAE shapes. */
+int matmpc_model_dimensions(size_t dims[4]) { (void)dims; return 0; }
+
 /* Analytic model x' = u. For DAE linkage, the algebraic equation is z = 0. */
 void f_Fun(double **in, double **out) { out[0][0] = in[1][0]; }
 void vde_Fun(double **in, double **out) { out[0][0] = 0.0; out[1][0] = 1.0; }

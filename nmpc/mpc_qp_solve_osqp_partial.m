@@ -29,5 +29,5 @@ function [cpt_qp, mem] = mpc_qp_solve_osqp_partial(settings,settings2,mem, mem2)
     
     cpt_qp   = sol.info.run_time*1e3;
                
-    Recover(mem, settings);
+    [mem.dx, mem.lambda_new] = Recover(mem, settings);
 end

@@ -42,6 +42,34 @@ open_system('MATMPC_SIMULINK')
 Use `open_system('MATMPC_SIMULINK_R2017b')` for the legacy model.
 Run `addpath('tests'); smoke_simulink_inverted_pendulum` to build and check both models.
 
+## Shared C kernels
+
+The explicit Runge–Kutta integrator and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers.
+
+```sh
+cmake -S core -B build/shared-core
+cmake --build build/shared-core --config Release
+cmake -E chdir build/shared-core ctest -C Release --output-on-failure
+```
+
+Use `-DBUILD_TESTING=OFF` when building the library alone. The ERK caller supplies model callbacks and the queried scratch storage. Recovery reads the QP data and writes into separate trajectory and multiplier buffers. The MATLAB setup above rebuilds the MEX gateways when using these sources.
+
+## MATLAB controller sessions
+
+Use a controller object to manage one solve sequence and inspect its numeric state in the workspace.
+
+```matlab
+settings = Build_Model('InvertedPendulum');
+controller = MATMPCController(settings);
+initial = controller.snapshot();
+[control, solution] = controller.step(initial.input.x0);
+debug = controller.snapshot(true);
+controller.reset();
+delete(controller);
+```
+
+`step` accepts a second argument with updated references, weights, bounds, or online model parameters. `snapshot()` returns ordinary MATLAB data without copying QP work arrays. `snapshot(true)` also includes the latest available QP arrays and can be saved with `save`. Controllers own their backend warm starts. Multiple live controllers use the same active generated model. Release the instances before rebuilding the MEX files, calling `clear mex`, or starting an example that clears the MEX state. Scripts and Simulink can continue to call the function interface.
+
 ## Smoke test
 
 The test builds the shipped inverted pendulum and runs five closed-loop samples with the default qpOASES solver. It checks that the solver returns finite outputs, executes an SQP iteration each step, and keeps the applied controls and observed position within the example's bounds.

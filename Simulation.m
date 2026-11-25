@@ -1,3 +1,4 @@
+MATMPCController.assertBuildAllowed();
 clear all; clear mex; close all;clc;
 
 disp( ' ' );

@@ -25,6 +25,10 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
         end
         error('MATMPC:QPSolverFailed', 'qpOASES failed (exitflag %d).', exitflag);
     end
+    if initializing && isfield(mem, 'own_qpoases_sequence') && mem.own_qpoases_sequence
+        sequence = mem.warm_start;
+        mem.qpoases_cleanup = onCleanup(@() qpOASES_sequence('c', sequence));
+    end
 
     %The dual solution vector contains exactly one entry per lower/upper bound as well as exactly one entry per
     %lower/upper constraints bound. Positive entries correspond to active lower (constraints) bounds, negative
@@ -37,5 +41,5 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
     mem.mu_new(:)   = - multiplier(N*nu+N*nbx+1:end);
     cpt_qp   = auxOutput.cpuTime*1e3;
                 
-    Recover(mem, sizes);
+    [mem.dx, mem.lambda_new] = Recover(mem, sizes);
 end

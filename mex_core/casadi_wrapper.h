@@ -1,6 +1,12 @@
 #ifndef CASADI_WRAPPER_H_
 #define CASADI_WRAPPER_H_
 
+#include <stddef.h>
+
+/* Compiled f_fun input dimensions in x, u, p, z order.
+ * 1: available, 0: unavailable test model, -1: incompatible generated ABI. */
+int matmpc_model_dimensions(size_t dims[4]);
+
 void f_Fun(double **in, double **out);
 void g_Fun(double **in, double **out);
 void vde_Fun(double **in, double **out);

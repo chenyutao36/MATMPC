@@ -52,6 +52,6 @@ function [cpt_qp, mem] = mpc_qp_solve_ipopt_partial_sparse(settings,settings2,me
         mem.mu_x_new((i+1)*Nc*settings.nbx-settings.nbx+1:(i+1)*Nc*settings.nbx) = mu_x(i*settings.nbx+1:(i+1)*settings.nbx);                   
     end
     
-    Recover(mem, settings);
+    [mem.dx, mem.lambda_new] = Recover(mem, settings);
 end
 

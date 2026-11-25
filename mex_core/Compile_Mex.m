@@ -1,8 +1,12 @@
 function Compile_Mex(coreDir, modelDir)
 %COMPILE_MEX Build MATMPC MEX files with MATLAB's configured C compiler.
 %   Compile_Mex() builds the core from generated sources in this directory.
-%   Compile_Mex(coreDir, modelDir) builds both the model and core MEX files.
+%   Compile_Mex(coreDir, modelDir) builds both the model and core MEX files
+%   using the portable sources in the sibling core directory.
 
+if exist('MATMPCController', 'class') == 8
+    MATMPCController.assertBuildAllowed();
+end
 if nargin < 1
     coreDir = fileparts(mfilename('fullpath'));
 end
@@ -16,24 +20,28 @@ end
 blas = {'-lmwblas'};
 lapack = {'-lmwblas', '-lmwlapack'};
 common = {'mpc_common.c'};
+sharedCore = fullfile(coreDir, '..', 'core');
+sharedInclude = ['-I', sharedCore];
+erkKernel = {sharedInclude, fullfile(sharedCore, 'erk_kernel.c')};
+recoverKernel = {sharedInclude, fullfile(sharedCore, 'recover_kernel.c')};
 modelSupport = {'casadi_wrapper.c', 'sim.c', 'erk.c', 'irk_ode.c', ...
     'irk_dae.c', 'casadi_src.c', 'mpc_common.c'};
 
-compile(coreDir, [{'qp_generation.c'}, modelSupport], lapack);
+compile(coreDir, [{'qp_generation.c'}, modelSupport], lapack, erkKernel{:});
 compile(coreDir, [{'Condensing.c'}, common], blas);
 compile(coreDir, [{'sparse2full.c'}, common], {});
 compile(coreDir, [{'partial_condensing_default.c', 'partial_condensing_routines.c'}, common], blas);
-compile(coreDir, [{'Recover.c'}, common], blas);
-compile(coreDir, [{'Line_search.c'}, modelSupport], lapack);
-compile(coreDir, [{'solution_info.c'}, modelSupport], lapack);
-compile(coreDir, [{'Simulate_System.c'}, modelSupport], lapack);
+compile(coreDir, {'Recover.c'}, {}, recoverKernel{:});
+compile(coreDir, [{'Line_search.c'}, modelSupport], lapack, erkKernel{:});
+compile(coreDir, [{'solution_info.c'}, modelSupport], lapack, erkKernel{:});
+compile(coreDir, [{'Simulate_System.c'}, modelSupport], lapack, erkKernel{:});
 
 compile(coreDir, [{'Condensing_mb.c'}, common], blas);
-compile(coreDir, [{'qp_generation_ngrid.c'}, modelSupport], lapack);
-compile(coreDir, [{'qp_generation_mb.c'}, modelSupport], lapack);
+compile(coreDir, [{'qp_generation_ngrid.c'}, modelSupport], lapack, erkKernel{:});
+compile(coreDir, [{'qp_generation_mb.c'}, modelSupport], lapack, erkKernel{:});
 end
 
-function compile(sourceDir, filenames, libraries)
+function compile(sourceDir, filenames, libraries, varargin)
 sources = fullfile(sourceDir, filenames);
-mex('-largeArrayDims', '-O', '-silent', '-outdir', sourceDir, sources{:}, libraries{:});
+mex('-largeArrayDims', '-O', '-silent', '-outdir', sourceDir, sources{:}, varargin{:}, libraries{:});
 end

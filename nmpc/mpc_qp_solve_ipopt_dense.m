@@ -22,7 +22,7 @@ function [cpt_qp, mem] = mpc_qp_solve_ipopt_dense(sizes,mem)
     mem.mu_new   = info_ipopt.Lambda.ineqlin(N*nbx+1:end);
     cpt_qp   = info_ipopt.Time*1e3;
     
-    Recover(mem, sizes);
+    [mem.dx, mem.lambda_new] = Recover(mem, sizes);
 
 end
 

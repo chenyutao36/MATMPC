@@ -16,5 +16,5 @@ function [cpt_qp, mem] = mpc_qp_solve_quadprog(sizes,mem)
     mem.mu_new = lambda.ineqlin(N*nbx+1:N*nbx+N*nc+ncN) - lambda.ineqlin(N*nbx+N*nc+ncN+N*nbx+1:end);
     cpt_qp   = toc(tqp)*1e3;
             
-    Recover(mem, sizes);
+    [mem.dx, mem.lambda_new] = Recover(mem, sizes);
 end

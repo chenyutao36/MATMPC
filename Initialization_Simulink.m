@@ -1,5 +1,6 @@
 % Initialize either supplied inverted-pendulum Simulink example.
 
+MATMPCController.assertBuildAllowed();
 clear mex;
 
 projectRoot = fileparts(mfilename('fullpath'));

@@ -10,6 +10,9 @@ if nargin < 2
     buildMex = true;
 end
 validateattributes(buildMex, {'logical'}, {'scalar'}, mfilename, 'buildMex');
+if buildMex
+    MATMPCController.assertBuildAllowed();
+end
 if isempty(which('casadi.SX'))
     error('MATMPC:MissingCasADi', 'Add your CasADi MATLAB installation to the path before building.');
 end
@@ -170,8 +173,13 @@ adjN_fun = Function('adjN_fun',{states,params,refN, QN, mu_x,muN_g},{dobjN, adj_
 
 if buildMex
     core = fullfile(projectRoot, 'mex_core');
+    sharedCore = fullfile(projectRoot, 'core');
+    stagedSharedCore = fullfile(stage, 'core');
+    mkdir(stagedSharedCore);
     copyfile(fullfile(core, '*.c'), stagedCore);
     copyfile(fullfile(core, '*.h'), stagedCore);
+    copyfile(fullfile(sharedCore, '*.c'), stagedSharedCore);
+    copyfile(fullfile(sharedCore, '*.h'), stagedSharedCore);
 end
 
 cd(stagedModel);

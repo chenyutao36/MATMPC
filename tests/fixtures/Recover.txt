@@ -1,10 +1,14 @@
-function calls = Recover(varargin)
+function [dx, lambda] = Recover(varargin)
 persistent recoveries;
 if isempty(recoveries)
     recoveries = 0;
 end
 if nargin > 0
     recoveries = recoveries + 1;
+    settings = varargin{2};
+    dx = zeros(settings.nx, settings.N + 1);
+    lambda = zeros(settings.nx, settings.N + 1);
+else
+    dx = recoveries;
 end
-calls = recoveries;
 end

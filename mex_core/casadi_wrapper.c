@@ -1,6 +1,18 @@
-#include "mex.h"
 #include "casadi_wrapper.h"
 #include "casadi_src.h"
+
+int matmpc_model_dimensions(size_t dims[4])
+{
+    if (f_fun_n_in() != 4)
+        return -1;
+    for (int i = 0; i < 4; ++i) {
+        const int *dimensions = f_fun_sparsity_in(i);
+        if (!dimensions || dimensions[0] < 0 || dimensions[1] != 1)
+            return -1;
+        dims[i] = (size_t)dimensions[0];
+    }
+    return 1;
+}
 
 void f_Fun(double **in, double **out){
     const double *x = in[0];

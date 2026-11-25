@@ -21,7 +21,8 @@ testCase.assumeTrue(~isempty(mex.getCompilerConfigurations('C', 'Selected')), ..
 
 build = testCase.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture);
 source = fullfile(projectRoot, 'mex_core', 'Recover.c');
-mex('-silent', '-outdir', build.Folder, source, '-lmwblas');
+core = fullfile(projectRoot, 'core');
+mex('-silent', '-outdir', build.Folder, ['-I', core], source, fullfile(core, 'recover_kernel.c'));
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(build.Folder));
 testCase.addTeardown(@clearRecover);
 end

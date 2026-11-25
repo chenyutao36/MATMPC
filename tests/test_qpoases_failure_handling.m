@@ -84,7 +84,7 @@ testCase.verifyFail('Expected the QP solve to be rejected.');
 end
 
 function [sizes, mem] = qpInput()
-sizes = struct('N', 2, 'nu', 1, 'nbx', 0, 'nc', 0, 'ncN', 0);
+sizes = struct('N', 2, 'nx', 1, 'nu', 1, 'nbx', 0, 'nc', 0, 'ncN', 0);
 mem.warm_start = 0;
 mem.hot_start = 0;
 mem.Hc = eye(2);

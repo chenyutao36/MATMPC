@@ -9,16 +9,8 @@ typedef struct{
     double *B;
     double *Sx;
     double *Su;
-         
-    double *xt;
-    double *K;
-    double *dKx;
-    double *dKu;
-    double *jacX_t;
-    double *jacU_t;
-    double *X_traj;
-    double *K_lambda;
-    double *lambda_t;
+    double *scratch;
+    size_t scratch_count;
 }sim_erk_workspace;
 
 sim_erk_workspace* sim_erk_workspace_create(sim_opts *opts);
