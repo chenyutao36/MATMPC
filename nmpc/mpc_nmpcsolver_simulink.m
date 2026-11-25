@@ -36,7 +36,8 @@ function [input,mem,cpt,StopCrit,OBJ] = mpc_nmpcsolver_simulink(input, settings,
                 hpipm_sparse(mem,settings);
             case 'hpipm_pcond'                             
                 hpipm_pcond(mem,settings);
-
+            otherwise
+                error('MATMPC:UnsupportedQPSolver', 'Unsupported Simulink QP solver "%s".', opt.qpsolver);
         end
 
         Line_search(mem, input, settings);

@@ -1,0 +1,10 @@
+function calls = Recover(varargin)
+persistent recoveries;
+if isempty(recoveries)
+    recoveries = 0;
+end
+if nargin > 0
+    recoveries = recoveries + 1;
+end
+calls = recoveries;
+end

@@ -56,6 +56,7 @@ void partial_condensing_workspace_free(partial_condensing_workspace *work)
 {
     mxFree(work->G);
     mxFree(work->L);
+    mxFree(work->I);
     mxFree(work->block11);
     mxFree(work->block12);
     mxFree(work->block21);
