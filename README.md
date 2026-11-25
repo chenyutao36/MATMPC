@@ -78,6 +78,8 @@ delete(controller);
 
 `step` accepts a second argument with updated references, weights, bounds, or online model parameters. `snapshot()` returns ordinary MATLAB data without copying QP work arrays. `snapshot(true)` also includes the latest available QP arrays and can be saved with `save`. Controllers own their backend warm starts. Multiple live controllers use the same active generated model. Release the instances before rebuilding the MEX files, calling `clear mex`, or starting an example that clears the MEX state. Scripts and Simulink can continue to call the function interface.
 
+The default `opt.hotstart = 'no'` reuses the qpOASES sequence and supplies the current Hessian and constraint matrix on each solve. When a sequence starts with `opt.hotstart = 'yes'`, the short call is used only while both matrices match the last successful solve exactly. A change to either matrix uses the full matrix update on the same sequence. This applies to standard and move-blocked qpOASES.
+
 ## Smoke test
 
 The test builds the shipped inverted pendulum and runs five closed-loop samples with the default qpOASES solver. It checks that the solver returns finite outputs, executes an SQP iteration each step, and keeps the applied controls and observed position within the example's bounds.

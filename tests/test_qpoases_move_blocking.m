@@ -38,8 +38,8 @@ mem.gc_r(1) = -5;
 [~, mem] = mpc_qp_solve_qpoases_mb(sizes, mem, struct());
 verifySolution(testCase, mem, [0, 4, 0, 0; -3, 0, 0, 0]);
 
-% The unchanged Hessian and Jacobian allow the short hotstart signature.
-% The lower input bound now ties across both stages of the first block.
+% Opting in after initialization keeps the matrix-update path for this
+% sequence. The lower input bound now ties across both stages of the block.
 mem.hot_start = 1;
 mem.lb_du(4) = -2;
 [~, mem] = mpc_qp_solve_qpoases_mb(sizes, mem, struct());

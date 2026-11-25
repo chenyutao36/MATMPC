@@ -4,31 +4,8 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
     N=sizes.N;  
     nbx=sizes.nbx;
                    
-    initializing = mem.warm_start == 0;
-    if initializing
-        [mem.warm_start,sol,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('i',mem.Hc,mem.gc,[mem.Ccx;mem.Ccg],...
-            mem.lb_du,mem.ub_du,[mem.lxc;mem.lcc],[mem.uxc;mem.ucc],mem.qpoases_opt); 
-    else
-        if mem.hot_start==0
-            [sol,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('m',mem.warm_start,mem.Hc,mem.gc,...
-                [mem.Ccx;mem.Ccg],mem.lb_du,mem.ub_du,[mem.lxc;mem.lcc],[mem.uxc;mem.ucc],mem.qpoases_opt);
-        end
-        if mem.hot_start==1
-           [sol,fval,exitflag,iterations,multiplier,auxOutput] = qpOASES_sequence('h',mem.warm_start,mem.gc,mem.lb_du,...
-               mem.ub_du,[mem.lxc;mem.lcc],[mem.uxc;mem.ucc],mem.qpoases_opt);
-        end
-    end
-    
-    if exitflag ~= 0
-        if initializing
-            qpOASES_sequence('c', mem.warm_start);
-        end
-        error('MATMPC:QPSolverFailed', 'qpOASES failed (exitflag %d).', exitflag);
-    end
-    if initializing && isfield(mem, 'own_qpoases_sequence') && mem.own_qpoases_sequence
-        sequence = mem.warm_start;
-        mem.qpoases_cleanup = onCleanup(@() qpOASES_sequence('c', sequence));
-    end
+    [sol, multiplier, cpt_qp, mem] = solve_qpoases_sequence(mem, mem.Hc, mem.gc, ...
+        [mem.Ccx; mem.Ccg], mem.lb_du, mem.ub_du, [mem.lxc; mem.lcc], [mem.uxc; mem.ucc], 'qpOASES');
 
     %The dual solution vector contains exactly one entry per lower/upper bound as well as exactly one entry per
     %lower/upper constraints bound. Positive entries correspond to active lower (constraints) bounds, negative
@@ -39,7 +16,6 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases(sizes,mem)
     mem.mu_u_new(:)  = - multiplier(1:N*nu); 
     mem.mu_x_new(:) = -multiplier(N*nu+1:N*nu+N*nbx);
     mem.mu_new(:)   = - multiplier(N*nu+N*nbx+1:end);
-    cpt_qp   = auxOutput.cpuTime*1e3;
                 
     [mem.dx, mem.lambda_new] = Recover(mem, sizes);
 end

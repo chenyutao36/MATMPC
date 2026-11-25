@@ -1,0 +1,27 @@
+function varargout = qpOASES_sequence(command, varargin)
+persistent commands failAfterUpdate;
+switch command
+    case 'testResetTrace'
+        commands = '';
+        failAfterUpdate = false;
+        return;
+    case 'testCommands'
+        varargout = {commands};
+        return;
+    case 'testFailAfterUpdate'
+        failAfterUpdate = true;
+        return;
+end
+
+commands = [commands, command];
+if nargout == 0
+    qpOASES_sequence_trace_native(command, varargin{:});
+else
+    [varargout{1:nargout}] = qpOASES_sequence_trace_native(command, varargin{:});
+end
+if strcmp(command, 'm') && failAfterUpdate
+    assert(varargout{3} == 0, 'The native matrix update must succeed before fault injection.');
+    varargout{3} = 1;
+    failAfterUpdate = false;
+end
+end

@@ -16,28 +16,9 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases_mb(sizes,mem,opt)
         blockUpper(:, block) = min(stageUpper(:, stages), [], 2);
     end
     
-    initializing = mem.warm_start == 0;
-    if initializing
-        [mem.warm_start,sol,~,exitflag,~,multiplier,auxOutput] = qpOASES_sequence('i',mem.Hc_r,mem.gc_r,[mem.Ccx_r;mem.Ccg_r],...
-            blockLower(:),blockUpper(:),[mem.lxc;mem.lcc],[mem.uxc;mem.ucc],mem.qpoases_opt);
-    elseif mem.hot_start == 1
-        [sol,~,exitflag,~,multiplier,auxOutput] = qpOASES_sequence('h',mem.warm_start,mem.gc_r,...
-            blockLower(:),blockUpper(:),[mem.lxc;mem.lcc],[mem.uxc;mem.ucc],mem.qpoases_opt);
-    else
-        [sol,~,exitflag,~,multiplier,auxOutput] = qpOASES_sequence('m',mem.warm_start,mem.Hc_r,mem.gc_r,...
-            [mem.Ccx_r;mem.Ccg_r],blockLower(:),blockUpper(:),[mem.lxc;mem.lcc],[mem.uxc;mem.ucc],mem.qpoases_opt);
-    end
-    
-    if exitflag ~= 0
-        if initializing
-            qpOASES_sequence('c', mem.warm_start);
-        end
-        error('MATMPC:QPSolverFailed', 'Move-blocking qpOASES failed (exitflag %d).', exitflag);
-    end
-    if initializing && isfield(mem, 'own_qpoases_sequence') && mem.own_qpoases_sequence
-        sequence = mem.warm_start;
-        mem.qpoases_cleanup = onCleanup(@() qpOASES_sequence('c', sequence));
-    end
+    [sol, multiplier, cpt_qp, mem] = solve_qpoases_sequence(mem, mem.Hc_r, mem.gc_r, ...
+        [mem.Ccx_r; mem.Ccg_r], blockLower(:), blockUpper(:), ...
+        [mem.lxc; mem.lcc], [mem.uxc; mem.ucc], 'Move-blocking qpOASES');
 
     mem.du(:) = mem.T * sol;
 
@@ -57,7 +38,6 @@ function [cpt_qp, mem] = mpc_qp_solve_qpoases_mb(sizes,mem,opt)
         stageMu(:, stages) = bsxfun(@times, active, mu ./ max(1, sum(active, 2)));
     end
     mem.mu_u_new(:) = stageMu(:);
-    cpt_qp   = auxOutput.cpuTime*1e3;
                 
     [mem.dx, mem.lambda_new] = Recover(mem, sizes);
 end
