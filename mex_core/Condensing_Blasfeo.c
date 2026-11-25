@@ -18,6 +18,7 @@
 static void *mem;
 static Condensing_Blasfeo_workspace *workspace;
 static bool mem_alloc = false;
+static size_t workspace_shape[6];
 
 int align_char_to(int num, char **c_ptr) {
     size_t s_ptr = (size_t)*c_ptr;
@@ -165,10 +166,11 @@ Condensing_Blasfeo_workspace* Condensing_Blasfeo_workspace_cast(int nx, int nu, 
     return workspace;
 }
 
-void exitFcn(){
+static void exitFcn(void){
     if (mem_alloc){
         mxFree(mem);
     }
+    mem_alloc = false;
 }
 
 void
@@ -218,13 +220,16 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     /*Allocate memory*/
     int i=0,j=0;
         
-    if (!mem_alloc){   
+    const size_t shape[] = { nx, nu, nc, ncN, nbx, N };
+    if (!mem_alloc || memcmp(shape, workspace_shape, sizeof(shape)) != 0){
+        exitFcn();
+        mexAtExit(exitFcn);
         int size = Condensing_Blasfeo_workspace_calculate_size(nx, nu, N, nc, ncN, nbx);
         mem = mxCalloc(size,1);
         mexMakeMemoryPersistent(mem);
         workspace = Condensing_Blasfeo_workspace_cast(nx, nu, N, nc, ncN, nbx, mem);
-        mem_alloc = true;       
-        mexAtExit(exitFcn);
+        memcpy(workspace_shape, shape, sizeof(shape));
+        mem_alloc = true;
     }
     
     struct blasfeo_dmat *StQ = workspace->StQ;

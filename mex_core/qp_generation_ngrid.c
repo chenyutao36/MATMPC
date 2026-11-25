@@ -2,57 +2,60 @@
 #include "mex.h"
 #include "string.h"
 
-#include "sim.h"
-#include "erk.h"
-#include "irk_ode.h"
-#include "irk_dae.h"
+#include "sim_workspace.h"
 #include "casadi_wrapper.h"
 #include "mpc_common.h"
 
 #include "blas.h"
 
-static sim_opts *opts = NULL;
-static sim_in *in = NULL;
-static sim_out *out = NULL;
-static sim_erk_workspace *erk_workspace = NULL;
-static sim_irk_ode_workspace *irk_ode_workspace = NULL;
-static sim_irk_dae_workspace *irk_dae_workspace = NULL;
+static sim_workspace integrator;
 static bool mem_alloc = false;
+static size_t workspace_shape[4];
 static double *Hes[1];
 static double *HesN[1];
 static double *Jac[2];
 static double *JacN[1];
 static double *temp[3];
 
-void exitFcn(){
-    if (erk_workspace!=NULL)
-        sim_erk_workspace_free(opts, erk_workspace);
-    if (irk_ode_workspace!=NULL)
-        sim_irk_ode_workspace_free(opts, irk_ode_workspace);
-    if (irk_dae_workspace!=NULL)
-        sim_irk_dae_workspace_free(opts, irk_dae_workspace);
-    if (opts!=NULL)
-        sim_opts_free(opts);
-    if (in!=NULL)
-        sim_in_free(in);
-    if (out!=NULL)
-        sim_out_free(out);
-    if (Hes[0]!=NULL)	
+static void free_scratch(void){
+    if (Hes[0] != NULL){
         mxFree(Hes[0]);
-    if (HesN[0]!=NULL)	
-        mxFree(HesN[0]);	
-    if (Jac[0]!=NULL)	
-        mxFree(Jac[0]);	
-    if (Jac[1]!=NULL)	
-        mxFree(Jac[1]);	
-    if (JacN[0]!=NULL)	
+        Hes[0] = NULL;
+    }
+    if (HesN[0] != NULL){
+        mxFree(HesN[0]);
+        HesN[0] = NULL;
+    }
+    if (Jac[0] != NULL){
+        mxFree(Jac[0]);
+        Jac[0] = NULL;
+    }
+    if (Jac[1] != NULL){
+        mxFree(Jac[1]);
+        Jac[1] = NULL;
+    }
+    if (JacN[0] != NULL){
         mxFree(JacN[0]);
-    if (temp[0]!=NULL)	
-        mxFree(temp[0]);	
-    if (temp[1]!=NULL)	
+        JacN[0] = NULL;
+    }
+    if (temp[0] != NULL){
+        mxFree(temp[0]);
+        temp[0] = NULL;
+    }
+    if (temp[1] != NULL){
         mxFree(temp[1]);
-    if (temp[2]!=NULL)	
+        temp[1] = NULL;
+    }
+    if (temp[2] != NULL){
         mxFree(temp[2]);
+        temp[2] = NULL;
+    }
+    mem_alloc = false;
+}
+
+static void exitFcn(void){
+    free_scratch();
+    sim_workspace_free(&integrator);
 }
 
 void
@@ -132,39 +135,13 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *casadi_in[5];
     double *casadi_out[2];    
            
-    if (!mem_alloc){
-        switch(sim_method){
-            case 1:
-                opts = sim_opts_create(prhs[2]);
-                opts->forw_sens_flag = true;
-                opts->adj_sens_flag = false;
-                in = sim_in_create(opts);              
-                out = sim_out_create(opts);                
-                erk_workspace = sim_erk_workspace_create(opts);               
-                sim_erk_workspace_init(opts, prhs[2], erk_workspace);                
-                break;
-            case 2:
-                opts = sim_opts_create(prhs[2]);
-                opts->forw_sens_flag = true;
-                opts->adj_sens_flag = false;
-                in = sim_in_create(opts);              
-                out = sim_out_create(opts);                
-                irk_ode_workspace = sim_irk_ode_workspace_create(opts);               
-                sim_irk_ode_workspace_init(opts, prhs[2], irk_ode_workspace);
-                break;
-            case 3:
-                opts = sim_opts_create(prhs[2]);
-                opts->forw_sens_flag = true;
-                opts->adj_sens_flag = false;
-                in = sim_in_create(opts);              
-                out = sim_out_create(opts);                
-                irk_dae_workspace = sim_irk_dae_workspace_create(opts);               
-                sim_irk_dae_workspace_init(opts, prhs[2], irk_dae_workspace);
-                break;
-            default:
-                mexErrMsgTxt("Please choose a supported integrator");
-                break;
-        }  
+    if (integrator.opts == NULL)
+        mexAtExit(exitFcn);
+    sim_workspace_prepare(&integrator, prhs[2], sim_method, nx, nu, nz, true, false);
+
+    const size_t shape[] = { nx, nu, ny, nyN };
+    if (!mem_alloc || memcmp(shape, workspace_shape, sizeof(shape)) != 0){
+        free_scratch();
         
         Hes[0] = (double *) mxMalloc(ny*ny * sizeof(double));	
         mexMakeMemoryPersistent(Hes[0]); 	
@@ -185,8 +162,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         temp[2] = (double *) mxMalloc(nyN*nx * sizeof(double));	
         mexMakeMemoryPersistent(temp[2]); 
         
-        mem_alloc=true;
-        mexAtExit(exitFcn);
+        memcpy(workspace_shape, shape, sizeof(shape));
+        mem_alloc = true;
     }
         
     // start loop
@@ -211,37 +188,37 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
         
         // integration    
-        opts->h = h*(index_T[i+1]-index_T[i]);                  
+        integrator.opts->h = h*(index_T[i+1]-index_T[i]);
         switch(sim_method){
             case 1:
-                in->x = x+i*nx;
-                in->u = u+i*nu;
-                in->p = od+i*np;
-                out->xn = a+i*nx;
-                out->Sx = A + i*nx*nx;
-                out->Su = B + i*nx*nu;
-                sim_erk(in, out, opts, erk_workspace);
+                integrator.in->x = x+i*nx;
+                integrator.in->u = u+i*nu;
+                integrator.in->p = od+i*np;
+                integrator.out->xn = a+i*nx;
+                integrator.out->Sx = A + i*nx*nx;
+                integrator.out->Su = B + i*nx*nu;
+                sim_erk(integrator.in, integrator.out, integrator.opts, integrator.erk);
                 break;
             case 2:
-                in->x = x+i*nx;
-                in->u = u+i*nu;
-                in->p = od+i*np;
-                in->z = z+i*nz;
-                out->xn = a+i*nx;
-                out->Sx = A + i*nx*nx;
-                out->Su = B + i*nx*nu;
-                sim_irk_ode(in, out, opts, irk_ode_workspace);
+                integrator.in->x = x+i*nx;
+                integrator.in->u = u+i*nu;
+                integrator.in->p = od+i*np;
+                integrator.in->z = z+i*nz;
+                integrator.out->xn = a+i*nx;
+                integrator.out->Sx = A + i*nx*nx;
+                integrator.out->Su = B + i*nx*nu;
+                sim_irk_ode(integrator.in, integrator.out, integrator.opts, integrator.irk_ode);
                 break;
             case 3:
-                in->x = x+i*nx;
-                in->u = u+i*nu;
-                in->p = od+i*np;
-                in->z = z+i*nz;
-                out->xn = a+i*nx;
-                out->Sx = A + i*nx*nx;
-                out->Su = B + i*nx*nu;
-                out->zn = z_out + i*nz;
-                sim_irk_dae(in, out, opts, irk_dae_workspace);
+                integrator.in->x = x+i*nx;
+                integrator.in->u = u+i*nu;
+                integrator.in->p = od+i*np;
+                integrator.in->z = z+i*nz;
+                integrator.out->xn = a+i*nx;
+                integrator.out->Sx = A + i*nx*nx;
+                integrator.out->Su = B + i*nx*nu;
+                integrator.out->zn = z_out + i*nz;
+                sim_irk_dae(integrator.in, integrator.out, integrator.opts, integrator.irk_dae);
                 break;
             default:
                 mexErrMsgTxt("Please choose a supported integrator");

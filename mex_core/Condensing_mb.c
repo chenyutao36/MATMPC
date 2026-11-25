@@ -10,8 +10,9 @@
 static double *L = NULL,*Hc_temp=NULL,*G_temp=NULL,*G=NULL, *W_mat=NULL, *w_vec=NULL;
 static double *Hi = NULL, *Cci = NULL, *Ccxi = NULL, *CcN = NULL;
 static bool mem_alloc = false;
+static size_t workspace_shape[7];
 
-void exitFcn(){
+static void exitFcn(void){
     if (mem_alloc){
         mxFree(G);
         mxFree(G_temp);
@@ -24,6 +25,7 @@ void exitFcn(){
         mxFree(CcN);
         mxFree(Ccxi);   
     }
+    mem_alloc = false;
 }
 
 void
@@ -77,30 +79,33 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     /*Allocate memory*/
     int i=0,j=0,k=0,l=0;
      
-    if (!mem_alloc){
-        G = (double *)mxMalloc(nx*N*r*nu * sizeof(double));
-        mexMakeMemoryPersistent(G);
-        G_temp = (double *)mxMalloc(nx*N*nu * sizeof(double));
-        mexMakeMemoryPersistent(G_temp);
-        Hc_temp = (double *)mxMalloc(nu*nu*r*N* sizeof(double));
-        mexMakeMemoryPersistent(Hc_temp);
-        W_mat = (double *)mxMalloc(nx*N*nu * sizeof(double));
-        mexMakeMemoryPersistent(W_mat);  
-        w_vec = (double *)mxMalloc(nx*N * sizeof(double));
-        mexMakeMemoryPersistent(w_vec);          
-        L = (double *)mxMalloc((N+1)*nx * sizeof(double));
-        mexMakeMemoryPersistent(L);        
-        Hi = (double *)mxMalloc(nu*nu * sizeof(double));
-        mexMakeMemoryPersistent(Hi);       
-        Cci = (double *)mxMalloc(nc*nu * sizeof(double));
-        mexMakeMemoryPersistent(Cci);       
-        CcN = (double *)mxMalloc(ncN*nu * sizeof(double)); 
-        mexMakeMemoryPersistent(CcN);
-        Ccxi = (double *)mxMalloc(nbx*nu * sizeof(double));
-        mexMakeMemoryPersistent(Ccxi);   
-        
-        mem_alloc = true;       
+    const size_t shape[] = { nx, nu, nc, ncN, nbx, N, r };
+    if (!mem_alloc || memcmp(shape, workspace_shape, sizeof(shape)) != 0){
+        exitFcn();
         mexAtExit(exitFcn);
+        G = (double *)mxMalloc(nx*N*r*nu * sizeof(double));
+        G_temp = (double *)mxMalloc(nx*N*nu * sizeof(double));
+        Hc_temp = (double *)mxMalloc(nu*nu*r*N* sizeof(double));
+        W_mat = (double *)mxMalloc(nx*N*nu * sizeof(double));
+        w_vec = (double *)mxMalloc(nx*N * sizeof(double));
+        L = (double *)mxMalloc((N+1)*nx * sizeof(double));
+        Hi = (double *)mxMalloc(nu*nu * sizeof(double));
+        Cci = (double *)mxMalloc(nc*nu * sizeof(double));
+        CcN = (double *)mxMalloc(ncN*nu * sizeof(double));
+        Ccxi = (double *)mxMalloc(nbx*nu * sizeof(double));
+
+        mexMakeMemoryPersistent(G);
+        mexMakeMemoryPersistent(G_temp);
+        mexMakeMemoryPersistent(Hc_temp);
+        mexMakeMemoryPersistent(W_mat);
+        mexMakeMemoryPersistent(w_vec);
+        mexMakeMemoryPersistent(L);
+        mexMakeMemoryPersistent(Hi);
+        mexMakeMemoryPersistent(Cci);
+        mexMakeMemoryPersistent(CcN);
+        mexMakeMemoryPersistent(Ccxi);
+        memcpy(workspace_shape, shape, sizeof(shape));
+        mem_alloc = true;
     }
    
     char *nTrans = "N", *Trans="T", *SIDE = "L", *UPLO = "L";

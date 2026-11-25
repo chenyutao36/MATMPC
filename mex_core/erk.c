@@ -10,7 +10,7 @@
 
 sim_erk_workspace* sim_erk_workspace_create(sim_opts *opts)
 {
-    sim_erk_workspace* work = (sim_erk_workspace*)mxMalloc(sizeof(sim_erk_workspace));
+    sim_erk_workspace* work = (sim_erk_workspace*)mxCalloc(1, sizeof(sim_erk_workspace));
         
     work->A = mxMalloc(opts->num_stages*opts->num_stages*sizeof(double));
     work->B = mxMalloc(opts->num_stages*sizeof(double));
@@ -18,20 +18,29 @@ sim_erk_workspace* sim_erk_workspace_create(sim_opts *opts)
     work->Su = mxMalloc(opts->nx*opts->nu*sizeof(double));    
     work->xt = mxMalloc(opts->nx*sizeof(double));
     work->K = mxMalloc(opts->num_stages*opts->nx*sizeof(double));
-    
+
+    if (opts->forw_sens_flag){
+        work->dKx = mxMalloc(opts->num_stages*opts->nx*opts->nx*sizeof(double));
+        work->dKu = mxMalloc(opts->num_stages*opts->nx*opts->nu*sizeof(double));
+        work->jacX_t = mxMalloc(opts->nx*opts->nx*sizeof(double));
+        work->jacU_t = mxMalloc(opts->nx*opts->nu*sizeof(double));
+    }
+
+    if (opts->adj_sens_flag){
+        work->X_traj = mxMalloc(opts->num_steps*opts->num_stages*opts->nx*sizeof(double));
+        work->K_lambda = mxMalloc(opts->num_stages*(opts->nx+opts->nu)*sizeof(double));
+        work->lambda_t = mxCalloc((opts->nx+opts->nu), sizeof(double));
+    }
+
+    /* Publish the buffers together after all allocations succeed. */
     mexMakeMemoryPersistent(work->A);
     mexMakeMemoryPersistent(work->B);
     mexMakeMemoryPersistent(work->Sx);
     mexMakeMemoryPersistent(work->Su);
     mexMakeMemoryPersistent(work->xt);
     mexMakeMemoryPersistent(work->K);
-    
+
     if (opts->forw_sens_flag){
-        work->dKx = mxMalloc(opts->num_stages*opts->nx*opts->nx*sizeof(double));
-        work->dKu = mxMalloc(opts->num_stages*opts->nx*opts->nu*sizeof(double));
-        work->jacX_t = mxMalloc(opts->nx*opts->nx*sizeof(double));
-        work->jacU_t = mxMalloc(opts->nx*opts->nu*sizeof(double));
-        
         mexMakeMemoryPersistent(work->dKx);
         mexMakeMemoryPersistent(work->dKu);
         mexMakeMemoryPersistent(work->jacX_t);
@@ -39,17 +48,12 @@ sim_erk_workspace* sim_erk_workspace_create(sim_opts *opts)
     }
 
     if (opts->adj_sens_flag){
-        work->X_traj = mxMalloc(opts->num_steps*opts->num_stages*opts->nx*sizeof(double));
-        work->K_lambda = mxMalloc(opts->num_stages*(opts->nx+opts->nu)*sizeof(double));
-        work->lambda_t = mxCalloc((opts->nx+opts->nu), sizeof(double));
-
         mexMakeMemoryPersistent(work->X_traj);
         mexMakeMemoryPersistent(work->K_lambda);
         mexMakeMemoryPersistent(work->lambda_t);
     }
-    
     mexMakeMemoryPersistent(work);
-    
+
     return work;
 }
 

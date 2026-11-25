@@ -13,7 +13,7 @@
 
 sim_irk_ode_workspace* sim_irk_ode_workspace_create(sim_opts *opts)
 {
-    sim_irk_ode_workspace* work = (sim_irk_ode_workspace*)mxMalloc(sizeof(sim_irk_ode_workspace));
+    sim_irk_ode_workspace* work = (sim_irk_ode_workspace*)mxCalloc(1, sizeof(sim_irk_ode_workspace));
         
     work->impl_ode_in = mxMalloc(5*sizeof(double *));
     work->res_out = mxMalloc(sizeof(double *));
@@ -21,20 +21,10 @@ sim_irk_ode_workspace* sim_irk_ode_workspace_create(sim_opts *opts)
     work->jac_u_out = mxMalloc(sizeof(double *));
     work->jac_xdot_out = mxMalloc(sizeof(double *));
     work->tmp_nx_nx = mxMalloc(opts->nx*opts->nx*sizeof(double));
-    
-    mexMakeMemoryPersistent(work->impl_ode_in);
-    mexMakeMemoryPersistent(work->res_out);
-    mexMakeMemoryPersistent(work->jac_x_out);
-    mexMakeMemoryPersistent(work->jac_u_out);
-    mexMakeMemoryPersistent(work->jac_xdot_out);
-    mexMakeMemoryPersistent(work->tmp_nx_nx);
-    
+
     work->jac_x_out[0] = mxMalloc(opts->nx*opts->nx*sizeof(double));
     work->jac_u_out[0] = mxMalloc(opts->nx*opts->nu*sizeof(double));
     work->jac_xdot_out[0] = mxMalloc(opts->nx*opts->nx*sizeof(double));
-    mexMakeMemoryPersistent(work->jac_x_out[0]);
-    mexMakeMemoryPersistent(work->jac_u_out[0]);
-    mexMakeMemoryPersistent(work->jac_xdot_out[0]);
        
     work->A = mxMalloc(opts->num_stages*opts->num_stages*sizeof(double));
     work->B = mxMalloc(opts->num_stages*sizeof(double));
@@ -45,31 +35,15 @@ sim_irk_ode_workspace* sim_irk_ode_workspace_create(sim_opts *opts)
     work->rG = mxMalloc(opts->num_stages*opts->nx*sizeof(double));
     work->JGK = mxMalloc(opts->num_stages*opts->nx*opts->num_stages*opts->nx*sizeof(double));
     work->JFK = mxMalloc(opts->num_stages*opts->nx*opts->num_stages*opts->nx*sizeof(double));
-    
-    mexMakeMemoryPersistent(work->A);
-    mexMakeMemoryPersistent(work->B);
-    mexMakeMemoryPersistent(work->Sx);
-    mexMakeMemoryPersistent(work->Su);
-    mexMakeMemoryPersistent(work->xt);
-    mexMakeMemoryPersistent(work->K);
-    mexMakeMemoryPersistent(work->rG);
-    mexMakeMemoryPersistent(work->JGK);
-    mexMakeMemoryPersistent(work->JFK);
 
     work->IPIV = mxMalloc(opts->num_stages*opts->nx*sizeof(size_t));
-    mexMakeMemoryPersistent(work->IPIV);
     
     if (opts->forw_sens_flag || opts->adj_sens_flag){
         work->JGx = mxMalloc(opts->num_stages*opts->nx*opts->nx*sizeof(double));
         work->JGu = mxMalloc(opts->num_stages*opts->nx*opts->nu*sizeof(double));
         work->JKx = mxMalloc(opts->num_stages*opts->nx*opts->nx*sizeof(double));
         work->JKu = mxMalloc(opts->num_stages*opts->nx*opts->nu*sizeof(double));
-                
-        mexMakeMemoryPersistent(work->JGx);
-        mexMakeMemoryPersistent(work->JGu);
-        mexMakeMemoryPersistent(work->JKx);
-        mexMakeMemoryPersistent(work->JKu);
-        
+
     }
 
     if (opts->adj_sens_flag){
@@ -79,15 +53,45 @@ sim_irk_ode_workspace* sim_irk_ode_workspace_create(sim_opts *opts)
         work->IPIV_traj = mxMalloc(opts->num_stages*opts->nx *opts->num_steps*sizeof(size_t));
         work->lambda_K = mxCalloc(opts->num_stages*opts->nx, sizeof(double));
 
+    }
+
+    /* Publish the buffers together after all allocations succeed. */
+    mexMakeMemoryPersistent(work->impl_ode_in);
+    mexMakeMemoryPersistent(work->res_out);
+    mexMakeMemoryPersistent(work->jac_x_out);
+    mexMakeMemoryPersistent(work->jac_u_out);
+    mexMakeMemoryPersistent(work->jac_xdot_out);
+    mexMakeMemoryPersistent(work->tmp_nx_nx);
+    mexMakeMemoryPersistent(work->jac_x_out[0]);
+    mexMakeMemoryPersistent(work->jac_u_out[0]);
+    mexMakeMemoryPersistent(work->jac_xdot_out[0]);
+    mexMakeMemoryPersistent(work->A);
+    mexMakeMemoryPersistent(work->B);
+    mexMakeMemoryPersistent(work->Sx);
+    mexMakeMemoryPersistent(work->Su);
+    mexMakeMemoryPersistent(work->xt);
+    mexMakeMemoryPersistent(work->K);
+    mexMakeMemoryPersistent(work->rG);
+    mexMakeMemoryPersistent(work->JGK);
+    mexMakeMemoryPersistent(work->JFK);
+    mexMakeMemoryPersistent(work->IPIV);
+
+    if (opts->forw_sens_flag || opts->adj_sens_flag){
+        mexMakeMemoryPersistent(work->JGx);
+        mexMakeMemoryPersistent(work->JGu);
+        mexMakeMemoryPersistent(work->JKx);
+        mexMakeMemoryPersistent(work->JKu);
+    }
+
+    if (opts->adj_sens_flag){
         mexMakeMemoryPersistent(work->JGK_fact_traj);
         mexMakeMemoryPersistent(work->JGx_traj);
         mexMakeMemoryPersistent(work->JGu_traj);
         mexMakeMemoryPersistent(work->IPIV_traj);
         mexMakeMemoryPersistent(work->lambda_K);
     }
-    
     mexMakeMemoryPersistent(work);
-    
+
     return work;
 }
 

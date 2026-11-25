@@ -4,10 +4,13 @@
 #include "mpc_common.h"
 
 static partial_condensing_workspace *work = NULL;
+static size_t workspace_shape[5];
 
-void exitFcn(){
-    if (work!=NULL)
+static void exitFcn(void){
+    if (work != NULL){
         partial_condensing_workspace_free(work);
+        work = NULL;
+    }
 }
 
 void
@@ -42,7 +45,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t N = mxGetScalar( mxGetField(prhs[1], 0, "N") );
     size_t N2 = mxGetScalar( mxGetField(prhs[1], 0, "N2") );
     
-    size_t Npc = (size_t) N/N2;
+    if (N2 == 0 || N < N2 || N % N2 != 0){
+        mexErrMsgIdAndTxt("MATMPC:PartialCondensing:Horizon",
+                         "The horizon must be divisible into nonempty partial condensing blocks.");
+    }
+
+    size_t Npc = N/N2;
             
     plhs[0] = mxCreateDoubleMatrix(nx+Npc*nu, (nx+Npc*nu)*N2, mxREAL);
     plhs[1] = mxCreateDoubleMatrix(nx+Npc*nu, N2, mxREAL);
@@ -70,9 +78,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lgc = mxGetPr(plhs[9]);
     double *ugc = mxGetPr(plhs[10]);
             
-    if (work==NULL){
-        work = partial_condensing_workspace_allocate(Npc, nx, nu, nbx,nc);
+    const size_t shape[] = { Npc, nx, nu, nbx, nc };
+    if (work == NULL || memcmp(shape, workspace_shape, sizeof(shape)) != 0){
+        exitFcn();
         mexAtExit(exitFcn);
+        work = partial_condensing_workspace_allocate(Npc, nx, nu, nbx, nc);
+        memcpy(workspace_shape, shape, sizeof(shape));
     }
     
     int i;
@@ -80,12 +91,16 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     for(i=0;i<N2;i++){        
         compute_G(work, Ap+i*nx*nx, Bp+i*nx*Npc*nu, A+i*Npc*nx*nx, B+i*Npc*nx*nu, nx, nu, Npc);              
         compute_H(Hp+i*(nx+Npc*nu)*(nx+Npc*nu), Q+i*Npc*nx*nx, S+i*Npc*nx*nu, R+i*Npc*nu*nu, A+i*Npc*nx*nx, B+i*Npc*nx*nu, work, nx, nu, Npc);       
-        compute_Ccx(Ccx+i*(Npc-1)*nbx*(nx+Npc*nu), Cx, work, nx, nu, nbx, Npc); 
-        compute_Ccg(Ccg+i*Npc*nc*(nx+Npc*nu), Cgx+i*Npc*nc*nx, Cgu+i*Npc*nc*nu, work, nx, nu, nc, Npc);       
+        if (nbx > 0 && Npc > 1)
+            compute_Ccx(Ccx+i*(Npc-1)*nbx*(nx+Npc*nu), Cx, work, nx, nu, nbx, Npc);
+        if (nc > 0)
+            compute_Ccg(Ccg+i*Npc*nc*(nx+Npc*nu), Cgx+i*Npc*nc*nx, Cgu+i*Npc*nc*nu, work, nx, nu, nc, Npc);
         compute_L(work, ap+i*nx, A+i*Npc*nx*nx, a+i*Npc*nx, nx, Npc);    
         compute_g(gp+i*(nx+Npc*nu), Q+i*Npc*nx*nx, S+i*Npc*nx*nu, A+i*Npc*nx*nx, B+i*Npc*nx*nu, work, gx+i*Npc*nx, gu+i*Npc*nu, nx, nu, Npc);            
-        compute_ccx(lxc+i*(Npc-1)*nbx, uxc+i*(Npc-1)*nbx, lb_dx+i*Npc*nbx, ub_dx+i*Npc*nbx, Cx, work, nx, nu, nbx, Npc);
-        compute_ccg(lgc+i*Npc*nc, ugc+i*Npc*nc, lc+i*Npc*nc, uc+i*Npc*nc, Cgx+i*Npc*nc*nx, work, nx, nu, nc, Npc);
+        if (nbx > 0 && Npc > 1)
+            compute_ccx(lxc+i*(Npc-1)*nbx, uxc+i*(Npc-1)*nbx, lb_dx+i*Npc*nbx, ub_dx+i*Npc*nbx, Cx, work, nx, nu, nbx, Npc);
+        if (nc > 0)
+            compute_ccg(lgc+i*Npc*nc, ugc+i*Npc*nc, lc+i*Npc*nc, uc+i*Npc*nc, Cgx+i*Npc*nc*nx, work, nx, nu, nc, Npc);
     }
     
 }
