@@ -1,82 +1,40 @@
-%% set path for your computer
+function Compile_Mex(coreDir, modelDir)
+%COMPILE_MEX Build MATMPC MEX files with MATLAB's configured C compiler.
+%   Compile_Mex() builds the core from generated sources in this directory.
+%   Compile_Mex(coreDir, modelDir) builds both the model and core MEX files.
 
-%% detect OS type
-
-OS_MAC = 0;
-OS_LINUX = 0;
-OS_WIN = 0;
-
-if ismac
-    OS_MAC = 1;
-    addpath(genpath('../solver/mac'));
-elseif isunix
-    OS_LINUX = 1;
-    addpath(genpath('../solver/linux'));
-elseif ispc
-    OS_WIN = 1;
-    addpath(genpath('../solver/win64'));
-else
-    disp('Platform not supported')
+if nargin < 1
+    coreDir = fileparts(mfilename('fullpath'));
 end
-
-%% Configure Compiler
-
-options = '-largeArrayDims';
-
-if OS_WIN
-   CC_FLAGS='CXXFLAGS="$CXXFLAGS -Wall"'; % use MinGW not VS studio
-end
-if OS_LINUX 
-    if strcmp(gcc_version, 'y')
-	CC_FLAGS = 'GCC="/usr/bin/gcc-6.3"';
-    else
-	CC_FLAGS = 'GCC="/usr/bin/gcc"';
+if nargin > 1
+    modelFiles = {'path_con_fun.c', 'path_con_N_fun.c', 'h_fun.c', 'f_fun.c', 'g_fun.c'};
+    for i = 1:numel(modelFiles)
+        compile(modelDir, modelFiles(i), {});
     end
 end
-if OS_MAC
-   CC_FLAGS = '';
+
+blas = {'-lmwblas'};
+lapack = {'-lmwblas', '-lmwlapack'};
+common = {'mpc_common.c'};
+modelSupport = {'casadi_wrapper.c', 'sim.c', 'erk.c', 'irk_ode.c', ...
+    'irk_dae.c', 'casadi_src.c', 'mpc_common.c'};
+
+compile(coreDir, [{'qp_generation.c'}, modelSupport], lapack);
+compile(coreDir, [{'Condensing.c'}, common], blas);
+compile(coreDir, [{'full2sparse.c'}, common], {});
+compile(coreDir, [{'sparse2full.c'}, common], {});
+compile(coreDir, [{'partial_condensing_default.c', 'partial_condensing_routines.c'}, common], blas);
+compile(coreDir, [{'Recover.c'}, common], blas);
+compile(coreDir, [{'Line_search.c'}, modelSupport], lapack);
+compile(coreDir, [{'solution_info.c'}, modelSupport], lapack);
+compile(coreDir, [{'Simulate_System.c'}, modelSupport], lapack);
+
+compile(coreDir, [{'Condensing_mb.c'}, common], blas);
+compile(coreDir, [{'qp_generation_ngrid.c'}, modelSupport], lapack);
+compile(coreDir, [{'qp_generation_mb.c'}, modelSupport], lapack);
 end
 
-OP_FLAGS='-O';
-PRINT_FLAGS='-silent';
-
-LIB1 = '-lmwblas';
-LIB2 = '-lmwlapack';
-
-LIB1_PATH = '';
-LIB2_PATH = '';
-
-HEAD1_PATH = '';
-HEAD2_PATH = '';
-
-%% These functions should be all compiled
-
-mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
-
-mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing.c','mpc_common.c', LIB1);
-
-mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'full2sparse.c','mpc_common.c');
-
-mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'sparse2full.c','mpc_common.c');
-
-mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'partial_condensing_default.c','partial_condensing_routines.c','mpc_common.c', LIB1);
-
-mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'Recover.c', LIB1);
-
-mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'Line_search.c','casadi_wrapper.c','casadi_src.c','sim.c','erk.c','irk_ode.c','irk_dae.c','mpc_common.c', LIB1, LIB2);
-
-mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH,'solution_info.c','casadi_wrapper.c','casadi_src.c','sim.c','erk.c','irk_ode.c','irk_dae.c','mpc_common.c', LIB1, LIB2);
-
-mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'Simulate_System.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
-
-%% Optional functions
-
-mex(options, CC_FLAGS, OP_FLAGS, PRINT_FLAGS, 'Condensing_mb.c','mpc_common.c', LIB1);
-
-mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_ngrid.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
-
-mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_mb.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
- 
-% mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'qp_generation_tac.c','casadi_wrapper.c','sim.c','erk.c','irk_ode.c','irk_dae.c','casadi_src.c','mpc_common.c',LIB1, LIB2);
-
-% mex(options, OP_FLAGS, CC_FLAGS, PRINT_FLAGS, HEAD1_PATH, LIB1_PATH, 'adaptive_eta.c',LIB1);
+function compile(sourceDir, filenames, libraries)
+sources = fullfile(sourceDir, filenames);
+mex('-largeArrayDims', '-O', '-silent', '-outdir', sourceDir, sources{:}, libraries{:});
+end
