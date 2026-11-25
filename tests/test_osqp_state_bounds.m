@@ -5,7 +5,7 @@ end
 function setupOnce(testCase)
     testCase.addTeardown(@path, path);
     root = fileparts(fileparts(mfilename('fullpath')));
-    addpath(root);
+    addpath(root, fullfile(root, 'nmpc'));
     if ispc
         platform = 'win64';
     elseif ismac
@@ -25,14 +25,16 @@ function testSparseStateBounds(testCase)
     assumeTrue(testCase,testCase.TestData.hasOSQP,'Bundled OSQP MEX is unavailable on this platform.');
     settings = makeSettings();
     mem = InitMemory(settings,makeOptions('osqp_sparse','no'),struct());
-    checkIndependentBounds(testCase,mem,settings.nx,settings.nbx_idx,settings.N);
+    verifyFalse(testCase, isfield(mem, 'Hc'));
+    checkIndependentBounds(testCase, mem, settings);
 end
 
 function testPartialSparseStateBounds(testCase)
     assumeTrue(testCase,testCase.TestData.hasOSQP,'Bundled OSQP MEX is unavailable on this platform.');
     settings = makeSettings();
     mem = InitMemory(settings,makeOptions('osqp_partial_sparse','partial_condensing'),struct());
-    checkIndependentBounds(testCase,mem.mem2,settings.nx,settings.nbx_idx,settings.N2);
+    verifyFalse(testCase, isfield(mem, 'Hc'));
+    checkIndependentBounds(testCase, mem.mem2, mem.settings2);
 end
 
 function testInvalidPartialHorizon(testCase)
@@ -54,9 +56,12 @@ function opt = makeOptions(solver,condensing)
         'hessian','Gauss_Newton','integrator','ERK4','RTI','yes','nonuniform_grid',0);
 end
 
-function checkIndependentBounds(testCase,mem,nx,boundedStates,horizon)
-    A = sparse(mem.sparse_dBx);
-    cols = bsxfun(@plus,boundedStates(:),nx*(1:horizon));
+function checkIndependentBounds(testCase, mem, settings)
+    [~, ~, pattern] = sparse_qp_layout(settings, true);
+    horizon = settings.N;
+    stateRows = (horizon + 1) * settings.nx + horizon * settings.nu + (1:horizon * settings.nbx);
+    A = pattern(stateRows, :);
+    cols = bsxfun(@plus, settings.nbx_idx(:), settings.nx * (1:horizon));
     expectedA = sparse((1:numel(cols))',cols(:),ones(numel(cols),1),size(A,1),size(A,2));
     verifyEqual(testCase,A,expectedA);
 

@@ -34,7 +34,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     /*Inputs*/
     double *Q = mxGetPr( mxGetField(prhs[0], 0, "Q") ); 
     double *S = mxGetPr( mxGetField(prhs[0], 0, "S") );
-    double *R = mxGetPr( mxGetField(prhs[0], 0, "R") );
+    double *R = mxGetPr( mxGetField(prhs[0], 0, "R_block") );
     double *A = mxGetPr( mxGetField(prhs[0], 0, "A") );
     double *B = mxGetPr( mxGetField(prhs[0], 0, "B") );
     double *Cx = mxGetPr( mxGetField(prhs[0], 0, "Cx") );
@@ -42,7 +42,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *Cgu = mxGetPr( mxGetField(prhs[0], 0, "Cgu") );
     double *CgN = mxGetPr( mxGetField(prhs[0], 0, "CgN") );
     double *gx = mxGetPr( mxGetField(prhs[0], 0, "gx") );
-    double *gu = mxGetPr( mxGetField(prhs[0], 0, "gu") );   
+    double *gu = mxGetPr( mxGetField(prhs[0], 0, "gu_block") );
     double *a = mxGetPr( mxGetField(prhs[0], 0, "a") );
     double *ds0 = mxGetPr( mxGetField(prhs[0], 0, "ds0") );
     double *lc = mxGetPr( mxGetField(prhs[0], 0, "lc") );

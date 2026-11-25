@@ -62,7 +62,7 @@ recoveries = Recover();
 testCase.verifyEqual(Recover(), recoveries + 1);
 testCase.verifyEqual(mem.warm_start, 42);
 testCase.verifyEqual(mem.du, [0.25, 0.25]);
-testCase.verifyEqual(mem.mu_u_new, [-1; -1]);
+testCase.verifyEqual(mem.mu_u_new, [-0.5; -0.5]);
 testCase.verifyEqual(time, 2);
 end
 
@@ -113,6 +113,7 @@ mem.Hc_r = 1;
 mem.gc_r = 0;
 mem.Ccx_r = zeros(0, 1);
 mem.Ccg_r = zeros(0, 1);
+mem.lb_du = [0.25; 0.25];
 mem.qpoases_opt.solution = 0.25;
 mem.qpoases_opt.multipliers = 1;
 end

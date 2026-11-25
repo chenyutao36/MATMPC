@@ -17,18 +17,8 @@ static double *Jac[2];
 static double *JacN[1];
 static double *temp[3];
 
-static double *R_temp= NULL;
-static double *gu_temp = NULL;
 
 static void free_scratch(void){
-    if (R_temp != NULL){
-        mxFree(R_temp);
-        R_temp = NULL;
-    }
-    if (gu_temp != NULL){
-        mxFree(gu_temp);
-        gu_temp = NULL;
-    }
     if (Hes[0] != NULL){
         mxFree(Hes[0]);
         Hes[0] = NULL;
@@ -110,6 +100,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *Q = mxGetPr( mxGetField(prhs[2], 0, "Q") );
     double *S = mxGetPr( mxGetField(prhs[2], 0, "S") );       
     double *R = mxGetPr( mxGetField(prhs[2], 0, "R") );
+    double *R_block = mxGetPr( mxGetField(prhs[2], 0, "R_block") );
     double *A = mxGetPr( mxGetField(prhs[2], 0, "A") );
     double *B = mxGetPr( mxGetField(prhs[2], 0, "B") );
     double *Cx = mxGetPr( mxGetField(prhs[2], 0, "Cx") );
@@ -118,6 +109,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *CgN = mxGetPr( mxGetField(prhs[2], 0, "CgN") );
     double *gx = mxGetPr( mxGetField(prhs[2], 0, "gx") );
     double *gu = mxGetPr( mxGetField(prhs[2], 0, "gu") );   
+    double *gu_block = mxGetPr( mxGetField(prhs[2], 0, "gu_block") );
     double *a = mxGetPr( mxGetField(prhs[2], 0, "a") );
     double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
     double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
@@ -151,10 +143,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     if (!mem_alloc || memcmp(shape, workspace_shape, sizeof(shape)) != 0){
         free_scratch();
 
-        R_temp = (double *) mxMalloc(nu*nu * sizeof(double));
-        mexMakeMemoryPersistent(R_temp);    
-        gu_temp = (double *) mxMalloc(nu * sizeof(double));
-        mexMakeMemoryPersistent(gu_temp);
         
         Hes[0] = (double *) mxMalloc(ny*ny * sizeof(double));	
         mexMakeMemoryPersistent(Hes[0]); 	
@@ -267,31 +255,25 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
         regularization(nx, Q+i*nx*nx, reg);
         
-        if ( (int)(index_T[k])==i){
-            memcpy(R_temp, R+i*nu*nu, nu*nu*sizeof(double));
-        }  
-        else{
-            for (j=0;j<nu*nu;j++)
-                  R_temp[j] += R[i*nu*nu+j];
-        }  
-        
-        
-        if ( (int)(index_T[k+1])==i+1){
-            memcpy(R+k*nu*nu, R_temp, nu*nu*sizeof(double));
-            regularization(nu, R+k*nu*nu, reg);
-        }              
-               
-        // gradient
+        double *block_hessian = R_block+k*nu*nu;
+        double *block_gradient = gu_block+k*nu;
         casadi_out[0] = gx+i*nx;
-        casadi_out[1] = gu_temp;
+        casadi_out[1] = gu+i*nu;
         gi_Fun(casadi_in, casadi_out);
-        if ( (int)(index_T[k])==i){
-                memcpy(gu+k*nu, gu_temp, nu*sizeof(double));
-        }  
-        else{
-             for (j=0;j<nu;j++)
-                *(gu+k*nu+j) += *(gu_temp+j);   
+
+        // Keep per-stage derivatives for the merit function and aggregate a
+        // separate control block for the condensed QP.
+        if ((int)index_T[k] == i) {
+            memcpy(block_hessian, R+i*nu*nu, nu*nu*sizeof(double));
+            memcpy(block_gradient, gu+i*nu, nu*sizeof(double));
+        } else {
+            for (j=0;j<nu*nu;j++)
+                block_hessian[j] += R[i*nu*nu+j];
+            for (j=0;j<nu;j++)
+                block_gradient[j] += gu[i*nu+j];
         }
+        if ((int)index_T[k+1] == i+1)
+            regularization(nu, block_hessian, reg);
           
                 
         // constraint residual

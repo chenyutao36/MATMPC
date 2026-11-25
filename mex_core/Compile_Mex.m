@@ -21,7 +21,6 @@ modelSupport = {'casadi_wrapper.c', 'sim.c', 'erk.c', 'irk_ode.c', ...
 
 compile(coreDir, [{'qp_generation.c'}, modelSupport], lapack);
 compile(coreDir, [{'Condensing.c'}, common], blas);
-compile(coreDir, [{'full2sparse.c'}, common], {});
 compile(coreDir, [{'sparse2full.c'}, common], {});
 compile(coreDir, [{'partial_condensing_default.c', 'partial_condensing_routines.c'}, common], blas);
 compile(coreDir, [{'Recover.c'}, common], blas);

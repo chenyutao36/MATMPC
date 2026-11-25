@@ -4,20 +4,11 @@ function [cpt_qp, mem] = mpc_qp_solve_osqp(sizes,mem)
     nbx=sizes.nbx;
     nx=sizes.nx;
     nu=sizes.nu;
-    nc=sizes.nc;
-    ncN=sizes.ncN;
     neq = (N+1)*nx;
     nw = (N+1)*nx+N*nu;
-    nineq = N*nc+ncN;
     
-    full2sparse(mem,sizes);    
-    A = [mem.sparse_dG; mem.sparse_dBu; mem.sparse_dBx; mem.sparse_dB];
-    l = [-mem.sparse_G; mem.sparse_lb];
-    u = [-mem.sparse_G; mem.sparse_ub];
-        
-    v_H = mem.sparse_H(mem.sparse_H_idx);
-    v_A = A(mem.sparse_A_idx);
-    mem.qp_obj.update('Px',v_H,'Ax',v_A,'q',mem.sparse_g,'l',l,'u',u);    
+    [P, A, q, l, u] = sparse_qp_data(mem);
+    mem.qp_obj.update('Px', P, 'Ax', A, 'q', q, 'l', l, 'u', u);
     sol = mem.qp_obj.solve();
             
     assert(strcmp(sol.info.status,'solved'), ['QP Error: ' sol.info.status]);

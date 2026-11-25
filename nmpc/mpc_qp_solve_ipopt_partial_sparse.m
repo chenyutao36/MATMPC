@@ -23,17 +23,15 @@ function [cpt_qp, mem] = mpc_qp_solve_ipopt_partial_sparse(settings,settings2,me
     ipopt.options.ub(neq+1:end) = mem2.ub_du;
     ipopt.options.lb(neq+1:end) = mem2.lb_du;
     
-    full2sparse(mem2,settings2);
-     
-    H = sparse(mem2.sparse_H);
+    [H, A, q, l, u] = sparse_qp_data(mem2);
         
     ipopt.funcs.hessian = @(x,sigma,lambda) tril(sigma*H);
     ipopt.funcs.hessianstructure = @() tril(H);
-    ipopt.funcs.objective=@(x) 0.5*x'*H*x + (mem2.sparse_g)'*x;
-    ipopt.funcs.gradient = @(x) (H*x + mem2.sparse_g)';
-    ipopt.options.A= sparse([mem2.sparse_dB;mem2.sparse_dG]);
-    ipopt.options.ru= [mem2.uc;-mem2.sparse_G];
-    ipopt.options.rl= [mem2.lc;-mem2.sparse_G];
+    ipopt.funcs.objective = @(x) 0.5*x'*H*x + q'*x;
+    ipopt.funcs.gradient = @(x) (H*x + q)';
+    ipopt.options.A = A;
+    ipopt.options.ru = u;
+    ipopt.options.rl = l;
     [sol,fval,exitflag,info_ipopt] = opti_ipopt(ipopt,[]);
     cpt_qp   = info_ipopt.Time*1e3;
     

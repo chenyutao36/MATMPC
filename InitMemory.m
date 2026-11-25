@@ -131,17 +131,7 @@ function [mem] = InitMemory(settings, opt, input)
             mem.ipopt.options.ub = inf(nw,1);
             mem.ipopt.options.lb = -inf(nw,1);
 
-            mem.sparse_H = zeros(nw,nw);
-            mem.sparse_g = zeros(nw,1);
-            mem.sparse_dG = zeros(neq,nw);  
-            mem.sparse_dG(1:nx,1:nx) = eye(nx);
-            mem.sparse_minus_eye = -eye(nx);
-            mem.sparse_dB = zeros(nineq,nw);
-            mem.sparse_dBx = zeros(N*nbx,nw);
-            mem.sparse_dBu = zeros(N*nu,nw);
-            mem.sparse_G = zeros(neq,1);
-            mem.sparse_ub = inf(nineq+N*nbx+N*nu,1);
-            mem.sparse_lb = -inf(nineq+N*nbx+N*nu,1);
+            mem.sparse_qp = sparse_qp_layout(settings, false);
             
         case 'ipopt_partial_sparse'
                                 
@@ -163,136 +153,15 @@ function [mem] = InitMemory(settings, opt, input)
             mem.mem2.ipopt.options.ipopt=ipopt_opts;
             mem.mem2.ipopt.options.ipopt.print_level=0;
 
-            mem.mem2.sparse_H = zeros(nw,nw);
-            mem.mem2.sparse_g = zeros(nw,1);
-            mem.mem2.sparse_dG = zeros(neq,nw);  
-            mem.mem2.sparse_dG(1:nx,1:nx) = eye(nx);
-            mem.mem2.sparse_minus_eye = -eye(nx);
-            mem.mem2.sparse_dB = zeros(nineq,nw);
-            mem.mem2.sparse_dBx = zeros(N2*nbx,nw);
-            mem.mem2.sparse_dBu = zeros(N2*mem.settings2.nu,nw);
-            mem.mem2.sparse_G = zeros(neq,1);
-            mem.mem2.sparse_ub = inf(nineq+N2*nbx+N2*mem.settings2.nu,1);
-            mem.mem2.sparse_lb = -inf(nineq+N2*nbx+N2*mem.settings2.nu,1);
+            mem.mem2.sparse_qp = sparse_qp_layout(mem.settings2, false);
 
             mem.mem2.ipopt.options.ub = inf(nw,1);
             mem.mem2.ipopt.options.lb = -inf(nw,1);
                          
         case 'osqp_sparse'
-            nw = (N+1)*nx+N*nu;
-            neq = (N+1)*nx;
-            nineq = N*nc+ncN;
-            
-            mem.qp_obj = osqp;
-            mem.osqp_options = mem.qp_obj.default_settings();
-            mem.osqp_options.eps_abs=1e-4;
-            mem.osqp_options.eps_rel=1e-4;
-            mem.osqp_options.polish = true;
-            mem.osqp_options.verbose = false;
-%             mem.osqp_options.warm_start = false;
-            
-            mem.sparse_H = zeros(nw,nw);
-            mem.sparse_g = zeros(nw,1);
-            mem.sparse_dG = zeros(neq,nw);  
-            mem.sparse_dG(1:nx,1:nx) = eye(nx);
-            mem.sparse_minus_eye = -eye(nx);
-            mem.sparse_dB = zeros(nineq,nw);
-            mem.sparse_dBx = zeros(N*nbx,nw);
-            mem.sparse_dBu = zeros(N*nu,nw);
-            mem.sparse_G = zeros(neq,1);
-            mem.sparse_ub = inf(nineq+N*nbx+N*nu,1);
-            mem.sparse_lb = -inf(nineq+N*nbx+N*nu,1);
-            
-            for i=0:N-1
-                for j=1:nbx
-                    mem.sparse_dBx(i*nbx+j, (i+1)*nx+nbx_idx(j)) = 1;
-                end
-            end
-            mem.sparse_dBu(:,neq+1:end) = eye(N*nu,N*nu);
-            
-            osqp_H_pattern = zeros(nw,nw); 
-            osqp_dG_pattern = zeros(neq,nw);  osqp_dG_pattern(1:nx,1:nx) = eye(nx);
-            osqp_dB_pattern = zeros(nineq,nw);
-            
-            for i=0:N-1	
-                osqp_H_pattern(i*nx+1:(i+1)*nx, i*nx+1:(i+1)*nx) = ones(nx,nx);	
-                osqp_H_pattern(i*nx+1:(i+1)*nx, neq+i*nu+1:neq+(i+1)*nu) = ones(nx,nu);	
-                osqp_H_pattern(neq+i*nu+1:neq+(i+1)*nu, i*nx+1:(i+1)*nx) = ones(nu,nx);	
-                osqp_H_pattern(neq+i*nu+1:neq+(i+1)*nu, neq+i*nu+1:neq+(i+1)*nu) = ones(nu,nu);	
-                	
-                osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, i*nx+1:(i+2)*nx) = [ones(nx,nx),-eye(nx,nx)];	
-                osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, neq+i*nu+1:neq+(i+1)*nu) = ones(nx,nu);	
-                	
-                osqp_dB_pattern(i*nc+1:(i+1)*nc, i*nx+1:(i+1)*nx) = ones(nc,nx);	
-                osqp_dB_pattern(i*nc+1:(i+1)*nc, neq+i*nu+1:neq+(i+1)*nu) = ones(nc,nu);	
-            end	
-            osqp_H_pattern(N*nx+1:(N+1)*nx, N*nx+1:(N+1)*nx) = ones(nx,nx);	
-            osqp_dB_pattern(N*nc+1:N*nc+ncN, N*nx+1:(N+1)*nx) = ones(ncN,nx);
-            
-            osqp_A_pattern = [osqp_dG_pattern; mem.sparse_dBu; mem.sparse_dBx; osqp_dB_pattern];
-            
-            mem.sparse_H_idx = triu(osqp_H_pattern)~=0;
-            mem.sparse_A_idx = osqp_A_pattern~=0;
-
-            mem.qp_obj.setup(osqp_H_pattern, [], osqp_A_pattern, -inf(size(osqp_A_pattern,1),1), inf(size(osqp_A_pattern,1),1), mem.osqp_options);
-            
+            mem = setupOSQP(mem, settings, false);
         case 'osqp_partial_sparse'
-            nw = (N2+1)*mem.settings2.nx+N2*mem.settings2.nu;
-            neq = (N2+1)*mem.settings2.nx;
-            nineq = N2*mem.settings2.nc+mem.settings2.ncN;
-            
-            mem.mem2.qp_obj = osqp;
-            mem.mem2.osqp_options =mem.mem2.qp_obj.default_settings();
-            mem.mem2.osqp_options.eps_abs=1e-4;
-            mem.mem2.osqp_options.eps_rel=1e-4;
-            mem.mem2.osqp_options.max_iter = 1e4;
-            mem.mem2.osqp_options.polish = true;
-            mem.mem2.osqp_options.verbose = false;
-            
-            mem.mem2.sparse_H = zeros(nw,nw);
-            mem.mem2.sparse_g = zeros(nw,1);
-            mem.mem2.sparse_dG = zeros(neq,nw);  
-            mem.mem2.sparse_dG(1:nx,1:nx) = eye(nx);
-            mem.mem2.sparse_minus_eye = -eye(nx);
-            mem.mem2.sparse_dB = zeros(nineq,nw);
-            mem.mem2.sparse_dBx = zeros(N2*nbx,nw);
-            mem.mem2.sparse_dBu = zeros(N2*mem.settings2.nu,nw);
-            mem.mem2.sparse_G = zeros(neq,1);
-            mem.mem2.sparse_ub = inf(nineq+N2*nbx+N2*mem.settings2.nu,1);
-            mem.mem2.sparse_lb = -inf(nineq+N2*nbx+N2*mem.settings2.nu,1);
-            
-            for i=0:N2-1
-                for j=1:nbx
-                    mem.mem2.sparse_dBx(i*nbx+j, (i+1)*nx+nbx_idx(j)) = 1;
-                end
-            end
-            mem.mem2.sparse_dBu(:,neq+1:end) = eye(N2*mem.settings2.nu,N2*mem.settings2.nu);
-            
-            osqp_H_pattern = zeros(nw,nw); 
-            osqp_dG_pattern = zeros(neq,nw);  osqp_dG_pattern(1:nx,1:nx) = eye(nx);
-            osqp_dB_pattern = zeros(nineq,nw);
-            
-            for i=0:N2-1	
-                osqp_H_pattern(i*nx+1:(i+1)*nx, i*nx+1:(i+1)*nx) = ones(nx,nx);	
-                osqp_H_pattern(i*nx+1:(i+1)*nx, neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu) = ones(nx,mem.settings2.nu);	
-                osqp_H_pattern(neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu, i*nx+1:(i+1)*nx) = ones(mem.settings2.nu,nx);	
-                osqp_H_pattern(neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu, neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu) = ones(mem.settings2.nu,mem.settings2.nu);	
-                	
-                osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, i*nx+1:(i+2)*nx) = [ones(nx,nx),-eye(nx,nx)];	
-                osqp_dG_pattern((i+1)*nx+1:(i+2)*nx, neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu) = ones(nx,mem.settings2.nu);	
-                	
-                osqp_dB_pattern(i*mem.settings2.nc+1:(i+1)*mem.settings2.nc, i*nx+1:(i+1)*nx) = ones(mem.settings2.nc,nx);	
-                osqp_dB_pattern(i*mem.settings2.nc+1:(i+1)*mem.settings2.nc, neq+i*mem.settings2.nu+1:neq+(i+1)*mem.settings2.nu) = ones(mem.settings2.nc,mem.settings2.nu);	
-            end	
-            osqp_H_pattern(N2*nx+1:(N2+1)*nx, N2*nx+1:(N2+1)*nx) = ones(nx,nx);	
-            osqp_dB_pattern(N2*mem.settings2.nc+1:N2*mem.settings2.nc+ncN, N2*nx+1:(N2+1)*nx) = ones(ncN,nx);
-            
-            osqp_A_pattern = [osqp_dG_pattern; mem.mem2.sparse_dBu; mem.mem2.sparse_dBx; osqp_dB_pattern];
-            
-            mem.mem2.sparse_H_idx = triu(osqp_H_pattern)~=0;
-            mem.mem2.sparse_A_idx = osqp_A_pattern~=0;
-
-            mem.mem2.qp_obj.setup(osqp_H_pattern, [], osqp_A_pattern, -inf(size(osqp_A_pattern,1),1), inf(size(osqp_A_pattern,1),1), mem.mem2.osqp_options);
+            mem.mem2 = setupOSQP(mem.mem2, mem.settings2, true);
     end
     
     switch opt.hessian
@@ -409,38 +278,51 @@ function [mem] = InitMemory(settings, opt, input)
     mem.lb_dx = zeros(N*nbx,1);
     mem.ub_dx = zeros(N*nbx,1);
     
-    mem.Hc = zeros(N*nu,N*nu);
-    mem.Ccx = zeros(N*nbx,N*nu);
-    mem.Ccg = zeros(N*nc+ncN,N*nu);
-    mem.gc = zeros(N*nu,1);
-    mem.lcc = zeros(N*nc+ncN,1);
-    mem.ucc = zeros(N*nc+ncN,1);
-    mem.lxc = zeros(N*nbx,1);
-    mem.uxc = zeros(N*nbx,1);
+    if ~any(strcmp(opt.condensing, {'no', 'partial_condensing'}))
+        mem.Hc = zeros(N*nu,N*nu);
+        mem.Ccx = zeros(N*nbx,N*nu);
+        mem.Ccg = zeros(N*nc+ncN,N*nu);
+        mem.gc = zeros(N*nu,1);
+        mem.lcc = zeros(N*nc+ncN,1);
+        mem.ucc = zeros(N*nc+ncN,1);
+        mem.lxc = zeros(N*nbx,1);
+        mem.uxc = zeros(N*nbx,1);
+    end
     
-    if strcmp(opt.qpsolver, 'qpoases_mb')
+    mem.nonuniform_grid = logical(opt.nonuniform_grid);
+    useMoveBlocking = strcmp(opt.qpsolver, 'qpoases_mb');
+    if useMoveBlocking && mem.nonuniform_grid
+        error('MATMPC:IncompatibleGrid', 'Move blocking requires a uniform shooting grid.');
+    end
+    if useMoveBlocking || mem.nonuniform_grid
         mem.r = r;
-        mem.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
-%         mem.index_T = [0, 1, 10, 50];
-%         mem.index_T = [0 1 3 5 7 10 13 16 19 22 25 28 31 35 40 45 50];
+        if isfield(settings, 'index_T')
+            boundaries = settings.index_T;
+        else
+            boundaries = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
+        end
+        if ~isnumeric(boundaries) || ~isreal(boundaries) || ~isvector(boundaries) ...
+                || numel(boundaries) ~= r+1 || ~all(isfinite(boundaries(:))) ...
+                || boundaries(1) ~= 0 || any(boundaries(:) ~= fix(boundaries(:))) ...
+                || any(diff(boundaries(:)) <= 0) ...
+                || (useMoveBlocking && boundaries(end) ~= N) ...
+                || (mem.nonuniform_grid && N ~= r)
+            error('MATMPC:InvalidGrid', ['settings.index_T must contain r+1 strictly increasing ' ...
+                'integer boundaries starting at zero. The last boundary must be N for move ' ...
+                'blocking, and settings.N must be r for a nonuniform grid.']);
+        end
+        mem.index_T = double(boundaries(:).');
+    end
+
+    if useMoveBlocking
         mem.Hc_r = zeros(mem.r*nu,mem.r*nu);
         mem.Ccx_r = zeros(N*nbx,mem.r*nu);
         mem.Ccg_r = zeros(N*nc+ncN,mem.r*nu);
         mem.gc_r = zeros(mem.r*nu,1);
+        mem.R_block = zeros(nu,mem.r*nu);
+        mem.gu_block = zeros(nu,mem.r);
         mem.L = zeros(mem.r,1);
         mem.Gr = zeros(N*nx,mem.r*nu);
-        T = zeros(N,mem.r);
-        for i=1:mem.r
-            T(mem.index_T(i)+1:mem.index_T(i+1),i)=1;
-        end
-        mem.T = kron(T, eye(nu));
-    end
-    
-    if opt.nonuniform_grid
-        mem.r = r;
-        mem.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
-%         mem.index_T = [0, 1, 10, 50];
-%         mem.index_T = [0 1 3 5 7 10 13 16 19 22 25 28 31 35 40 45 50];
         T = zeros(N,mem.r);
         for i=1:mem.r
             T(mem.index_T(i)+1:mem.index_T(i+1),i)=1;
@@ -506,5 +388,21 @@ function [mem] = InitMemory(settings, opt, input)
 %     
 %     mem.Ns=25;
        
+end
+
+function mem = setupOSQP(mem, settings, isPartiallyCondensed)
+    [mem.sparse_qp, P, A] = sparse_qp_layout(settings, true);
+    mem.qp_obj = osqp;
+    mem.osqp_options = mem.qp_obj.default_settings();
+    mem.osqp_options.eps_abs = 1e-4;
+    mem.osqp_options.eps_rel = 1e-4;
+    mem.osqp_options.polish = true;
+    mem.osqp_options.verbose = false;
+    if isPartiallyCondensed
+        mem.osqp_options.max_iter = 1e4;
+    end
+
+    bounds = inf(size(A, 1), 1);
+    mem.qp_obj.setup(P, [], A, -bounds, bounds, mem.osqp_options);
 end
 

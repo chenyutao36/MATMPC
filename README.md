@@ -21,6 +21,27 @@ Simulation
 
 To run your own model, follow an [example](examples), configure its shooting interval and initial state, references, and bounds in `InitData.m`, choose your horizon and solver settings in `Simulation.m`, and run the same build and simulation steps. Plotting is in `Draw.m`.
 
+## Prediction grid and move blocking
+
+Set `opt.nonuniform_grid = 1` in `Simulation.m` to use unequal shooting intervals. Set `settings.r` to the interval count and optionally set `settings.index_T` to the interval boundaries in units of `settings.Ts_st`. For example, `[0 1 3 6]` gives three intervals of lengths one, two, and three base sampling periods. The prediction horizon passed to `InitMemory` uses `settings.N = settings.r` in this mode. Reference preview follows the same boundaries.
+
+For uniform shooting with move blocking, select `qpoases_mb`. Set `settings.r` to the number of control blocks and enter `r + 1` strictly increasing integer boundaries from zero to `settings.N`. The default boundaries cover 80 uniform steps in 10 blocks. Nonuniform shooting and move blocking are separate solver modes.
+
+`mpc_nmpcsolver` reports step acceptance in `output.info.lineSearchAccepted`. When the line search rejects all trial steps, the solver returns the last accepted iterate.
+
+## Simulink examples
+
+Build the inverted pendulum and initialize the controller workspace before opening either supplied model.
+
+```matlab
+Build_Model('InvertedPendulum')
+Initialization_Simulink
+open_system('MATMPC_SIMULINK')
+```
+
+Use `open_system('MATMPC_SIMULINK_R2017b')` for the legacy model.
+Run `addpath('tests'); smoke_simulink_inverted_pendulum` to build and check both models.
+
 ## Smoke test
 
 The test builds the shipped inverted pendulum and runs five closed-loop samples with the default qpOASES solver. It checks that the solver returns finite outputs, executes an SQP iteration each step, and keeps the applied controls and observed position within the example's bounds.

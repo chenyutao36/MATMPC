@@ -19,5 +19,7 @@ typedef struct {
 void sim_workspace_prepare(sim_workspace *workspace, const mxArray *mem, int method,
                            size_t nx, size_t nu, size_t nz, bool forward, bool adjoint);
 void sim_workspace_free(sim_workspace *workspace);
+const double *sim_grid_indices(const mxArray *mem, size_t horizon, bool required);
+void sim_set_stage_step(sim_opts *opts, const double *grid, size_t stage);
 
 #endif
