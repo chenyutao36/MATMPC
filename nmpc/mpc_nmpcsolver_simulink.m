@@ -29,7 +29,7 @@ function [input,mem,cpt,StopCrit,OBJ,lineSearchAccepted] = mpc_nmpcsolver_simuli
                  if ~moveBlocking
                     mem = condense_default_qp(mem, settings);
                  else
-                    Condensing_mb(mem, settings);
+                    mem = condense_move_blocked_qp(mem, settings);
                  end
              case 'blasfeo_full'               
                  Condensing_Blasfeo(mem, settings);               

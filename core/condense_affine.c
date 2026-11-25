@@ -73,14 +73,15 @@ static void shift_bounds(const double *matrix, size_t rows, size_t nx, const dou
     }
 }
 
-matmpc_condense_status matmpc_condense_affine(const matmpc_condense_dimensions *dimensions,
-                                             const matmpc_condense_affine_inputs *inputs,
-                                             const matmpc_condense_affine_outputs *outputs,
-                                             matmpc_condense_output workspace)
+static matmpc_condense_status condense_affine(const matmpc_condense_dimensions *dimensions,
+                                              const matmpc_condense_affine_inputs *inputs,
+                                              const matmpc_condense_affine_outputs *outputs,
+                                              matmpc_condense_output workspace,
+                                              const size_t *boundaries, size_t boundary_count)
 {
     matmpc_condense_affine_sizes sizes;
     matmpc_condense_status status = matmpc_condense_affine_get_sizes(dimensions, &sizes);
-    size_t nx, nu, horizon, nbx, nc, ncN, stage, state_bytes;
+    size_t nx, nu, horizon, nbx, nc, ncN, stage, state_bytes, controls, block;
     double *trajectory, *costates;
 
     if (status != MATMPC_CONDENSE_OK) {
@@ -93,15 +94,30 @@ matmpc_condense_status matmpc_condense_affine(const matmpc_condense_dimensions *
     nbx = dimensions->state_bounds;
     nc = dimensions->path_constraints;
     ncN = dimensions->terminal_constraints;
+    controls = sizes.controls;
+    block = 0;
+    if (boundaries != NULL) {
+        if (boundary_count < 2 || boundary_count - 1 > horizon ||
+            boundaries[0] != 0 || boundaries[boundary_count - 1] != horizon) {
+            return MATMPC_CONDENSE_INVALID_DIMENSIONS;
+        }
+        for (size_t i = 1; i < boundary_count; ++i) {
+            if (boundaries[i] <= boundaries[i - 1]) {
+                return MATMPC_CONDENSE_INVALID_DIMENSIONS;
+            }
+        }
+        controls = (boundary_count - 1) * nu;
+        block = boundary_count - 2;
+    }
     if (inputs == NULL || outputs == NULL ||
         !readable(inputs->q, sizes.q) || !readable(inputs->s, sizes.s) ||
         !readable(inputs->a, sizes.a) || !readable(inputs->b, sizes.s) ||
         !readable(inputs->cx, sizes.cx) || !readable(inputs->cgx, sizes.cgx) ||
         !readable(inputs->cgn, sizes.cgn) || !readable(inputs->gx, sizes.states) ||
-        !readable(inputs->gu, sizes.controls) || !readable(inputs->defect, sizes.defect) ||
+        !readable(inputs->gu, controls) || !readable(inputs->defect, sizes.defect) ||
         !readable(inputs->ds0, nx) || !readable(inputs->lower_general, sizes.general) ||
         !readable(inputs->upper_general, sizes.general) || !readable(inputs->lower_state, sizes.state) ||
-        !readable(inputs->upper_state, sizes.state) || !writable(outputs->gc, sizes.controls) ||
+        !readable(inputs->upper_state, sizes.state) || !writable(outputs->gc, controls) ||
         !writable(outputs->lcc, sizes.general) || !writable(outputs->ucc, sizes.general) ||
         !writable(outputs->lxc, sizes.state) || !writable(outputs->uxc, sizes.state) ||
         !writable(workspace, sizes.workspace)) {
@@ -122,6 +138,7 @@ matmpc_condense_status matmpc_condense_affine(const matmpc_condense_dimensions *
 
     if (nu > 0) {
         double *terminal_costate = costates + (horizon - 1) * nx;
+        memcpy(outputs->gc.data, inputs->gu.data, controls * sizeof(double));
         memcpy(terminal_costate, inputs->gx.data + horizon * nx, state_bytes);
         matmpc_la_symv_lower(nx, 1.0, inputs->q.data + horizon * nx * nx, nx,
                             trajectory + horizon * nx, 1.0, terminal_costate);
@@ -134,8 +151,12 @@ matmpc_condense_status matmpc_condense_affine(const matmpc_condense_dimensions *
             --stage;
             offset = stage * nx;
             next_costate = costates + offset;
-            gradient = outputs->gc.data + stage * nu;
-            memcpy(gradient, inputs->gu.data + stage * nu, nu * sizeof(double));
+            if (boundaries == NULL) {
+                block = stage;
+            } else if (stage < boundaries[block]) {
+                --block;
+            }
+            gradient = outputs->gc.data + block * nu;
             matmpc_la_gemv(1, nx, nu, 1.0, inputs->s.data + offset * nu, nx,
                           trajectory + offset, 1.0, gradient);
             matmpc_la_gemv(1, nx, nu, 1.0, inputs->b.data + offset * nu, nx,
@@ -172,4 +193,24 @@ matmpc_condense_status matmpc_condense_affine(const matmpc_condense_dimensions *
     }
 
     return MATMPC_CONDENSE_OK;
+}
+
+matmpc_condense_status matmpc_condense_affine(const matmpc_condense_dimensions *dimensions,
+                                             const matmpc_condense_affine_inputs *inputs,
+                                             const matmpc_condense_affine_outputs *outputs,
+                                             matmpc_condense_output workspace)
+{
+    return condense_affine(dimensions, inputs, outputs, workspace, NULL, 0);
+}
+
+matmpc_condense_status matmpc_condense_affine_blocked(const matmpc_condense_dimensions *dimensions,
+                                                     const matmpc_condense_affine_inputs *inputs,
+                                                     const matmpc_condense_affine_outputs *outputs,
+                                                     matmpc_condense_output workspace,
+                                                     const size_t *boundaries, size_t boundary_count)
+{
+    if (boundaries == NULL) {
+        return MATMPC_CONDENSE_INVALID_BUFFER;
+    }
+    return condense_affine(dimensions, inputs, outputs, workspace, boundaries, boundary_count);
 }

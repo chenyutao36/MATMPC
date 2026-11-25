@@ -102,7 +102,7 @@ classdef MATMPCController < handle
                 stage = {'Q','S','R','A','B','Cx','Cgx','Cgu','CgN','gx','gu', ...
                     'a','ds0','lc','uc','lb_dx','ub_dx','lb_du','ub_du'};
                 condensed = {'Hc','gc','Ccx','Ccg','lcc','ucc','lxc','uxc', ...
-                    'Hc_r','gc_r','Ccx_r','Ccg_r'};
+                    'Hc_r','gc_r','Ccx_r','Ccg_r','R_block','gu_block'};
                 state.qp = copyNumericFields(obj.Memory, [stage, condensed]);
                 if isfield(obj.Memory, 'mem2')
                     state.qp.partial = copyNumericFields(obj.Memory.mem2, stage);

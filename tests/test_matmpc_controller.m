@@ -102,6 +102,25 @@ verifyTrue(testCase, all(isfinite(c.step(x0))));
 verifyEqual(testCase, c.snapshot().sample, before.sample + 1);
 end
 
+function testMoveBlockingSnapshotContainsStageAndReducedQP(testCase)
+assumeTrue(testCase, testCase.TestData.qpOASES);
+settings = testCase.TestData.settings;
+settings.r = 3;
+settings.index_T = [0, 1, 10, settings.N];
+controller = MATMPCController(settings, struct('qpsolver', 'qpoases_mb'));
+release = onCleanup(@() delete(controller)); %#ok<NASGU>
+x0 = [0; pi; 0; 0];
+firstControl = controller.step(x0);
+snapshot = controller.snapshot(true);
+verifySize(testCase, snapshot.qp.R, [settings.nu, settings.N*settings.nu]);
+verifySize(testCase, snapshot.qp.R_block, [settings.nu, settings.r*settings.nu]);
+verifySize(testCase, snapshot.qp.gu_block, [settings.nu, settings.r]);
+verifySize(testCase, snapshot.qp.Hc_r, [settings.r*settings.nu, settings.r*settings.nu]);
+verifyFalse(testCase, isfield(snapshot.qp, 'Hc'));
+controller.reset();
+verifyEqual(testCase, controller.step(x0), firstControl, 'AbsTol', 1e-8);
+end
+
 function testOSQPOwnsBothWorkspaceForms(testCase)
 assumeTrue(testCase, testCase.TestData.OSQP);
 settings = testCase.TestData.settings;

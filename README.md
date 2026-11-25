@@ -44,7 +44,7 @@ Run `addpath('tests'); smoke_simulink_inverted_pendulum` to build and check both
 
 ## Shared C kernels
 
-The explicit Runge–Kutta integrator, ERK4 Gauss–Newton QP generation, default full condensing, and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers.
+The explicit Runge–Kutta integrator, ERK4 Gauss–Newton QP generation, full condensing with or without move blocking, and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers.
 
 ```sh
 cmake -S core -B build/shared-core
@@ -59,6 +59,8 @@ Full condensing exposes the gradient and bounds separately from the Hessian and 
 The ERK4 Gauss–Newton MEX path returns the linearized dynamics, cost, and constraints as `qp = qp_generation(input, settings, mem)` for both uniform and nonuniform shooting. The nonuniform path scales the ERK substep by the interval width in `mem.index_T` and uses the same configured substep count in every interval. Compare these blocks before condensing when investigating differences in the control solution.
 
 For uniform shooting with move blocking, `qp = qp_generation(input, settings, mem, mem.index_T)` also returns the block control gradients and Hessians in `gu_block` and `R_block`. Each `R_block` receives the diagonal floor after summing the raw stage Hessians. The per-stage `R` and `gu` remain available for the merit calculation.
+
+`qp = Condensing_mb(mem, settings)` returns the eight reduced arrays. Its C kernel forms one block's state response at a time and writes directly to the reduced matrices. The reduced Hessian includes both contributions from the state–control cross term when several stages share one control increment.
 
 ## MATLAB controller sessions
 

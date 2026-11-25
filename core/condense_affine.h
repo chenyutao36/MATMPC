@@ -17,7 +17,7 @@ typedef struct {
     matmpc_condense_buffer cgx;            /* N path-constraint state Jacobians */
     matmpc_condense_buffer cgn;            /* Terminal state Jacobian */
     matmpc_condense_buffer gx;             /* State gradients at nodes 0..N */
-    matmpc_condense_buffer gu;             /* Control gradients at stages 0..N-1 */
+    matmpc_condense_buffer gu;             /* Control gradients per stage or per block */
     matmpc_condense_buffer defect;         /* N state transition defects */
     matmpc_condense_buffer ds0;            /* Initial state deviation */
     matmpc_condense_buffer lower_general;  /* N*nc path rows followed by ncN terminal rows */
@@ -62,6 +62,16 @@ matmpc_condense_status matmpc_condense_affine(const matmpc_condense_dimensions *
                                              const matmpc_condense_affine_inputs *inputs,
                                              const matmpc_condense_affine_outputs *outputs,
                                              matmpc_condense_output workspace);
+
+/* Use the same shooting grid with control increments shared by each block.
+ * gu contains the accumulated direct gradients, one nu-vector per block.
+ * The boundary array starts at zero and ends at the shooting horizon.
+ */
+matmpc_condense_status matmpc_condense_affine_blocked(const matmpc_condense_dimensions *dimensions,
+                                                     const matmpc_condense_affine_inputs *inputs,
+                                                     const matmpc_condense_affine_outputs *outputs,
+                                                     matmpc_condense_output workspace,
+                                                     const size_t *boundaries, size_t boundary_count);
 
 #ifdef __cplusplus
 }

@@ -27,6 +27,8 @@ recoverKernel = {sharedInclude, fullfile(sharedCore, 'recover_kernel.c')};
 condenseKernels = {sharedInclude, fullfile(sharedCore, 'condense_affine.c'), ...
     fullfile(sharedCore, 'condense_matrix.c'), ...
     fullfile(coreDir, 'matmpc_la_mex.c')};
+condenseMoveBlockedKernels = {sharedInclude, fullfile(sharedCore, 'condense_affine.c'), ...
+    fullfile(sharedCore, 'condense_mb.c'), fullfile(coreDir, 'matmpc_la_mex.c')};
 gaussNewtonKernel = {fullfile(sharedCore, 'qp_gauss_newton.c'), ...
     fullfile(coreDir, 'matmpc_la_mex.c')};
 modelSupport = {'casadi_wrapper.c', 'sim.c', 'erk.c', 'irk_ode.c', ...
@@ -41,7 +43,7 @@ compile(coreDir, [{'Line_search.c'}, modelSupport], lapack, erkKernel{:});
 compile(coreDir, [{'solution_info.c'}, modelSupport], lapack, erkKernel{:});
 compile(coreDir, [{'Simulate_System.c'}, modelSupport], lapack, erkKernel{:});
 
-compile(coreDir, [{'Condensing_mb.c'}, common], blas);
+compile(coreDir, {'Condensing_mb.c'}, blas, condenseMoveBlockedKernels{:});
 compile(coreDir, [{'qp_generation_ngrid.c'}, modelSupport], lapack, erkKernel{:});
 compile(coreDir, [{'qp_generation_mb.c'}, modelSupport], lapack, erkKernel{:});
 end

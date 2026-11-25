@@ -32,7 +32,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
                 if ~moveBlocking
                     mem = condense_default_qp(mem, settings);
                 else
-                    Condensing_mb(mem, settings);
+                    mem = condense_move_blocked_qp(mem, settings);
                 end
                 tCOND=toc(tcond)*1e3;
                 

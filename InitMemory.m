@@ -278,11 +278,14 @@ function [mem] = InitMemory(settings, opt, input)
     mem.lb_dx = zeros(N*nbx,1);
     mem.ub_dx = zeros(N*nbx,1);
     
+    useMoveBlocking = strcmp(opt.qpsolver, 'qpoases_mb');
     if ~any(strcmp(opt.condensing, {'no', 'partial_condensing'}))
-        mem.Hc = zeros(N*nu,N*nu);
-        mem.Ccx = zeros(N*nbx,N*nu);
-        mem.Ccg = zeros(N*nc+ncN,N*nu);
-        mem.gc = zeros(N*nu,1);
+        if ~(useMoveBlocking && strcmp(opt.condensing, 'default_full'))
+            mem.Hc = zeros(N*nu,N*nu);
+            mem.Ccx = zeros(N*nbx,N*nu);
+            mem.Ccg = zeros(N*nc+ncN,N*nu);
+            mem.gc = zeros(N*nu,1);
+        end
         mem.lcc = zeros(N*nc+ncN,1);
         mem.ucc = zeros(N*nc+ncN,1);
         mem.lxc = zeros(N*nbx,1);
@@ -290,7 +293,6 @@ function [mem] = InitMemory(settings, opt, input)
     end
     
     mem.nonuniform_grid = logical(opt.nonuniform_grid);
-    useMoveBlocking = strcmp(opt.qpsolver, 'qpoases_mb');
     if useMoveBlocking && mem.nonuniform_grid
         error('MATMPC:IncompatibleGrid', 'Move blocking requires a uniform shooting grid.');
     end
@@ -321,8 +323,6 @@ function [mem] = InitMemory(settings, opt, input)
         mem.gc_r = zeros(mem.r*nu,1);
         mem.R_block = zeros(nu,mem.r*nu);
         mem.gu_block = zeros(nu,mem.r);
-        mem.L = zeros(mem.r,1);
-        mem.Gr = zeros(N*nx,mem.r*nu);
         T = zeros(N,mem.r);
         for i=1:mem.r
             T(mem.index_T(i)+1:mem.index_T(i+1),i)=1;

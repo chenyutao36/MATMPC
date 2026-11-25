@@ -48,6 +48,8 @@ function testMoveBlockingUsesSeparateControlBlocks(testCase)
     mem = InitMemory(settings,opt,struct());
     verifyFalse(testCase,mem.nonuniform_grid);
     verifyEqual(testCase,mem.T,kron([1 0; 1 0; 0 1; 0 1; 0 1],eye(settings.nu)));
+    verifySize(testCase,mem.Hc_r,[settings.r*settings.nu,settings.r*settings.nu]);
+    verifyFalse(testCase,any(isfield(mem,{'Hc','gc','Ccx','Ccg','Gr','L'})));
     settings.index_T = [0 2 4];
     verifyError(testCase,@() InitMemory(settings,opt,struct()),'MATMPC:InvalidGrid');
     opt.nonuniform_grid = true;
