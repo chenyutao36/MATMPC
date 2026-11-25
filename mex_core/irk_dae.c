@@ -147,6 +147,8 @@ int sim_irk_dae(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_dae_workspace 
     mwSignedIndex one_i = 1;
     
     double h= opts->h;
+    /* JFK is stored at the configured base step. */
+    double minus_step_scale = -h / opts->base_h;
     size_t nx = opts->nx;
     size_t nu = opts->nu;
     size_t nz = opts->nz;
@@ -394,8 +396,8 @@ int sim_irk_dae(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_dae_workspace 
                 dgetrs(nTrans, &ldG, &nx, JGK, &ldG, IPIV, JKx, &ldG, &INFO);
                 dgetrs(nTrans, &ldG, &nu, JGK, &ldG, IPIV, JKu, &ldG, &INFO);
 
-                dgemm(nTrans, nTrans, &nx, &nx, &ldG, &minus_one_d, JFK, &nx, JKx, &ldG, &one_d, Jac_x, &nx);
-                dgemm(nTrans, nTrans, &nx, &nu, &ldG, &minus_one_d, JFK, &nx, JKu, &ldG, &one_d, Jac_u, &nx);
+                dgemm(nTrans, nTrans, &nx, &nx, &ldG, &minus_step_scale, JFK, &nx, JKx, &ldG, &one_d, Jac_x, &nx);
+                dgemm(nTrans, nTrans, &nx, &nu, &ldG, &minus_step_scale, JFK, &nx, JKu, &ldG, &one_d, Jac_u, &nx);
             }
         } 
 
@@ -421,7 +423,7 @@ int sim_irk_dae(sim_in *in, sim_out *out, sim_opts *opts, sim_irk_dae_workspace 
     // backward sweep
     if (adj_sens_flag){
         for (istep=num_steps-1;istep>-1;istep--){
-            dgemv(Trans, &nx, &ldG, &minus_one_d, JFK, &nx, adj_sens, &one_i, &zero, lambda_K, &one_i);
+            dgemv(Trans, &nx, &ldG, &minus_step_scale, JFK, &nx, adj_sens, &one_i, &zero, lambda_K, &one_i);
             dgetrs(Trans, &ldG, &one_i, JGK_fact_traj+istep*num_stages*(nx+nz)*num_stages*(nx+nz), &ldG, IPIV_traj+istep*num_stages*(nx+nz), lambda_K, &ldG, &INFO);
             dgemv(Trans, &ldG, &nx, &one_d, JGx_traj+istep*num_stages*(nx+nz)*nx, &ldG, lambda_K, &one_i, &one_d, adj_sens, &one_i);
             dgemv(Trans, &ldG, &nu, &one_d, JGu_traj+istep*num_stages*(nx+nz)*nu, &ldG, lambda_K, &one_i, &one_d, adj_sens+nx, &one_i);

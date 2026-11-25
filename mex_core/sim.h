@@ -5,6 +5,7 @@
 
 typedef struct{
     double h;
+    double base_h;
     size_t nx;
     size_t nu;
     size_t nz;

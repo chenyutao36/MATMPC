@@ -67,7 +67,12 @@ static void exitFcn(void){
 void
 mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
 {    
+    if (nrhs != 3 || nlhs < 4 || nlhs > 5) {
+        mexErrMsgIdAndTxt("MATMPC:SolutionInfo:Arguments",
+                         "Call [eqResidual, ineqResidual, KKT, objective, z] = solution_info(input, settings, mem).");
+    }
     double *x = mxGetPr( mxGetField(prhs[0], 0, "x") );
+    double *x0 = mxGetPr( mxGetField(prhs[0], 0, "x0") );
     double *u = mxGetPr( mxGetField(prhs[0], 0, "u") );
     double *z = mxGetPr( mxGetField(prhs[0], 0, "z") );
     double *lambda = mxGetPr( mxGetField(prhs[0], 0, "lambda") );
@@ -86,12 +91,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lbx = mxGetPr( mxGetField(prhs[0], 0, "lbx") );
     double *ubx = mxGetPr( mxGetField(prhs[0], 0, "ubx") );
     
-    double *ds0 = mxGetPr( mxGetField(prhs[2], 0, "ds0") );
-    double *lc = mxGetPr( mxGetField(prhs[2], 0, "lc") );
-    double *uc = mxGetPr( mxGetField(prhs[2], 0, "uc") );
-    double *obj = mxGetPr( mxGetField(prhs[2], 0, "obj") );
-    double *z_out = mxGetPr( mxGetField(prhs[2], 0, "z_out") );
-     
     size_t nx = mxGetScalar( mxGetField(prhs[1], 0, "nx") );
     size_t nu = mxGetScalar( mxGetField(prhs[1], 0, "nu") );
     size_t nz = mxGetScalar( mxGetField(prhs[1], 0, "nz") );
@@ -122,6 +121,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     if (integrator.opts == NULL)
         mexAtExit(exitFcn);
     sim_workspace_prepare(&integrator, prhs[2], sim_method, nx, nu, nz, false, true);
+    const double *grid = sim_grid_indices(prhs[2], N, false);
 
     const size_t shape[] = { nx, nu, nbx, N };
     if (!mem_alloc || memcmp(shape, workspace_shape, sizeof(shape)) != 0){
@@ -153,9 +153,15 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         mem_alloc = true;
     }
     
-    memcpy(eq_res_vec, ds0, nx*sizeof(double));
-    
-    double *work;
+    for (j=0; j<nx; ++j)
+        eq_res_vec[j] = x0[j] - x[j];
+
+    double *lc = mxMalloc(nineq * sizeof(double));
+    double *uc = mxMalloc(nineq * sizeof(double));
+    double obj;
+    mxArray *algebraic = mxCreateDoubleMatrix(nz, N, mxREAL);
+    double *z_out = mxGetPr(algebraic);
+    double *work = NULL;
     double KKT=0, eq_res=0, ineq_res=0, OBJ=0;
     
     for (i=0;i<N;i++){
@@ -175,11 +181,12 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         casadi_in[8] = mu+i*nc;
 
         // objective value      
-        casadi_out[0] = obj;
+        casadi_out[0] = &obj;
         obji_Fun(casadi_in, casadi_out);
-        OBJ += obj[0];
+        OBJ += obj;
               
         // call integrator to compute xend and adjoint sensitivities
+        sim_set_stage_step(integrator.opts, grid, i);
         switch(sim_method){
             case 1:      
                 integrator.in->x = x+i*nx;
@@ -289,16 +296,20 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     for (i=0;i<nineq;i++)
         ineq_res += MAX(-1*uc[i],0) + MAX(lc[i],0);
     
-    casadi_out[0] = obj;
+    casadi_out[0] = &obj;
     objN_Fun(casadi_in, casadi_out);
-    OBJ += obj[0];
+    OBJ += obj;
     
     OBJ *= Ts_st;
 
-    memcpy(z, z_out, N*nz*sizeof(double));
-
+    mxFree(lc);
+    mxFree(uc);
     plhs[0] = mxCreateDoubleScalar(eq_res); // eq_res
     plhs[1] = mxCreateDoubleScalar(ineq_res); // ineq_res
     plhs[2] = mxCreateDoubleScalar(KKT); // KKT
     plhs[3] = mxCreateDoubleScalar(OBJ); // OBJ
+    if (nlhs == 5)
+        plhs[4] = algebraic;
+    else
+        mxDestroyArray(algebraic);
 }

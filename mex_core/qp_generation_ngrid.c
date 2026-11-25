@@ -89,8 +89,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *nbx_idx = mxGetPr( mxGetField(prhs[1], 0, "nbx_idx") );
     size_t N = mxGetScalar( mxGetField(prhs[1], 0, "N") );    
     int sim_method = mxGetScalar( mxGetField(prhs[2], 0, "sim_method") );
-    size_t r = mxGetScalar( mxGetField(prhs[1], 0, "r") );
-    double Ts_st = mxGetScalar( mxGetField(prhs[1], 0, "Ts_st") );
     
     int i=0,j=0;
     char *nTrans = "N", *Trans="T", *UPLO="L";
@@ -118,11 +116,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double *lb_dx = mxGetPr( mxGetField(prhs[2], 0, "lb_dx") );
     double *ub_dx = mxGetPr( mxGetField(prhs[2], 0, "ub_dx") );
     double *z_out = mxGetPr( mxGetField(prhs[2], 0, "z_out") );
-    double *index_T = mxGetPr( mxGetField(prhs[2], 0, "index_T") );
     
     double reg = mxGetScalar( mxGetField(prhs[2], 0, "reg") );
-    size_t ns = mxGetScalar( mxGetField(prhs[2], 0, "num_steps") );
-    double h = mxGetScalar( mxGetField(prhs[2], 0, "h") );
     int hessian_type = mxGetScalar( mxGetField(prhs[2], 0, "hessian") );
     
     for (i=0;i<nx;i++)
@@ -138,6 +133,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     if (integrator.opts == NULL)
         mexAtExit(exitFcn);
     sim_workspace_prepare(&integrator, prhs[2], sim_method, nx, nu, nz, true, false);
+    const double *grid = sim_grid_indices(prhs[2], N, true);
 
     const size_t shape[] = { nx, nu, ny, nyN };
     if (!mem_alloc || memcmp(shape, workspace_shape, sizeof(shape)) != 0){
@@ -167,7 +163,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     }
         
     // start loop
-    for(i=0;i<r;i++){
+    for(i=0;i<N;i++){
         casadi_in[0] = x+i*nx;
         casadi_in[1] = u+i*nu;
         casadi_in[2] = od+i*np;
@@ -188,7 +184,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
         
         // integration    
-        integrator.opts->h = h*(index_T[i+1]-index_T[i]);
+        sim_set_stage_step(integrator.opts, grid, i);
         switch(sim_method){
             case 1:
                 integrator.in->x = x+i*nx;

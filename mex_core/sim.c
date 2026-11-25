@@ -15,6 +15,7 @@ sim_opts* sim_opts_create(const mxArray *mem)
     opts->num_stages = mxGetScalar( mxGetField(mem, 0, "num_stages") );
     opts->num_steps = mxGetScalar( mxGetField(mem, 0, "num_steps") );
     opts->h = mxGetScalar( mxGetField(mem, 0, "h") );
+    opts->base_h = opts->h;
     
 	return opts;
 }
@@ -142,6 +143,7 @@ void sim_workspace_prepare(sim_workspace *workspace, const mxArray *mem, int met
         workspace->in = sim_in_create(opts);
         workspace->out = sim_out_create(opts);
     }
+    opts->base_h = h;
     opts->h = h;
 
     switch (method) {
@@ -180,5 +182,33 @@ void sim_workspace_prepare(sim_workspace *workspace, const mxArray *mem, int met
             }
             break;
         }
+    }
+}
+
+const double *sim_grid_indices(const mxArray *mem, size_t horizon, bool required)
+{
+    const mxArray *flag = mxGetField(mem, 0, "nonuniform_grid");
+    if (!required && (flag == NULL || mxGetScalar(flag) == 0.0))
+        return NULL;
+
+    const double *grid = require_matrix(mem, "index_T", horizon + 1);
+    for (size_t i = 0; i < horizon; ++i) {
+        const double interval = grid[i + 1] - grid[i];
+        if (!mxIsFinite(interval) || interval <= 0.0) {
+            mexErrMsgIdAndTxt("MATMPC:Integrator:Grid", "Shooting grid intervals must be finite and positive.");
+        }
+    }
+    return grid;
+}
+
+void sim_set_stage_step(sim_opts *opts, const double *grid, size_t stage)
+{
+    opts->h = opts->base_h;
+    if (grid == NULL)
+        return;
+
+    opts->h *= grid[stage + 1] - grid[stage];
+    if (!mxIsFinite(opts->h) || opts->h <= 0.0) {
+        mexErrMsgIdAndTxt("MATMPC:Integrator:Grid", "Shooting interval produces an invalid integration step size.");
     }
 }

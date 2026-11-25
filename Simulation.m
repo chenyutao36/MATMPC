@@ -55,11 +55,9 @@ nbx = settings.nbx;  % No. of state bounds
 N  = 80;             % No. of shooting points
 settings.N = N;
 
-N2 = N/5;
-settings.N2 = N2;    % No. of horizon length after partial condensing (N2=1 means full condensing)
-
 r = 10;
-settings.r = r;      % No. of input blocks (go to InitMemory.m, line 441 to configure)
+settings.r = r;      % No. of input blocks or nonuniform shooting intervals
+% settings.index_T = [0, 1, 3, 6, 10, 15, 20, 35, 50, 65, 80];
 
 opt.hessian         = 'Gauss_Newton';  % 'Gauss_Newton', 'Generalized_Gauss_Newton'
 opt.integrator      = 'ERK4'; % 'ERK4','IRK3','IRK3-DAE'
@@ -68,7 +66,7 @@ opt.qpsolver        = 'qpoases';
 opt.hotstart        = 'no'; %'yes','no' (only for qpoases, use 'no' for nonlinear systems)
 opt.shifting        = 'no'; % 'yes','no'
 opt.ref_type        = 0; % 0-time invariant, 1-time varying(no preview), 2-time varying (preview)
-opt.nonuniform_grid = 0; % if use non-uniform grid discretization (go to InitMemory.m, line 459 to configure)
+opt.nonuniform_grid = 0; % use settings.index_T for nonuniform interval boundaries
 opt.RTI             = 'yes'; % if use Real-time Iteration
 %% available qpsolver
 
@@ -91,6 +89,9 @@ if opt.nonuniform_grid
 else
 	[input, data] = InitData(settings);
 end  
+
+N2 = N / gcd(N,5);
+settings.N2 = N2;    % Number of partial-condensing blocks for the effective horizon
 
 %% Initialize Solvers (only for advanced users)
 
@@ -122,8 +123,13 @@ while time(end) < Tf
             input.y = repmat(data.REF(mem.iter,:)',1,N);
             input.yN = data.REF(mem.iter,1:nyN)';
         case 2 %time-varying reference (reference preview)
-            input.y = data.REF(mem.iter:mem.iter+N-1,:)';
-            input.yN = data.REF(mem.iter+N,1:nyN)';
+            if opt.nonuniform_grid
+                referenceNodes = mem.iter + mem.index_T;
+            else
+                referenceNodes = mem.iter + (0:N);
+            end
+            input.y = data.REF(referenceNodes(1:end-1),:)';
+            input.yN = data.REF(referenceNodes(end),1:nyN)';
     end
               
     % obtain the state measurement
@@ -137,6 +143,11 @@ while time(end) < Tf
         case 'yes'
             input.x=[output.x(:,2:end),output.x(:,end)];  
             input.u=[output.u(:,2:end),output.u(:,end)];
+            if strcmp(opt.qpsolver, 'qpoases_mb')
+                blockStarts = mem.index_T(1:end-1) + 1;
+                blockControls = input.u(:,blockStarts);
+                input.u = reshape(mem.T * blockControls(:),nu,N);
+            end
             input.z=[output.z(:,2:end),output.z(:,end)];
             input.lambda=[output.lambda(:,2:end),output.lambda(:,end)];
             input.mu=[output.mu(nc+1:end);output.mu(end-nc+1:end)];
@@ -201,7 +212,7 @@ while time(end) < Tf
 end
 
 %%
-if strcmp(opt.qpsolver, 'qpoases')
+if any(strcmp(opt.qpsolver, {'qpoases', 'qpoases_mb'})) && mem.warm_start ~= 0
     qpOASES_sequence( 'c', mem.warm_start);
 end
 clear mex;

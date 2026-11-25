@@ -4,6 +4,10 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
     mem.sqp_it=0;
     mem.alpha =1;
     mem.obj=0;
+    mem.nonuniform_grid = logical(opt.nonuniform_grid);
+    if mem.nonuniform_grid && strcmp(opt.qpsolver, 'qpoases_mb')
+        error('MATMPC:IncompatibleGrid', 'Move blocking requires a uniform shooting grid.');
+    end
     StopCrit = 2*mem.kkt_lim;
     
     CPT.SHOOT=0;
@@ -17,7 +21,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         %% ----------- QP Preparation
         
         tshoot = tic;
-        if opt.nonuniform_grid
+        if mem.nonuniform_grid
             qp_generation_ngrid(input, settings, mem);
         else
             if strcmp(opt.qpsolver, 'qpoases_mb')
@@ -97,19 +101,8 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
         end
         
 
-        %% ---------- Line search
-
-        Line_search(mem, input, settings);
-        
-        %% ---------- CMoN
-%         if mem.iter==1 && mem.sqp_it==0
-%             [mem.rho_cmon, mem.gamma] = CMoN_Init(settings, mem, input);                                   
-%         end  
-%         adaptive_eta(mem,settings);
-                
-        %% ---------- KKT calculation 
-        
-        [eq_res, ineq_res, KKT, OBJ] = solution_info(input, settings, mem);
+        %% ---------- Step acceptance and diagnostics
+        [input, mem, eq_res, ineq_res, KKT, OBJ] = mpc_sqp_step(input, settings, mem);
                 
         StopCrit = max([eq_res, ineq_res, KKT]);
         
@@ -134,6 +127,7 @@ function [output, mem] = mpc_nmpcsolver(input, settings, mem, opt)
     output.mu_u=input.mu_u;
 
     output.info.iteration_num=mem.sqp_it;      
+    output.info.lineSearchAccepted = mem.alpha > 0;
     output.info.kktValue=KKT;
     output.info.objValue=OBJ;
     output.info.OptCrit = StopCrit;
