@@ -127,6 +127,22 @@ static int terminal_constraint(void *context, const double *x, const double *p, 
     return 0;
 }
 
+static int implicit_stage(void *context, double step, const double *x, const double *u, const double *p,
+                          const double *z, double *xn, double *zn, double *A, double *B)
+{
+    if (*(const bool *)context)
+        return 1;
+    xn[0] = x[0] + step * (u[0] + p[0]);
+    xn[1] = x[1] + step * (2 * u[1] - p[0]);
+    zn[0] = z[0] + step;
+    A[0] = A[3] = 1.0;
+    A[1] = A[2] = 0.0;
+    B[0] = step;
+    B[3] = 2 * step;
+    B[1] = B[2] = 0.0;
+    return 0;
+}
+
 int main(void)
 {
     const double tableau[] = {0, 0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 1, 0, 0, 0, 0};
@@ -135,7 +151,8 @@ int main(void)
     const size_t indices[] = {1, 0};
     matmpc_qp_config config = {
         {{2, 2, 4, 2, true, false}, 0.125, {tableau, 16}, {weights, 4}},
-        2, 1, 2, 1, 2, 1, indices, 2, {state_seed, 4}, {control_seed, 4}, 2.0, {NULL, 0}, {NULL, 0}, 0.0
+        2, 1, 2, 1, 2, 1, indices, 2, {state_seed, 4}, {control_seed, 4}, 2.0, {NULL, 0}, {NULL, 0}, 0.0,
+        NULL, NULL, 0
     };
     const matmpc_qp_model model = {
         {NULL, rhs, forward, NULL}, NULL, stage_cost, terminal_cost, path_constraint, terminal_constraint
@@ -147,14 +164,14 @@ int main(void)
     const double lb[] = {-1, -2, -3, -4, -5}, ub[] = {1, 2, 3, 4, 5};
     matmpc_qp_input input = {
         {x0, 2}, {x, 6}, {u, 4}, {p, 3}, {y, 4}, {yN, 1}, {W, 4}, {WN, 1},
-        {lbu, 4}, {ubu, 4}, {lbx, 4}, {ubx, 4}, {lb, 5}, {ub, 5}
+        {lbu, 4}, {ubu, 4}, {lbx, 4}, {ubx, 4}, {lb, 5}, {ub, 5}, {NULL, 0}
     };
     double A[8], B[8], a[4], ds0[2], Q[12], S[8], R[8], gx[6], gu[4];
     double Cgx[8], Cgu[8], CgN[2], lc[5], uc[5], lb_du[4], ub_du[4], lb_dx[4], ub_dx[4];
     matmpc_qp_output output = {
         {A, 8}, {B, 8}, {a, 4}, {ds0, 2}, {Q, 12}, {S, 8}, {R, 8}, {gx, 6}, {gu, 4},
         {Cgx, 8}, {Cgu, 8}, {CgN, 2}, {lc, 5}, {uc, 5}, {lb_du, 4}, {ub_du, 4}, {lb_dx, 4}, {ub_dx, 4},
-        {NULL, 0}, {NULL, 0}
+        {NULL, 0}, {NULL, 0}, {NULL, 0}
     };
     size_t count;
     double scratch[128];
@@ -349,6 +366,28 @@ int main(void)
     output.lb_dx = output.ub_dx = empty_output;
     require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
             "zero-row constraints were rejected");
+
+    bool fail = false;
+    config.integrate_stage = implicit_stage;
+    config.integration_context = &fail;
+    config.nz = 1;
+    config.stage_grid = nonuniform_grid;
+    const double z[] = {4.0, 10.0};
+    double z_out[2];
+    input.z = (matmpc_erk_view){z, 2};
+    output.z_out = (matmpc_erk_buffer){z_out, 2};
+    require(matmpc_qp_workspace_size(&config, &blocked_count) == MATMPC_QP_OK && blocked_count < count,
+            "integrator callback should use its own workspace");
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_OK,
+            "custom integrator QP assembly failed");
+    check_array(A, expected_A, 8, "custom integrator A");
+    const double custom_B[] = {0.375, 0, 0, 0.75, 0.25, 0, 0, 0.5};
+    const double custom_z[] = {4.375, 10.25};
+    check_array(B, custom_B, 8, "custom integrator B");
+    check_array(z_out, custom_z, 2, "custom integrator algebraic output");
+    fail = true;
+    require(matmpc_qp_gauss_newton(&config, &model, &input, &output, workspace) == MATMPC_QP_INTEGRATION_ERROR,
+            "custom integrator failure was ignored");
 
     config.horizon = SIZE_MAX;
     require(matmpc_qp_workspace_size(&config, &count) == MATMPC_QP_SIZE_OVERFLOW && count == 0,

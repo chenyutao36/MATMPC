@@ -178,6 +178,16 @@ static int qp_terminal_constraint(void *context, const double *x, const double *
     return 0;
 }
 
+static int qp_irk_stage(void *context, double step, const double *x, const double *u, const double *p,
+                        const double *z, double *xn, double *zn, double *A, double *B)
+{
+    sim_workspace *work = context;
+    sim_in in = {(double *)x, (double *)u, (double *)p, (double *)z, NULL};
+    sim_out out = {xn, zn, A, B, NULL};
+    work->opts->h = step;
+    return sim_irk_ode(&in, &out, work->opts, work->irk_ode);
+}
+
 static void check_model_dimensions(const matmpc_qp_config *config)
 {
     size_t dimensions[4];
@@ -201,9 +211,11 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
         mexErrMsgIdAndTxt("MATMPC:QPGeneration:Configuration", "input, settings and mem must be scalar structures.");
     }
 
-    if (dimension(settings, "nz") != 0 || dimension(mem, "sim_method") != 1 || dimension(mem, "hessian") != 0 ||
-        dimension(mem, "num_stages") != 4) {
-        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Mode", "Explicit QP output requires ERK4 and Gauss-Newton.");
+    const size_t method = dimension(mem, "sim_method");
+    const size_t stages = dimension(mem, "num_stages");
+    if (dimension(settings, "nz") != 0 || dimension(mem, "hessian") != 0 ||
+        (method != 1 && method != 2) || (method == 1 && stages != 4)) {
+        mexErrMsgIdAndTxt("MATMPC:QPGeneration:Mode", "Explicit QP output requires ERK4 or IRK ODE with Gauss-Newton.");
     }
 
     matmpc_qp_config config = {0};
@@ -215,10 +227,14 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
         config.stage_grid.count = N + 1;
     config.integration.shape.nx = nx;
     config.integration.shape.nu = nu;
-    config.integration.shape.stages = 4;
+    config.integration.shape.stages = stages;
     config.integration.shape.steps = dimension(mem, "num_steps");
     config.integration.shape.forward = true;
     config.integration.step = scalar_field(mem, "h");
+    if (method == 2) {
+        config.integrate_stage = qp_irk_stage;
+        config.integration_context = &integrator;
+    }
     config.horizon = N;
     config.np = dimension(settings, "np");
     config.ny = dimension(settings, "ny");
@@ -250,10 +266,16 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
         matmpc_qp_workspace_size(&config, &count) != MATMPC_QP_OK) {
         mexErrMsgIdAndTxt("MATMPC:QPGeneration:Configuration", "Invalid QP workspace dimensions.");
     }
-    config.integration.a = input_field(mem, "A_tab", 4, 4, false);
-    config.integration.b = input_field(mem, "B_tab", 1, 4, true);
-    config.state_seed = input_field(mem, "Sx", nx, nx, false);
-    config.control_seed = input_field(mem, "Su", nx, nu, false);
+    if (method == 1) {
+        config.integration.a = input_field(mem, "A_tab", 4, 4, false);
+        config.integration.b = input_field(mem, "B_tab", 1, 4, true);
+        config.state_seed = input_field(mem, "Sx", nx, nx, false);
+        config.control_seed = input_field(mem, "Su", nx, nu, false);
+    } else {
+        if (integrator.opts == NULL)
+            mexAtExit(exitFcn);
+        sim_workspace_prepare(&integrator, mem, (int)method, nx, nu, 0, true, false);
+    }
 
     const size_t ny = config.ny, nyN = config.ny_terminal;
     const size_t nc = config.nc, ncN = config.nc_terminal;
@@ -266,7 +288,7 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
         input_field(input, "W", ny, N, false), input_field(input, "WN", nyN, 1, true),
         input_field(input, "lbu", nu, N, true), input_field(input, "ubu", nu, N, true),
         input_field(input, "lbx", nbx, N, true), input_field(input, "ubx", nbx, N, true),
-        input_field(input, "lb", path_rows, 1, true), input_field(input, "ub", path_rows, 1, true)
+        input_field(input, "lb", path_rows, 1, true), input_field(input, "ub", path_rows, 1, true), {NULL, 0}
     };
     if (nbx != 0) {
         const matmpc_erk_view indices = input_field(settings, "nbx_idx", nbx, 1, true);
@@ -295,7 +317,7 @@ static mxArray *generate_explicit_qp(const mxArray *input, const mxArray *settin
         output_field(arrays, "lb_du", N * nu, 1), output_field(arrays, "ub_du", N * nu, 1),
         output_field(arrays, "lb_dx", N * nbx, 1), output_field(arrays, "ub_dx", N * nbx, 1),
         blocks != 0 ? output_field(arrays, "R_block", nu, blocks * nu) : empty,
-        blocks != 0 ? output_field(arrays, "gu_block", nu, blocks) : empty
+        blocks != 0 ? output_field(arrays, "gu_block", nu, blocks) : empty, empty
     };
 
     if (native_qp_workspace_count != count) {

@@ -3,7 +3,7 @@ function mem = prepare_shooting_qp(input, settings, mem, moveBlocking)
 if nargin < 4
     moveBlocking = false;
 end
-if mem.sim_method == 1 && mem.hessian == 0 && mem.num_stages == 4
+if mem.hessian == 0 && ((mem.sim_method == 1 && mem.num_stages == 4) || mem.sim_method == 2)
     if moveBlocking
         qp = qp_generation(input, settings, mem, mem.index_T);
     else

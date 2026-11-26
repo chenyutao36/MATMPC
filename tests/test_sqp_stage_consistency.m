@@ -16,12 +16,13 @@ tmp = testCase.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture);
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(tmp.Folder));
 testCase.addTeardown(@unloadFixtures);
 options = {'-outdir', tmp.Folder, ['-I' coreDir], ['-I' sharedCore]};
-support = fullfile(coreDir, {'sim.c', 'erk.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
+support = fullfile(coreDir, {'sim.c', 'erk.c', 'irk_mex.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
+portable = fullfile(sharedCore, {'erk_kernel.c', 'irk_kernel.c', 'matmpc_lu.c', 'matmpc_la.c'});
 model = fullfile(testDir, 'fixtures', 'scalar_ode.c');
 for target = {'qp_generation_ngrid', 'Line_search', 'solution_info'}
     gateway = target{1};
     mex(options{:}, '-output', gateway, fullfile(coreDir, [gateway '.c']), ...
-        support{:}, fullfile(sharedCore, 'erk_kernel.c'), model, '-lmwblas', '-lmwlapack');
+        support{:}, portable{:}, model, '-lmwblas', '-lmwlapack');
 end
 end
 

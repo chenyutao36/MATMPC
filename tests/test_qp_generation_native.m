@@ -22,8 +22,8 @@ testCase.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(projectRoot,
 tmp = testCase.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture);
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(tmp.Folder));
 testCase.addTeardown(@unloadFixture);
-sources = fullfile(mexCore, {'sim.c', 'erk.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
-portable = fullfile(core, {'qp_gauss_newton.c', 'erk_kernel.c', 'matmpc_la.c'});
+sources = fullfile(mexCore, {'sim.c', 'erk.c', 'irk_mex.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
+portable = fullfile(core, {'qp_gauss_newton.c', 'erk_kernel.c', 'irk_kernel.c', 'matmpc_lu.c', 'matmpc_la.c'});
 for entry = {'qp_generation', 'qp_generation_ngrid', 'qp_generation_mb'}
     name = entry{1};
     mex('-outdir', tmp.Folder, ['-I' core], ['-I' mexCore], '-output', name, ...
@@ -217,42 +217,58 @@ function blockedQp(input, settings, mem, boundaries)
 unused = qp_generation(input, settings, mem, boundaries); %#ok<NASGU>
 end
 
-function testGgnAndIrkKeepTheirExistingPaths(testCase)
+function testGgnKeepsItsExistingPath(testCase)
 [input, settings, opt] = scalarProblem();
-for selected = {'Generalized_Gauss_Newton', 'IRK3'}
-    options = opt;
-    if strcmp(selected{1}, 'IRK3')
-        options.integrator = 'IRK3';
-    else
-        options.hessian = selected{1};
+opt.hessian = 'Generalized_Gauss_Newton';
+for nonuniform = [false, true]
+    opt.nonuniform_grid = nonuniform;
+    settings.index_T = [0, 1, 4, 9];
+    duration = settings.Ts_st * ones(1, settings.N);
+    if nonuniform
+        duration = settings.Ts_st * diff(settings.index_T);
     end
-    mem = InitMemory(settings, options, input);
-    testCase.verifyError(@() explicitQp(input, settings, mem), 'MATMPC:QPGeneration:Mode');
-    updated = prepare_uniform_qp(input, settings, mem);
-    testCase.verifyEqual(updated.A, ones(1, settings.N), 'AbsTol', 1e-12);
-    testCase.verifyEqual(updated.B, settings.Ts_st * ones(1, settings.N), 'AbsTol', 1e-12);
-    testCase.verifyEqual(updated.R, input.W, 'AbsTol', 1e-12);
-end
-end
-
-function testNonuniformGgnAndIrkKeepTheirExistingPaths(testCase)
-[input, settings, opt] = scalarProblem();
-settings.index_T = [0, 1, 4, 9];
-opt.nonuniform_grid = true;
-duration = settings.Ts_st * diff(settings.index_T);
-for selected = {'Generalized_Gauss_Newton', 'IRK3'}
-    options = opt;
-    if strcmp(selected{1}, 'IRK3')
-        options.integrator = 'IRK3';
-    else
-        options.hessian = selected{1};
-    end
-    mem = InitMemory(settings, options, input);
+    mem = InitMemory(settings, opt, input);
     testCase.verifyError(@() explicitQp(input, settings, mem), 'MATMPC:QPGeneration:Mode');
     updated = prepare_shooting_qp(input, settings, mem);
     testCase.verifyEqual(updated.A, ones(1, settings.N), 'AbsTol', 1e-12);
     testCase.verifyEqual(updated.B, duration, 'AbsTol', 1e-12);
     testCase.verifyEqual(updated.R, input.W, 'AbsTol', 1e-12);
+end
+end
+
+function testIrkOdeUsesSharedQpAssembly(testCase)
+[input, settings, opt] = scalarProblem();
+opt.integrator = 'IRK3';
+for variant = 1:3
+    switch variant
+        case 2
+            settings.index_T = [0, 1, 4, 9];
+            opt.nonuniform_grid = true;
+        case 3
+            settings.index_T = [0, 2, 3];
+            settings.r = 2;
+            opt.nonuniform_grid = false;
+            opt.qpsolver = 'qpoases_mb';
+    end
+    mem = InitMemory(settings, opt, input);
+    legacy = InitMemory(settings, opt, input);
+    duration = settings.Ts_st * ones(1, settings.N);
+    switch variant
+        case 1
+            qp_generation(input, settings, legacy);
+        case 2
+            duration = settings.Ts_st * diff(settings.index_T);
+            qp_generation_ngrid(input, settings, legacy);
+        case 3
+            qp_generation_mb(input, settings, legacy);
+    end
+    updated = prepare_shooting_qp(input, settings, mem, variant == 3);
+    testCase.verifyEqual(updated.A, ones(1, settings.N), 'AbsTol', 1e-12);
+    testCase.verifyEqual(updated.B, duration, 'AbsTol', 1e-12);
+    testCase.verifyEqual(updated.R, input.W, 'AbsTol', 1e-12);
+    testCase.verifyEqual(updated.a, input.x(1:end-1) + duration.*input.u - input.x(2:end), 'AbsTol', 1e-12);
+    testCase.verifyEqual(updated.a, legacy.a, 'AbsTol', 1e-12);
+    testCase.verifyEqual(mem.B, zeros(size(mem.B)));
 end
 end
 

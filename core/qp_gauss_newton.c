@@ -7,7 +7,7 @@
 #include <string.h>
 
 typedef struct {
-    size_t x, u, parameters, references, state_bounds, path_bounds;
+    size_t x, u, z, parameters, references, state_bounds, path_bounds;
     size_t A, B, a, Q, R, Cgx, Cgu, CgN;
     size_t Jx, Ju, J_terminal, integration, count;
     size_t blocks, R_block, gu_block;
@@ -38,9 +38,11 @@ static bool stages(size_t rows, size_t columns, size_t count, size_t *elements)
 
 static matmpc_qp_status layout_for(const matmpc_qp_config *config, qp_layout *layout)
 {
-    if (config == NULL || config->horizon == 0 || config->integration.shape.stages != 4 ||
-        !config->integration.shape.forward || config->integration.shape.adjoint ||
+    if (config == NULL || config->horizon == 0 || config->integration.shape.nx == 0 ||
         !isfinite(config->levenberg_marquardt) || config->levenberg_marquardt < 0.0)
+        return MATMPC_QP_INVALID_ARGUMENT;
+    if (config->integrate_stage == NULL && (config->nz != 0 || config->integration.shape.stages != 4 ||
+        !config->integration.shape.forward || config->integration.shape.adjoint))
         return MATMPC_QP_INVALID_ARGUMENT;
 
     const size_t nx = config->integration.shape.nx;
@@ -48,6 +50,7 @@ static matmpc_qp_status layout_for(const matmpc_qp_config *config, qp_layout *la
     const size_t N = config->horizon;
     size_t states, path, jacobians;
     if (!add(N, 1, &states) || !multiply(nx, states, &layout->x) || !multiply(nu, N, &layout->u) ||
+        !multiply(config->nz, N, &layout->z) ||
         !multiply(config->np, states, &layout->parameters) || !multiply(config->ny, N, &layout->references) ||
         !multiply(config->nbx, N, &layout->state_bounds) || !multiply(config->nc, N, &path) ||
         !add(path, config->nc_terminal, &layout->path_bounds) || !multiply(nx, N, &layout->a) ||
@@ -76,14 +79,16 @@ static matmpc_qp_status layout_for(const matmpc_qp_config *config, qp_layout *la
         layout->gu_block = layout->blocks * nu;
     }
 
-    const matmpc_erk_status integration = matmpc_erk_workspace_size(&config->integration.shape, &layout->integration);
-    if (integration == MATMPC_ERK_SIZE_OVERFLOW)
-        return MATMPC_QP_SIZE_OVERFLOW;
-    if (integration != MATMPC_ERK_OK)
-        return MATMPC_QP_INVALID_ARGUMENT;
+    if (config->integrate_stage == NULL) {
+        const matmpc_erk_status integration = matmpc_erk_workspace_size(&config->integration.shape, &layout->integration);
+        if (integration == MATMPC_ERK_SIZE_OVERFLOW)
+            return MATMPC_QP_SIZE_OVERFLOW;
+        if (integration != MATMPC_ERK_OK)
+            return MATMPC_QP_INVALID_ARGUMENT;
+    }
 
     const size_t cost_scratch = jacobians > layout->J_terminal ? jacobians : layout->J_terminal;
-    if (!add(layout->integration, cost_scratch, &layout->count))
+    if (!add(layout->integration, cost_scratch > 0 ? cost_scratch : 1, &layout->count))
         return MATMPC_QP_SIZE_OVERFLOW;
     return MATMPC_QP_OK;
 }
@@ -112,6 +117,7 @@ static bool input_matches(const matmpc_qp_config *config, const qp_layout *layou
 {
     return valid_input(input->x0, config->integration.shape.nx) && valid_input(input->x, layout->x) &&
            valid_input(input->u, layout->u) && valid_input(input->parameters, layout->parameters) &&
+           valid_input(input->z, layout->z) &&
            valid_input(input->reference, layout->references) && valid_input(input->weight, layout->references) &&
            valid_input(input->reference_terminal, config->ny_terminal) && valid_input(input->weight_terminal, config->ny_terminal) &&
            valid_input(input->lower_u, layout->u) && valid_input(input->upper_u, layout->u) &&
@@ -129,7 +135,8 @@ static bool output_matches(const matmpc_qp_config *config, const qp_layout *layo
            valid_output(output->lc, layout->path_bounds) && valid_output(output->uc, layout->path_bounds) &&
            valid_output(output->lb_du, layout->u) && valid_output(output->ub_du, layout->u) &&
            valid_output(output->lb_dx, layout->state_bounds) && valid_output(output->ub_dx, layout->state_bounds) &&
-           valid_output(output->R_block, layout->R_block) && valid_output(output->gu_block, layout->gu_block);
+           valid_output(output->R_block, layout->R_block) && valid_output(output->gu_block, layout->gu_block) &&
+           valid_output(output->z_out, layout->z);
 }
 
 static bool valid_stage_grid(const matmpc_qp_config *config)
@@ -228,8 +235,9 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
     const size_t nu = config->integration.shape.nu;
     const size_t nc = config->nc;
     const size_t N = config->horizon;
-    if (!isfinite(config->diagonal_floor) || !valid_input(config->state_seed, nx * nx) ||
-        !valid_input(config->control_seed, nx * nu) || (config->nbx != 0 && config->bounded_states == NULL) ||
+    if (!isfinite(config->diagonal_floor) || (config->integrate_stage == NULL &&
+        (!valid_input(config->state_seed, nx * nx) || !valid_input(config->control_seed, nx * nu))) ||
+        (config->nbx != 0 && config->bounded_states == NULL) ||
         model->stage_cost == NULL || model->terminal_cost == NULL || (nc != 0 && model->path_constraint == NULL) ||
         (config->nc_terminal != 0 && model->terminal_constraint == NULL) ||
         !valid_stage_grid(config) || !input_matches(config, &layout, input) || !output_matches(config, &layout, output))
@@ -254,17 +262,23 @@ matmpc_qp_status matmpc_qp_gauss_newton(const matmpc_qp_config *config, const ma
         const double *y = config->ny != 0 ? input->reference.data + i * config->ny : NULL;
         const double *W = config->ny != 0 ? input->weight.data + i * config->ny : NULL;
         double *a = output->a.data + i * nx;
-        const matmpc_erk_input step_input = {{x, nx}, {u, nu}, p, config->state_seed, config->control_seed, {NULL, 0}};
-        const matmpc_erk_output step_output = {
-            {a, nx}, {output->A.data + i * nx * nx, nx * nx},
-            {nu != 0 ? output->B.data + i * nx * nu : NULL, nx * nu}, {NULL, 0}
-        };
+        double *A = output->A.data + i * nx * nx;
+        double *B = nu != 0 ? output->B.data + i * nx * nu : NULL;
         if (grid.count != 0)
             integration.step = config->integration.step * (grid.data[i + 1] - grid.data[i]);
-        const matmpc_erk_status step_status = matmpc_erk_integrate(&integration, &model->dynamics,
-                                                                  &step_input, &step_output, integration_workspace);
-        if (step_status != MATMPC_ERK_OK)
-            return step_status == MATMPC_ERK_MODEL_ERROR ? MATMPC_QP_MODEL_ERROR : MATMPC_QP_INVALID_ARGUMENT;
+        if (config->integrate_stage != NULL) {
+            const double *z = config->nz != 0 ? input->z.data + i * config->nz : NULL;
+            double *z_next = config->nz != 0 ? output->z_out.data + i * config->nz : NULL;
+            if (config->integrate_stage(config->integration_context, integration.step, x, u, p, z, a, z_next, A, B) != 0)
+                return MATMPC_QP_INTEGRATION_ERROR;
+        } else {
+            const matmpc_erk_input step_input = {{x, nx}, {u, nu}, p, config->state_seed, config->control_seed, {NULL, 0}};
+            const matmpc_erk_output step_output = {{a, nx}, {A, nx * nx}, {B, nx * nu}, {NULL, 0}};
+            const matmpc_erk_status step_status = matmpc_erk_integrate(&integration, &model->dynamics,
+                                                                      &step_input, &step_output, integration_workspace);
+            if (step_status != MATMPC_ERK_OK)
+                return step_status == MATMPC_ERK_MODEL_ERROR ? MATMPC_QP_MODEL_ERROR : MATMPC_QP_INVALID_ARGUMENT;
+        }
         const double *next = x + nx;
         for (size_t j = 0; j < nx; ++j)
             a[j] -= next[j];
