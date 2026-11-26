@@ -22,12 +22,13 @@ tmp = testCase.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture);
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(tmp.Folder));
 testCase.addTeardown(@unloadFixtures);
 mexSupport = fullfile(mexCore, {'sim.c', 'erk.c', 'irk_mex.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
-coreSupport = fullfile(portableCore, {'qp_gauss_newton.c', 'erk_kernel.c', 'irk_kernel.c', 'matmpc_lu.c', 'matmpc_la.c'});
+coreSupport = fullfile(portableCore, {'qp_gauss_newton.c', 'erk_kernel.c', 'irk_kernel.c', ...
+    'irk_dae_kernel.c', 'matmpc_lu.c', 'matmpc_la.c'});
 for target = {'qp_generation', 'qp_generation_ngrid', 'qp_generation_mb'}
     name = target{1};
     mex('-outdir', tmp.Folder, ['-I' mexCore], ['-I' portableCore], ...
         fullfile(mexCore, [name '.c']), mexSupport{:}, coreSupport{:}, ...
-        fullfile(testDir, 'fixtures', 'scalar_ode.c'), '-lmwblas', '-lmwlapack');
+        fullfile(testDir, 'fixtures', 'scalar_ode.c'), '-lmwblas');
 end
 end
 

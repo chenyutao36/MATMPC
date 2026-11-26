@@ -5,7 +5,6 @@
 #include "casadi_wrapper.h"
 
 #include "blas.h"
-#include "lapack.h"
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -46,17 +45,13 @@ static double eval_cons_res(double *x, double *u, double *od, double *z, double 
     sim_in *in = sim->in;
     sim_out *out = sim->out;
     
-    size_t neq = (N+1)*nx;
+    ptrdiff_t neq = (ptrdiff_t)((N+1)*nx);
     size_t nineq = N*nc+ncN;
     
     double *casadi_in[4];
     double *casadi_out[1];
-    double *work = NULL;
     double eq_res=0, ineq_res=0, cons_res;
-    
-    char *nTrans = "N", *Trans="T", *Norm="O";
-    double one_d = 1.0, zero = 0.0;
-    size_t one_i = 1;
+    ptrdiff_t stride = 1;
     int idx;
     
     double *lu = (double *)mxMalloc( N*nu * sizeof(double));        
@@ -139,7 +134,7 @@ static double eval_cons_res(double *x, double *u, double *od, double *z, double 
         }
     }
         
-    eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &neq, work);
+    eq_res = dasum(&neq, eq_res_vec, &stride);
             
     for (i=0;i<N*nu;i++)
         ineq_res += MAX(-1*uu[i],0) + MAX(lu[i],0);

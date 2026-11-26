@@ -23,12 +23,13 @@ tmp = testCase.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture);
 testCase.applyFixture(matlab.unittest.fixtures.PathFixture(tmp.Folder));
 testCase.addTeardown(@unloadFixture);
 sources = fullfile(mexCore, {'sim.c', 'erk.c', 'irk_mex.c', 'irk_ode.c', 'irk_dae.c', 'mpc_common.c'});
-portable = fullfile(core, {'qp_gauss_newton.c', 'erk_kernel.c', 'irk_kernel.c', 'matmpc_lu.c', 'matmpc_la.c'});
+portable = fullfile(core, {'qp_gauss_newton.c', 'erk_kernel.c', 'irk_kernel.c', ...
+    'irk_dae_kernel.c', 'matmpc_lu.c', 'matmpc_la.c'});
 for entry = {'qp_generation', 'qp_generation_ngrid', 'qp_generation_mb'}
     name = entry{1};
     mex('-outdir', tmp.Folder, ['-I' core], ['-I' mexCore], '-output', name, ...
         fullfile(mexCore, [name '.c']), sources{:}, portable{:}, ...
-        fullfile(testDir, 'fixtures', 'scalar_ode.c'), '-lmwblas', '-lmwlapack');
+        fullfile(testDir, 'fixtures', 'scalar_ode.c'), '-lmwblas');
 end
 end
 
@@ -270,6 +271,32 @@ for variant = 1:3
     testCase.verifyEqual(updated.a, legacy.a, 'AbsTol', 1e-12);
     testCase.verifyEqual(mem.B, zeros(size(mem.B)));
 end
+end
+
+function testDaeExplicitQpReturnsSeparateAlgebraicStates(testCase)
+[input, settings, opt] = scalarProblem();
+settings.nz = 1;
+input.z = [2, 4, 6];
+settings.index_T = [0, 1, 3, 6];
+opt.nonuniform_grid = true;
+opt.integrator = 'IRK3-DAE';
+mem = InitMemory(settings, opt, input);
+qp = qp_generation(input, settings, mem);
+testCase.verifyNumElements(fieldnames(qp), 19);
+testCase.verifyEqual(qp.B, settings.Ts_st * diff(settings.index_T), 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.z_out, zeros(1, settings.N), 'AbsTol', 1e-12);
+testCase.verifyEqual(input.z, [2, 4, 6]);
+
+opt.nonuniform_grid = false;
+opt.qpsolver = 'qpoases_mb';
+settings.index_T = [0, 2, 3];
+settings.r = 2;
+mem = InitMemory(settings, opt, input);
+qp = qp_generation(input, settings, mem, mem.index_T);
+testCase.verifyNumElements(fieldnames(qp), 21);
+testCase.verifyEqual(qp.B, repmat(settings.Ts_st, 1, settings.N), 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.z_out, zeros(1, settings.N), 'AbsTol', 1e-12);
+testCase.verifyEqual(qp.R_block, [7, 3], 'AbsTol', 1e-12);
 end
 
 function explicitQp(input, settings, mem)

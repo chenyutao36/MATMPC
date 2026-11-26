@@ -44,7 +44,7 @@ Run `addpath('tests'); smoke_simulink_inverted_pendulum` to build and check both
 
 ## Shared C kernels
 
-The explicit Runge–Kutta integrator, implicit Runge–Kutta ODE integrator, Gauss–Newton QP generation, full condensing with or without move blocking, and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers. IRK uses a portable partial-pivot LU factorization from the same library for Newton and sensitivity solves.
+The explicit Runge–Kutta integrator, implicit Runge–Kutta ODE and DAE integrators, Gauss–Newton QP generation, full condensing with or without move blocking, and condensed QP solution recovery live in `core/`. The existing MEX entry points link these same sources. The C APIs operate on ordinary arrays and caller-owned memory and can be built independently of MATLAB, CasADi, and the QP solvers. IRK uses the core's portable partial-pivot LU factorization for Newton and sensitivity solves. Standalone builds use the core's C linear algebra, and the MEX build uses MATLAB's bundled BLAS for matrix operations.
 
 ```sh
 cmake -S core -B build/shared-core
@@ -56,7 +56,7 @@ Use `-DBUILD_TESTING=OFF` when building the library alone. The ERK caller suppli
 
 Full condensing exposes the gradient and bounds separately from the Hessian and constraint matrices in C. In MATLAB, `qp = Condensing(mem, settings)` returns all eight condensed arrays for inspection or comparison.
 
-The ERK4 and IRK3 ODE Gauss–Newton MEX paths return the linearized dynamics, cost, and constraints as `qp = qp_generation(input, settings, mem)` for both uniform and nonuniform shooting. The nonuniform path scales the integration substep by the interval width in `mem.index_T` and uses the same configured substep count in every interval. In standalone C, `matmpc_qp_config.integrate_stage` can call `matmpc_irk_ode_integrate` using the caller's model callbacks and scratch. Compare the QP blocks before condensing when investigating differences in the control solution.
+The ERK4, IRK3 and IRK3-DAE Gauss–Newton MEX paths return the linearized dynamics, cost, and constraints as `qp = qp_generation(input, settings, mem)` for both uniform and nonuniform shooting. The nonuniform path scales the integration substep by the interval width in `mem.index_T` and uses the same configured substep count in every interval. In standalone C, `matmpc_qp_config.integrate_stage` can call `matmpc_irk_ode_integrate` or `matmpc_irk_dae_integrate` using the caller's model callbacks and scratch. For an index-1 DAE with residuals `F(x,u,p,xdot,z)` and `g(x,u,p,z)`, pass one algebraic guess per shooting interval. `qp.z_out` contains the algebraic value at the last collocation stage of each interval. With the supplied Radau IIA tableau, that stage is the interval endpoint. Compare the QP blocks before condensing when investigating differences in the control solution.
 
 For uniform shooting with move blocking, `qp = qp_generation(input, settings, mem, mem.index_T)` also returns the block control gradients and Hessians in `gu_block` and `R_block`. Each `R_block` receives the diagonal floor after summing the raw stage Hessians. The per-stage `R` and `gu` remain available for the merit calculation.
 

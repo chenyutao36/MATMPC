@@ -4,7 +4,6 @@
 #include "casadi_wrapper.h"
 #include "sim_workspace.h"
 
-#include "lapack.h"
 #include "blas.h"
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -111,7 +110,7 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     size_t nw = N*nv+nx;
     size_t neq = (N+1)*nx;
     size_t nineq = N*nc+ncN;
-    char *nTrans = "N", *Trans="T", *Norm="O";
+    char *nTrans = "N", *Trans="T";
     double one_d = 1.0, zero = 0.0;
     size_t one_i = 1;
     int idx;
@@ -161,7 +160,6 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
     double obj;
     mxArray *algebraic = mxCreateDoubleMatrix(nz, N, mxREAL);
     double *z_out = mxGetPr(algebraic);
-    double *work = NULL;
     double KKT=0, eq_res=0, ineq_res=0, OBJ=0;
     
     for (i=0;i<N;i++){
@@ -286,7 +284,8 @@ mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
         }
     }
          
-    eq_res = dlange(Norm, &neq, &one_i, eq_res_vec, &neq, work);
+    ptrdiff_t residual_count = (ptrdiff_t)neq, stride = 1;
+    eq_res = dasum(&residual_count, eq_res_vec, &stride);
     KKT = dnrm2(&nw, L, &one_i);
     
     for (i=0;i<N*nu;i++)
